@@ -1,0 +1,10 @@
+
+Django
+djangorestframework
+django-cors-headers
+drf-spectacular
+rdflib
+SPARQLWrapper
+pyshacl
+python-dotenv
+requests
