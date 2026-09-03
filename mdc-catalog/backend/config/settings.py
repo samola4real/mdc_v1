@@ -10,15 +10,17 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
+import os
 from pathlib import Path
+
+from config.env import env_bool, env_float, env_list
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
-import os
 #* app level Dirs
 PROJECT_ROOT = BASE_DIR.parent
 CURATED_DATA_DIR = PROJECT_ROOT / "data" / "curated"
-GENERATED_DATA_DIR = BASE_DIR.parent / "data" / "generated"
+GENERATED_DATA_DIR = PROJECT_ROOT / "data" / "generated"
 PROVIDER_SEED_DIR = CURATED_DATA_DIR / "providers"
 
 
@@ -28,10 +30,13 @@ PROVIDER_SEED_DIR = CURATED_DATA_DIR / "providers"
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = "django-insecure-5z!dhlzj!(0=nuyk(fj(h(obp(%gao5efy$0nk^=(6gp*_wzw!"
+SECRET_KEY = os.getenv(
+    "DJANGO_SECRET_KEY",
+    "django-insecure-5z!dhlzj!(0=nuyk(fj(h(obp(%gao5efy$0nk^=(6gp*_wzw!",
+)
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = env_bool("DJANGO_DEBUG", True)
 
 
 #! FUSEKI
@@ -60,27 +65,35 @@ SERVICE_DISCOVERY_FUSEKI_QUERY_ENDPOINT = os.getenv(
     "",
 )
 
-FUSEKI_TIMEOUT_SECONDS = float(
-    os.getenv(
-        "FUSEKI_TIMEOUT_SECONDS",
-        "10",
-    )
+FUSEKI_TIMEOUT_SECONDS = env_float("FUSEKI_TIMEOUT_SECONDS", 10)
+
+MDC_DEMO_API_ENABLED = env_bool("MDC_DEMO_API_ENABLED", True)
+MDC_PROVIDER_PUBLICATION_ENABLED = env_bool(
+    "MDC_PROVIDER_PUBLICATION_ENABLED",
+    True,
 )
 
-MDC_DEMO_API_ENABLED = True
 
-
-ALLOWED_HOSTS = ["localhost", "127.0.0.1", "[::1]"]
+ALLOWED_HOSTS = env_list(
+    "DJANGO_ALLOWED_HOSTS",
+    ["localhost", "127.0.0.1", "[::1]"],
+)
 
 # Local development frontend origins.
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:3000",
-    "http://127.0.0.1:3000",
-    # "http://localhost:5173",
-    # "http://127.0.0.1:5173",
-]
+CORS_ALLOWED_ORIGINS = env_list(
+    "CORS_ALLOWED_ORIGINS",
+    [
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        # "http://localhost:5173",
+        # "http://127.0.0.1:5173",
+    ],
+)
 
-CSRF_TRUSTED_ORIGINS = CORS_ALLOWED_ORIGINS
+CSRF_TRUSTED_ORIGINS = env_list(
+    "CSRF_TRUSTED_ORIGINS",
+    CORS_ALLOWED_ORIGINS,
+)
 
 REST_FRAMEWORK = {
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",

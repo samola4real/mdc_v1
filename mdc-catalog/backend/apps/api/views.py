@@ -1,4 +1,5 @@
 
+from django.conf import settings
 from django.shortcuts import render
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
@@ -118,6 +119,19 @@ def provider_publication(request):
     - no RDF generation yet
     - no Fuseki update yet
     """
+    if not getattr(settings, "MDC_PROVIDER_PUBLICATION_ENABLED", False):
+        return Response(
+            {
+                "error": {
+                    "code": "provider_publication_disabled",
+                    "message": (
+                        "Provider publication is disabled for this environment."
+                    ),
+                }
+            },
+            status=status.HTTP_403_FORBIDDEN,
+        )
+
     serializer = ProviderPublicationSerializer(data=request.data)
 
     if not serializer.is_valid():

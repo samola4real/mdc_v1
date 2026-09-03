@@ -128,6 +128,29 @@ class ProviderPublicationApiTests(SimpleTestCase):
                 expected_file = provider_seed_dir / "api_example_provider.yaml"
                 self.assertTrue(expected_file.exists())
 
+    @override_settings(MDC_PROVIDER_PUBLICATION_ENABLED=False)
+    def test_provider_publication_endpoint_disabled_by_feature_flag(self):
+        payload = make_valid_provider_publication_payload()
+
+        with TemporaryDirectory() as temp_dir:
+            provider_seed_dir = Path(temp_dir) / "providers"
+
+            with override_settings(PROVIDER_SEED_DIR=provider_seed_dir):
+                response = self.client.post(
+                    "/api/provider-publication",
+                    payload,
+                    format="json",
+                )
+
+                self.assertEqual(response.status_code, 403)
+                self.assertEqual(
+                    response.json()["error"]["code"],
+                    "provider_publication_disabled",
+                )
+                self.assertFalse(
+                    (provider_seed_dir / "api_example_provider.yaml").exists()
+                )
+
     def test_provider_publication_endpoint_updates_existing_provider_file(self):
         payload = make_valid_provider_publication_payload()
 
