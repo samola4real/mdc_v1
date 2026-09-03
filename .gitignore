@@ -4,6 +4,7 @@ venv/
 
 # Editor settings
 .vscode/
+.vercel/
 
 # Local documentation and development notes
 docs/
