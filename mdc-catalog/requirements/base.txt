@@ -8,3 +8,4 @@ SPARQLWrapper
 pyshacl
 python-dotenv
 requests
+PyYAML
