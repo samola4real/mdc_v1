@@ -535,10 +535,12 @@ def get_service_discovery_registry() -> dict:
 
     return {
         "registry_version": "m18_harmonized_v1",
-        "search_contract_active": False,
+        "search_contract_active": True,
         "note": (
             "This registry supports Marketplace dynamic form rendering. "
-            "The harmonized service-discovery search request contract is not active yet."
+            "The harmonized service-discovery search request contract is active "
+            "through POST /api/v1/service-discovery/search, with "
+            "POST /api/service-discovery/search retained as a compatibility alias."
         ),
         "service_categories": deepcopy(SERVICE_CATEGORIES),
         "part_families": deepcopy(SERVICE_DISCOVERY_PART_FAMILIES),

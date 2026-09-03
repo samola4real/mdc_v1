@@ -9,7 +9,9 @@ class ServiceDiscoveryRegistryTests(SimpleTestCase):
 
     def test_registry_metadata(self):
         self.assertEqual(self.registry["registry_version"], "m18_harmonized_v1")
-        self.assertIs(self.registry["search_contract_active"], False)
+        self.assertIs(self.registry["search_contract_active"], True)
+        self.assertIn("/api/v1/service-discovery/search", self.registry["note"])
+        self.assertIn("/api/service-discovery/search", self.registry["note"])
         forbidden_key = "m18" + "_service_discovery"
         self.assertNotIn(forbidden_key, self.registry)
         self.assertTrue(callable(get_service_discovery_registry))

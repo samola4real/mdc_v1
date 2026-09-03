@@ -67,7 +67,7 @@ class ApiV1FoundationTests(SimpleTestCase):
             service_discovery["registry_version"],
             "m18_harmonized_v1",
         )
-        self.assertIs(service_discovery["search_contract_active"], False)
+        self.assertIs(service_discovery["search_contract_active"], True)
 
         profiles = service_discovery["part_type_profiles"]
         self.assertIn("spur_gear", profiles)
