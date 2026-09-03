@@ -1,0 +1,59 @@
+provider:
+  provider_id: precipart
+  display_name: Precipart
+  country: Switzerland
+  certifications: []
+offerings:
+  - offering_id: precipart_precision_gears
+    provider_id: precipart
+    service_category: precision_gears
+    name: High-precision custom gears
+    part_family: gear
+    support_status: confirmed
+    supported_part_types:
+      - part_type: spur_gear
+        support_status: confirmed
+        source_type: public_web
+        confidence: publicly_confirmed
+      - part_type: helical_gear
+        support_status: confirmed
+        source_type: public_web
+        confidence: publicly_confirmed
+      - part_type: worm_gear
+        support_status: confirmed
+        source_type: public_web
+        confidence: publicly_confirmed
+      - part_type: crown_gear
+        support_status: candidate_requiring_confirmation
+        source_type: public_web
+        confidence: inferred
+        source_note: Source lists face_gear and records crown_gear as a candidate mapping requiring confirmation.
+    family_capabilities:
+      module:
+        min: 0.125
+        max: 1.5
+        source_type: public_web
+        confidence: publicly_confirmed
+        source_note: Source field module_mm mapped to harmonized module.
+      diametral_pitch:
+        min: 16
+        max: 200
+        source_type: public_web
+        confidence: publicly_confirmed
+      outside_diameter_mm:
+        min: 6
+        max: 102
+        source_type: public_web
+        confidence: publicly_confirmed
+      gear_quality:
+        standard: ISO
+        best_class: 5
+        comparison_rule: lower_or_equal_is_better
+        source_type: public_web
+        confidence: publicly_confirmed
+        source_note: Source lists ISO 5 among supported gear quality references.
+    part_type_capabilities: {}
+    generic_capabilities: {}
+publication_metadata:
+  source_type: public_web
+  confidence: publicly_confirmed

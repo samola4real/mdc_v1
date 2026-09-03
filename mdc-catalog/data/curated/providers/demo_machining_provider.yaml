@@ -1,0 +1,131 @@
+metadata:
+  dataset_id: demo_machining_provider_seed_v1
+  version: 1.0
+  status: curated_demo_seed
+  route_fields_included: false
+  notes:
+    - Demo provider for testing multi-provider catalogue loading.
+    - Not real provider data.
+    - Route/operation sequence fields are excluded from v1.
+
+providers:
+  - provider_id: demo_machining_provider
+    legal_name: Demo Machining Provider Oy
+    display_name: Demo Machining Provider
+    provider_type: MaaSProvider
+    country: Finland
+    source_type: curated
+    confidence: curated
+    facilities:
+      - facility_id: demo_machining_provider_main
+        city: Tampere
+        country: Finland
+        confidence: curated
+    certifications:
+      - code: ISO9001_2015
+        label: ISO 9001:2015
+        confidence: curated
+        source_type: curated
+
+materials:
+  - material_id: steel
+    label: Steel
+    ontology_concept: mdc:Steel
+  - material_id: aluminum
+    label: Aluminum
+    ontology_concept: mdc:Aluminum
+
+material_grades:
+  - grade_id: 42CrMo4
+    label: 42CrMo4
+    material_id: steel
+    confidence: curated
+    source_type: curated
+  - grade_id: Al6082
+    label: Aluminum 6082
+    material_id: aluminum
+    confidence: curated
+    source_type: curated
+
+offerings:
+  - offering_id: demo_machining_provider_precision_machining
+    provider_id: demo_machining_provider
+    name: Demo precision machining
+    service_type: machining
+    ontology_service_concept: mdc:MachiningService
+    source_type: curated
+    confidence: curated
+    part_families:
+      - shaft
+      - transmission_component
+    processes:
+      - machining
+      - turning
+      - milling
+      - grinding
+    supported_materials:
+      - material: steel
+        confidence: curated
+        source_type: curated
+      - material: aluminum
+        confidence: curated
+        source_type: curated
+    supported_material_grades:
+      - 42CrMo4
+      - Al6082
+    capabilities:
+      batch_size:
+        min: 10
+        max: 500
+        unit: pcs
+        confidence: curated
+        source_type: curated
+      diameter_mm:
+        min: 5
+        max: 300
+        confidence: curated
+        source_type: curated
+      weight_kg:
+        max: 100
+        approximate: true
+        confidence: curated
+        source_type: curated
+      module:
+        min: null
+        max: null
+        confidence: unknown
+        source_type: not_confirmed
+      diametral_pitch:
+        min: null
+        max: null
+        raw: null
+        normalized_order: null
+        confidence: unknown
+        source_type: not_confirmed
+      quality:
+        standard: null
+        best_class: null
+        comparison_rule: null
+        confidence: unknown
+        source_type: not_confirmed
+      lead_time_weeks:
+        min: 4
+        max: 8
+        qualifier: normal_case_dependent
+        confidence: curated
+        source_type: curated
+      surface_finish_ra_um:
+        max: 3.2
+        confidence: curated
+        source_type: curated
+      tolerance_mm:
+        min: null
+        confidence: unknown
+        source_type: not_confirmed
+      traceability:
+        aerospace_traceability: null
+        full_traceability: null
+        confidence: unknown
+        source_type: not_confirmed
+    notes:
+      - Demo machining provider used only for backend development tests.

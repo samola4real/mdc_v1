@@ -1,0 +1,96 @@
+
+---
+provider_id: precipart
+provider_name: Precipart
+provider_european_operations:
+- Switzerland
+- United Kingdom
+service_type: precision_component_manufacturing
+quality_certifications_europe:
+- ISO 9001 - Switzerland
+- ISO 13485 - Switzerland
+- AS9100 - Switzerland
+supported_material_families:
+- steel
+- stainless_steel
+- carbon_steel
+- bronze
+- brass
+- aluminium
+- titanium
+- precious_metal
+- specialty_alloy
+offerings:
+- offering_id: precipart_precision_gears
+  offering_name: High-precision custom gears
+  part_family: gear
+  part_types:
+  - spur_gear
+  - helical_gear
+  - worm_gear
+  - internal_gear
+  - straight_bevel_gear
+  - spiral_bevel_gear
+  - face_gear
+  - sector_gear
+  - planetary_gear
+  - rack
+  outside_diameter_mm:
+    min: 6
+    max: 102
+  module_mm:
+    min: 0.125
+    max: 1.5
+  diametral_pitch:
+    min: 16
+    max: 200
+  pressure_angle_deg_supported:
+  - 14.5
+  - 20
+  - 22.5
+  - 30
+  gear_quality_supported:
+  - AGMA Q12
+  - AGMA 2015
+  - ISO 5
+  candidate_mapping_requiring_confirmation:
+    crown_gear: face_gear
+  source_status: publicly_confirmed
+- offering_id: precipart_custom_turned_components
+  offering_name: Custom Swiss-turned precision components
+  part_family: metal_part
+  geometry_class: rotationally_symmetric
+  candidate_part_types_requiring_confirmation:
+  - bushing
+  - roller
+  - collar
+  - plain_shaft
+  - stepped_shaft
+  diameter_mm:
+    min: 0.3
+    max: 32
+  tolerance_um:
+    less_than: 10
+  manufacturing_process_supported:
+  - swiss_turning
+  - grinding
+  - honing
+  - heat_treatment
+  - edm
+  - laser_marking
+  source_status: public_process_envelope
+- offering_id: precipart_custom_milled_components
+  offering_name: Custom CNC-milled precision metal components
+  part_family: metal_part
+  geometry_class: prismatic_or_complex
+  confirmed_component_examples:
+  - precision_plate_component
+  candidate_part_types_requiring_confirmation:
+  - block
+  - bracket
+  - plate
+  manufacturing_process_supported:
+  - cnc_3_axis_milling
+  - cnc_4_axis_milling
+  - cnc_5_axis_milling
+  source_status: public_process_envelope

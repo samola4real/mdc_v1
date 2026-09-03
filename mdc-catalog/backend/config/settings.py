@@ -14,6 +14,14 @@ from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+import os
+#* app level Dirs
+PROJECT_ROOT = BASE_DIR.parent
+CURATED_DATA_DIR = PROJECT_ROOT / "data" / "curated"
+GENERATED_DATA_DIR = BASE_DIR.parent / "data" / "generated"
+PROVIDER_SEED_DIR = CURATED_DATA_DIR / "providers"
+
+
 
 
 # Quick-start development settings - unsuitable for production
@@ -25,21 +33,101 @@ SECRET_KEY = "django-insecure-5z!dhlzj!(0=nuyk(fj(h(obp(%gao5efy$0nk^=(6gp*_wzw!
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+
+#! FUSEKI
+FUSEKI_BASE_URL = os.getenv(
+    "FUSEKI_BASE_URL",
+    "http://localhost:3030",
+)
+
+FUSEKI_DATASET = os.getenv(
+    "FUSEKI_DATASET",
+    "mdc",
+)
+
+FUSEKI_QUERY_ENDPOINT = os.getenv(
+    "FUSEKI_QUERY_ENDPOINT",
+    f"{FUSEKI_BASE_URL}/{FUSEKI_DATASET}/sparql",
+)
+
+FUSEKI_UPDATE_ENDPOINT = os.getenv(
+    "FUSEKI_UPDATE_ENDPOINT",
+    f"{FUSEKI_BASE_URL}/{FUSEKI_DATASET}/update",
+)
+
+SERVICE_DISCOVERY_FUSEKI_QUERY_ENDPOINT = os.getenv(
+    "SERVICE_DISCOVERY_FUSEKI_QUERY_ENDPOINT",
+    "",
+)
+
+FUSEKI_TIMEOUT_SECONDS = float(
+    os.getenv(
+        "FUSEKI_TIMEOUT_SECONDS",
+        "10",
+    )
+)
+
+MDC_DEMO_API_ENABLED = True
+
+
+ALLOWED_HOSTS = ["localhost", "127.0.0.1", "[::1]"]
+
+# Local development frontend origins.
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    # "http://localhost:5173",
+    # "http://127.0.0.1:5173",
+]
+
+CSRF_TRUSTED_ORIGINS = CORS_ALLOWED_ORIGINS
+
+REST_FRAMEWORK = {
+    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+    "DEFAULT_RENDERER_CLASSES": [
+        "rest_framework.renderers.JSONRenderer",
+        "rest_framework.renderers.BrowsableAPIRenderer",
+    ],
+}
+
+SPECTACULAR_SETTINGS = {
+    "TITLE": "MDC Catalog API",
+    "VERSION": "1.0.0",
+}
 
 
 # Application definition
 
 INSTALLED_APPS = [
+
+    #! Project apps
+    "apps.api.apps.ApiConfig",
+    "apps.catalog.apps.CatalogConfig",
+    "apps.ontology.apps.OntologyConfig",
+    "apps.providers.apps.ProvidersConfig",
+    "apps.search.apps.SearchConfig",
+    "apps.demo.apps.DemoConfig",
+
+    
+    #* Third-party
+    "rest_framework",
+    "drf_spectacular",
+    "corsheaders",
+
+    #? Django
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+
 ]
 
 MIDDLEWARE = [
+
+    "corsheaders.middleware.CorsMiddleware",
+    #! Django
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",

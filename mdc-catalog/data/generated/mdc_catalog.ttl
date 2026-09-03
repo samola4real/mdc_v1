@@ -1,0 +1,182 @@
+@prefix mdc: <https://maasai-project.eu/ontology/mdc#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+mdc:APQP a mdc:Certification .
+
+mdc:ISO14001_2015 a mdc:Certification .
+
+mdc:ISO_TS_16949_partial a mdc:Certification .
+
+mdc:MaterialGrade_16MnCr5 a mdc:MaterialGrade ;
+    mdc:dataConfidence "declared" ;
+    mdc:gradeOfMaterial mdc:AlloyedCarburizingSteel ;
+    mdc:label "16MnCr5" ;
+    mdc:materialGradeCode "16MnCr5" ;
+    mdc:sourceType "provider_confirmed" .
+
+mdc:MaterialGrade_18CrNiMo7_6 a mdc:MaterialGrade ;
+    mdc:dataConfidence "declared" ;
+    mdc:gradeOfMaterial mdc:AlloyedCarburizingSteel ;
+    mdc:label "18CrNiMo7-6" ;
+    mdc:materialGradeCode "18CrNiMo7-6" ;
+    mdc:sourceType "provider_confirmed" .
+
+mdc:MaterialGrade_20MnCr5 a mdc:MaterialGrade ;
+    mdc:dataConfidence "declared" ;
+    mdc:gradeOfMaterial mdc:AlloyedCarburizingSteel ;
+    mdc:label "20MnCr5" ;
+    mdc:materialGradeCode "20MnCr5" ;
+    mdc:sourceType "provider_confirmed" .
+
+mdc:MaterialGrade_42CrMo4 a mdc:MaterialGrade ;
+    mdc:dataConfidence "curated" ;
+    mdc:gradeOfMaterial mdc:Steel ;
+    mdc:label "42CrMo4" ;
+    mdc:materialGradeCode "42CrMo4" ;
+    mdc:sourceType "curated" .
+
+mdc:MaterialGrade_Al6082 a mdc:MaterialGrade ;
+    mdc:dataConfidence "curated" ;
+    mdc:gradeOfMaterial mdc:Aluminum ;
+    mdc:label "Aluminum 6082" ;
+    mdc:materialGradeCode "Al6082" ;
+    mdc:sourceType "curated" .
+
+mdc:offering_demo_heat_treatment_provider_heat_treatment a mdc:ProviderOffering ;
+    mdc:dataConfidence "curated" ;
+    mdc:displayName "Demo heat treatment service" ;
+    mdc:hasServiceType mdc:HeatTreatmentService ;
+    mdc:leadTimeMaxWeeks 6.0 ;
+    mdc:leadTimeMinWeeks 2.0 ;
+    mdc:leadTimeQualifier "normal_case_dependent" ;
+    mdc:offeredBy mdc:provider_demo_heat_treatment_provider ;
+    mdc:offeringId "demo_heat_treatment_provider_heat_treatment" ;
+    mdc:providerId "demo_heat_treatment_provider" ;
+    mdc:sourceType "curated" ;
+    mdc:supportsMaterial mdc:AlloyedCarburizingSteel,
+        mdc:Steel ;
+    mdc:supportsPartFamily mdc:Gear,
+        mdc:Shaft,
+        mdc:TransmissionComponent ;
+    mdc:supportsProcess mdc:HeatTreatment .
+
+mdc:offering_demo_machining_provider_precision_machining a mdc:ProviderOffering ;
+    mdc:batchMax 500 ;
+    mdc:batchMin 10 ;
+    mdc:dataConfidence "curated" ;
+    mdc:diameterMaxMm 300.0 ;
+    mdc:diameterMinMm 5.0 ;
+    mdc:displayName "Demo precision machining" ;
+    mdc:hasServiceType mdc:MachiningService ;
+    mdc:leadTimeMaxWeeks 8.0 ;
+    mdc:leadTimeMinWeeks 4.0 ;
+    mdc:leadTimeQualifier "normal_case_dependent" ;
+    mdc:offeredBy mdc:provider_demo_machining_provider ;
+    mdc:offeringId "demo_machining_provider_precision_machining" ;
+    mdc:providerId "demo_machining_provider" ;
+    mdc:sourceType "curated" ;
+    mdc:supportsMaterial mdc:Aluminum,
+        mdc:Steel ;
+    mdc:supportsMaterialGrade mdc:MaterialGrade_42CrMo4,
+        mdc:MaterialGrade_Al6082 ;
+    mdc:supportsPartFamily mdc:Shaft,
+        mdc:TransmissionComponent ;
+    mdc:supportsProcess mdc:Grinding,
+        mdc:Machining,
+        mdc:Milling,
+        mdc:Turning ;
+    mdc:surfaceRaMinUm 3.2 ;
+    mdc:weightApproximate true ;
+    mdc:weightMaxKg 100.0 .
+
+mdc:offering_tasowheel_gears_shafts_precision a mdc:ProviderOffering ;
+    mdc:batchMax 2000 ;
+    mdc:batchMin 100 ;
+    mdc:dataConfidence "declared" ;
+    mdc:diameterMaxMm 450.0 ;
+    mdc:diameterMinMm 10.0 ;
+    mdc:displayName "High-quality gears and shafts" ;
+    mdc:dpMax 85.0 ;
+    mdc:dpMin 2.5 ;
+    mdc:dpRaw "DP 85-2.5" ;
+    mdc:hasServiceType mdc:GearTransmissionService ;
+    mdc:leadTimeMaxWeeks 12.0 ;
+    mdc:leadTimeMinWeeks 8.0 ;
+    mdc:leadTimeQualifier "normal_case_dependent" ;
+    mdc:moduleMax 10.0 ;
+    mdc:moduleMin 0.3 ;
+    mdc:offeredBy mdc:provider_tasowheel ;
+    mdc:offeringId "tasowheel_gears_shafts_precision" ;
+    mdc:providerId "tasowheel" ;
+    mdc:qualityClassBest 4.0 ;
+    mdc:sourceType "provider_confirmed" ;
+    mdc:supportsMaterial mdc:AlloyedCarburizingSteel,
+        mdc:Steel ;
+    mdc:supportsMaterialGrade mdc:MaterialGrade_16MnCr5,
+        mdc:MaterialGrade_18CrNiMo7_6,
+        mdc:MaterialGrade_20MnCr5 ;
+    mdc:supportsPartFamily mdc:Gear,
+        mdc:HelicalGear,
+        mdc:Shaft,
+        mdc:SpurGear,
+        mdc:TransmissionComponent ;
+    mdc:supportsProcess mdc:GearGrinding,
+        mdc:GearShaping,
+        mdc:Grinding,
+        mdc:HardTurning,
+        mdc:HeatTreatment,
+        mdc:Hobbing,
+        mdc:InspectionProcess,
+        mdc:Machining,
+        mdc:Milling,
+        mdc:Turning ;
+    mdc:weightApproximate true ;
+    mdc:weightMaxKg 200.0 .
+
+mdc:provider_demo_heat_treatment_provider a mdc:MaaSProvider ;
+    mdc:country "Finland" ;
+    mdc:dataConfidence "curated" ;
+    mdc:displayName "Demo Heat Treatment Provider" ;
+    mdc:hasCertification mdc:ISO9001_2015 ;
+    mdc:hasOffering mdc:offering_demo_heat_treatment_provider_heat_treatment ;
+    mdc:legalName "Demo Heat Treatment Provider Oy" ;
+    mdc:providerId "demo_heat_treatment_provider" ;
+    mdc:sourceType "curated" .
+
+mdc:provider_demo_machining_provider a mdc:MaaSProvider ;
+    mdc:country "Finland" ;
+    mdc:dataConfidence "curated" ;
+    mdc:displayName "Demo Machining Provider" ;
+    mdc:hasCertification mdc:ISO9001_2015 ;
+    mdc:hasOffering mdc:offering_demo_machining_provider_precision_machining ;
+    mdc:legalName "Demo Machining Provider Oy" ;
+    mdc:providerId "demo_machining_provider" ;
+    mdc:sourceType "curated" .
+
+mdc:provider_tasowheel a mdc:MaaSProvider ;
+    mdc:country "Finland" ;
+    mdc:dataConfidence "declared" ;
+    mdc:displayName "Tasowheel Oy" ;
+    mdc:hasCertification mdc:APQP,
+        mdc:ISO14001_2015,
+        mdc:ISO9001_2015,
+        mdc:ISO_TS_16949_partial ;
+    mdc:hasOffering mdc:offering_tasowheel_gears_shafts_precision ;
+    mdc:legalName "Tasowheel Oy" ;
+    mdc:providerId "tasowheel" ;
+    mdc:sourceType "provider_confirmed" .
+
+mdc:Aluminum a mdc:Material ;
+    mdc:label "Aluminum" ;
+    mdc:materialId "aluminum" .
+
+mdc:ISO9001_2015 a mdc:Certification .
+
+mdc:Steel a mdc:Material ;
+    mdc:label "Steel" ;
+    mdc:materialId "steel" .
+
+mdc:AlloyedCarburizingSteel a mdc:Material ;
+    mdc:label "Alloyed carburizing steel" ;
+    mdc:materialId "alloyed_carburizing_steel" .
+

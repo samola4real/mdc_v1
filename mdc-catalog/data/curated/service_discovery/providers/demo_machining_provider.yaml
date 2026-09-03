@@ -1,0 +1,77 @@
+provider:
+  provider_id: demo_machining_provider
+  display_name: Demo Machining Provider
+  country: Finland
+  certifications:
+    - code: ISO9001_2015
+      source_type: curated
+      confidence: curated
+offerings:
+  - offering_id: demo_machining_provider_precision_shafts
+    provider_id: demo_machining_provider
+    service_category: precision_shafts
+    name: Precision shafts
+    part_family: shaft
+    support_status: confirmed
+    supported_part_types: []
+    family_capabilities:
+      outer_diameter_mm:
+        min: 5
+        max: 300
+        source_type: curated
+        confidence: curated
+        source_note: Legacy demo diameter_mm mapped to harmonized shaft outer_diameter_mm.
+    part_type_capabilities: {}
+    generic_capabilities:
+      materials:
+        - material: steel
+          available_grades:
+            - 42CrMo4
+          source_type: curated
+          confidence: curated
+        - material: aluminum
+          available_grades:
+            - Al6082
+          source_type: curated
+          confidence: curated
+      processes:
+        - process: machining
+          delivery_mode: unspecified
+          source_type: curated
+          confidence: curated
+        - process: turning
+          delivery_mode: unspecified
+          source_type: curated
+          confidence: curated
+        - process: milling
+          delivery_mode: unspecified
+          source_type: curated
+          confidence: curated
+        - process: grinding
+          delivery_mode: unspecified
+          source_type: curated
+          confidence: curated
+      batch_size:
+        min: 10
+        max: 500
+        unit: pcs
+        source_type: curated
+        confidence: curated
+      lead_time_weeks:
+        min: 4
+        max: 8
+        qualifier: normal_case_dependent
+        source_type: curated
+        confidence: curated
+      weight_kg:
+        max: 100
+        approximate: true
+        source_type: curated
+        confidence: curated
+      surface_finish_ra_um:
+        max: 3.2
+        source_type: curated
+        confidence: curated
+publication_metadata:
+  source_type: curated
+  confidence: curated

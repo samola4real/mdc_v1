@@ -1,0 +1,43 @@
+# Virtual environments
+.venv/
+venv/
+
+# Editor settings
+.vscode/
+
+# Local documentation and development notes
+docs/
+mdc-catalog/docs/
+Chat_MDC_Dev/
+MDC_Dev_chat/
+new_Phases.md
+
+# Python cache files and test output
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Local environment and secret files
+.env
+.env.*
+!.env.example
+!mdc-catalog/.env.example
+
+# Django/local runtime artifacts
+db.sqlite3
+*.sqlite3
+staticfiles/
+media/
+*.log
+mdc-catalog/data/demo/provider_demo_state*.json
+
+# OS and office temp files
+.DS_Store
+Thumbs.db
+~$*.xlsx
+
+# Duplicate local data archives
+mdc-catalog/data/curated/*.zip

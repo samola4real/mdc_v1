@@ -1,0 +1,763 @@
+@prefix mdc: <https://maasai-project.eu/ontology/mdc#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+mdc:available_grade_evidence_demo_machining_provider_precision_shafts_aluminum_0 a mdc:AvailableGradeEvidence ;
+    mdc:availableGrade "Al6082" ;
+    mdc:sequenceIndex 0 .
+
+mdc:available_grade_evidence_demo_machining_provider_precision_shafts_steel_0 a mdc:AvailableGradeEvidence ;
+    mdc:availableGrade "42CrMo4" ;
+    mdc:sequenceIndex 0 .
+
+mdc:available_grade_evidence_tasowheel_precision_gears_alloyed_carburizing_steel_0 a mdc:AvailableGradeEvidence ;
+    mdc:availableGrade "18CrNiMo7-6" ;
+    mdc:sequenceIndex 0 .
+
+mdc:available_grade_evidence_tasowheel_precision_gears_alloyed_carburizing_steel_1 a mdc:AvailableGradeEvidence ;
+    mdc:availableGrade "16MnCr5" ;
+    mdc:sequenceIndex 1 .
+
+mdc:available_grade_evidence_tasowheel_precision_gears_alloyed_carburizing_steel_2 a mdc:AvailableGradeEvidence ;
+    mdc:availableGrade "20MnCr5" ;
+    mdc:sequenceIndex 2 .
+
+mdc:available_grade_evidence_tasowheel_precision_shafts_alloyed_carburizing_steel_0 a mdc:AvailableGradeEvidence ;
+    mdc:availableGrade "18CrNiMo7-6" ;
+    mdc:sequenceIndex 0 .
+
+mdc:available_grade_evidence_tasowheel_precision_shafts_alloyed_carburizing_steel_1 a mdc:AvailableGradeEvidence ;
+    mdc:availableGrade "16MnCr5" ;
+    mdc:sequenceIndex 1 .
+
+mdc:available_grade_evidence_tasowheel_precision_shafts_alloyed_carburizing_steel_2 a mdc:AvailableGradeEvidence ;
+    mdc:availableGrade "20MnCr5" ;
+    mdc:sequenceIndex 2 .
+
+mdc:certification_evidence_demo_machining_provider_ISO9001_2015 a mdc:CertificationEvidence ;
+    mdc:certification mdc:ISO90012015 ;
+    mdc:certificationCode "ISO9001_2015" ;
+    mdc:confidence "curated" ;
+    mdc:sequenceIndex 0 ;
+    mdc:sourceType "curated" .
+
+mdc:certification_evidence_tasowheel_APQP a mdc:CertificationEvidence ;
+    mdc:certification mdc:APQP ;
+    mdc:certificationCode "APQP" ;
+    mdc:confidence "declared" ;
+    mdc:sequenceIndex 3 ;
+    mdc:sourceType "provider_confirmed" .
+
+mdc:certification_evidence_tasowheel_ISO14001_2015 a mdc:CertificationEvidence ;
+    mdc:certification mdc:ISO140012015 ;
+    mdc:certificationCode "ISO14001_2015" ;
+    mdc:confidence "declared" ;
+    mdc:sequenceIndex 1 ;
+    mdc:sourceType "provider_confirmed" .
+
+mdc:certification_evidence_tasowheel_ISO9001_2015 a mdc:CertificationEvidence ;
+    mdc:certification mdc:ISO90012015 ;
+    mdc:certificationCode "ISO9001_2015" ;
+    mdc:confidence "declared" ;
+    mdc:sequenceIndex 0 ;
+    mdc:sourceType "provider_confirmed" .
+
+mdc:certification_evidence_tasowheel_ISO_TS_16949_partial a mdc:CertificationEvidence ;
+    mdc:certification mdc:ISO_TS_16949_partial ;
+    mdc:certificationCode "ISO_TS_16949_partial" ;
+    mdc:confidence "declared" ;
+    mdc:sequenceIndex 2 ;
+    mdc:sourceType "provider_confirmed" .
+
+mdc:family_capability_demo_machining_provider_precision_shafts_outer_diameter_mm a mdc:CapabilityEvidence ;
+    mdc:capabilityField mdc:OuterDiameterMm ;
+    mdc:confidence "curated" ;
+    mdc:fieldCode "outer_diameter_mm" ;
+    mdc:maxValue 300 ;
+    mdc:minValue 5 ;
+    mdc:sourceNote "Legacy demo diameter_mm mapped to harmonized shaft outer_diameter_mm." ;
+    mdc:sourceType "curated" .
+
+mdc:family_capability_precipart_precision_gears_diametral_pitch a mdc:CapabilityEvidence ;
+    mdc:capabilityField mdc:DiametralPitch ;
+    mdc:confidence "publicly_confirmed" ;
+    mdc:fieldCode "diametral_pitch" ;
+    mdc:maxValue 200 ;
+    mdc:minValue 16 ;
+    mdc:sourceType "public_web" .
+
+mdc:family_capability_precipart_precision_gears_gear_quality a mdc:CapabilityEvidence ;
+    mdc:bestClass 5 ;
+    mdc:capabilityField mdc:GearQuality ;
+    mdc:comparisonRule "lower_or_equal_is_better" ;
+    mdc:confidence "publicly_confirmed" ;
+    mdc:fieldCode "gear_quality" ;
+    mdc:qualityStandard "ISO" ;
+    mdc:sourceNote "Source lists ISO 5 among supported gear quality references." ;
+    mdc:sourceType "public_web" .
+
+mdc:family_capability_precipart_precision_gears_module a mdc:CapabilityEvidence ;
+    mdc:capabilityField mdc:Module ;
+    mdc:confidence "publicly_confirmed" ;
+    mdc:fieldCode "module" ;
+    mdc:maxValue 1.5 ;
+    mdc:minValue 0.125 ;
+    mdc:sourceNote "Source field module_mm mapped to harmonized module." ;
+    mdc:sourceType "public_web" .
+
+mdc:family_capability_precipart_precision_gears_outside_diameter_mm a mdc:CapabilityEvidence ;
+    mdc:capabilityField mdc:OutsideDiameterMm ;
+    mdc:confidence "publicly_confirmed" ;
+    mdc:fieldCode "outside_diameter_mm" ;
+    mdc:maxValue 102 ;
+    mdc:minValue 6 ;
+    mdc:sourceType "public_web" .
+
+mdc:family_capability_tasowheel_precision_gears_diametral_pitch a mdc:CapabilityEvidence ;
+    mdc:capabilityField mdc:DiametralPitch ;
+    mdc:confidence "declared" ;
+    mdc:fieldCode "diametral_pitch" ;
+    mdc:maxValue 85 ;
+    mdc:minValue 2.5 ;
+    mdc:normalizedOrder "ascending" ;
+    mdc:rawValue "DP 85-2.5" ;
+    mdc:sourceNote "Raw DP value preserved from TSW questionnaire." ;
+    mdc:sourceType "provider_confirmed" .
+
+mdc:family_capability_tasowheel_precision_gears_gear_quality a mdc:CapabilityEvidence ;
+    mdc:bestClass 4 ;
+    mdc:capabilityField mdc:GearQuality ;
+    mdc:comparisonRule "lower_or_equal_is_better" ;
+    mdc:confidence "declared" ;
+    mdc:fieldCode "gear_quality" ;
+    mdc:qualityStandard "DIN" ;
+    mdc:sourceNote "TSW questionnaire states quality demands up to DIN4." ;
+    mdc:sourceType "provider_confirmed" .
+
+mdc:family_capability_tasowheel_precision_gears_module a mdc:CapabilityEvidence ;
+    mdc:capabilityField mdc:Module ;
+    mdc:confidence "declared" ;
+    mdc:fieldCode "module" ;
+    mdc:maxValue 10 ;
+    mdc:minValue 0.3 ;
+    mdc:sourceNote "TSW questionnaire states module range 0.3-10." ;
+    mdc:sourceType "provider_confirmed" .
+
+mdc:family_capability_tasowheel_precision_gears_outside_diameter_mm a mdc:CapabilityEvidence ;
+    mdc:capabilityField mdc:OutsideDiameterMm ;
+    mdc:confidence "declared" ;
+    mdc:fieldCode "outside_diameter_mm" ;
+    mdc:maxValue 450 ;
+    mdc:minValue 10 ;
+    mdc:sourceNote "Legacy diameter_mm mapped to harmonized gear outside_diameter_mm." ;
+    mdc:sourceType "provider_confirmed" .
+
+mdc:family_capability_tasowheel_precision_shafts_length_mm a mdc:CapabilityEvidence ;
+    mdc:capabilityField mdc:LengthMm ;
+    mdc:confidence "publicly_confirmed" ;
+    mdc:fieldCode "length_mm" ;
+    mdc:maxValue 500 ;
+    mdc:sourceNote "Tasowheel publicly states that shafts up to 500 mm in length can be produced." ;
+    mdc:sourceType "public_web" .
+
+mdc:family_capability_tasowheel_precision_shafts_outer_diameter_mm a mdc:CapabilityEvidence ;
+    mdc:capabilityField mdc:OuterDiameterMm ;
+    mdc:confidence "declared" ;
+    mdc:fieldCode "outer_diameter_mm" ;
+    mdc:maxValue 450 ;
+    mdc:minValue 10 ;
+    mdc:sourceNote "Legacy diameter_mm mapped to harmonized shaft outer_diameter_mm." ;
+    mdc:sourceType "provider_confirmed" .
+
+mdc:generic_capability_demo_machining_provider_precision_shafts_batch_size a mdc:CapabilityEvidence ;
+    mdc:capabilityField mdc:BatchSize ;
+    mdc:confidence "curated" ;
+    mdc:fieldCode "batch_size" ;
+    mdc:maxValue 500 ;
+    mdc:minValue 10 ;
+    mdc:sourceType "curated" ;
+    mdc:unit "pcs" .
+
+mdc:generic_capability_demo_machining_provider_precision_shafts_lead_time_weeks a mdc:CapabilityEvidence ;
+    mdc:capabilityField mdc:LeadTimeWeeks ;
+    mdc:confidence "curated" ;
+    mdc:fieldCode "lead_time_weeks" ;
+    mdc:maxValue 8 ;
+    mdc:minValue 4 ;
+    mdc:qualifier "normal_case_dependent" ;
+    mdc:sourceType "curated" .
+
+mdc:generic_capability_demo_machining_provider_precision_shafts_surface_finish_ra_um a mdc:CapabilityEvidence ;
+    mdc:capabilityField mdc:SurfaceFinishRaUm ;
+    mdc:confidence "curated" ;
+    mdc:fieldCode "surface_finish_ra_um" ;
+    mdc:maxValue 3.2 ;
+    mdc:sourceType "curated" .
+
+mdc:generic_capability_demo_machining_provider_precision_shafts_weight_kg a mdc:CapabilityEvidence ;
+    mdc:approximate true ;
+    mdc:capabilityField mdc:WeightKg ;
+    mdc:confidence "curated" ;
+    mdc:fieldCode "weight_kg" ;
+    mdc:maxValue 100 ;
+    mdc:sourceType "curated" .
+
+mdc:generic_capability_tasowheel_precision_gears_batch_size a mdc:CapabilityEvidence ;
+    mdc:capabilityField mdc:BatchSize ;
+    mdc:confidence "declared" ;
+    mdc:fieldCode "batch_size" ;
+    mdc:maxValue 2000 ;
+    mdc:minValue 100 ;
+    mdc:sourceNote "TSW questionnaire states batch sizes 100-2000 pcs." ;
+    mdc:sourceType "provider_confirmed" ;
+    mdc:unit "pcs" .
+
+mdc:generic_capability_tasowheel_precision_gears_lead_time_weeks a mdc:CapabilityEvidence ;
+    mdc:capabilityField mdc:LeadTimeWeeks ;
+    mdc:confidence "declared" ;
+    mdc:fieldCode "lead_time_weeks" ;
+    mdc:maxValue 12 ;
+    mdc:minValue 8 ;
+    mdc:qualifier "normal_case_dependent" ;
+    mdc:sourceNote "TSW questionnaire states normal delivery time is 8-12 weeks and case dependent." ;
+    mdc:sourceType "provider_confirmed" .
+
+mdc:generic_capability_tasowheel_precision_gears_surface_finish_ra_um a mdc:CapabilityEvidence ;
+    mdc:capabilityField mdc:SurfaceFinishRaUm ;
+    mdc:confidence "unknown" ;
+    mdc:explicitNullField "max" ;
+    mdc:fieldCode "surface_finish_ra_um" ;
+    mdc:sourceNote "Surface roughness/Ra is not confirmed in v1 data." ;
+    mdc:sourceType "not_confirmed" .
+
+mdc:generic_capability_tasowheel_precision_gears_weight_kg a mdc:CapabilityEvidence ;
+    mdc:approximate true ;
+    mdc:capabilityField mdc:WeightKg ;
+    mdc:confidence "declared" ;
+    mdc:fieldCode "weight_kg" ;
+    mdc:maxValue 200 ;
+    mdc:sourceNote "TSW questionnaire states weights up to approximately 200 kg." ;
+    mdc:sourceType "provider_confirmed" .
+
+mdc:generic_capability_tasowheel_precision_shafts_batch_size a mdc:CapabilityEvidence ;
+    mdc:capabilityField mdc:BatchSize ;
+    mdc:confidence "declared" ;
+    mdc:fieldCode "batch_size" ;
+    mdc:maxValue 2000 ;
+    mdc:minValue 100 ;
+    mdc:sourceNote "TSW questionnaire states batch sizes 100-2000 pcs." ;
+    mdc:sourceType "provider_confirmed" ;
+    mdc:unit "pcs" .
+
+mdc:generic_capability_tasowheel_precision_shafts_lead_time_weeks a mdc:CapabilityEvidence ;
+    mdc:capabilityField mdc:LeadTimeWeeks ;
+    mdc:confidence "declared" ;
+    mdc:fieldCode "lead_time_weeks" ;
+    mdc:maxValue 12 ;
+    mdc:minValue 8 ;
+    mdc:qualifier "normal_case_dependent" ;
+    mdc:sourceNote "TSW questionnaire states normal delivery time is 8-12 weeks and case dependent." ;
+    mdc:sourceType "provider_confirmed" .
+
+mdc:generic_capability_tasowheel_precision_shafts_surface_finish_ra_um a mdc:CapabilityEvidence ;
+    mdc:capabilityField mdc:SurfaceFinishRaUm ;
+    mdc:confidence "unknown" ;
+    mdc:explicitNullField "max" ;
+    mdc:fieldCode "surface_finish_ra_um" ;
+    mdc:sourceNote "Surface roughness/Ra is not confirmed in v1 data." ;
+    mdc:sourceType "not_confirmed" .
+
+mdc:generic_capability_tasowheel_precision_shafts_weight_kg a mdc:CapabilityEvidence ;
+    mdc:approximate true ;
+    mdc:capabilityField mdc:WeightKg ;
+    mdc:confidence "declared" ;
+    mdc:fieldCode "weight_kg" ;
+    mdc:maxValue 200 ;
+    mdc:sourceNote "TSW questionnaire states weights up to approximately 200 kg." ;
+    mdc:sourceType "provider_confirmed" .
+
+mdc:material_evidence_demo_machining_provider_precision_shafts_aluminum a mdc:MaterialEvidence ;
+    mdc:availableGrade "Al6082" ;
+    mdc:confidence "curated" ;
+    mdc:hasAvailableGradeEvidence mdc:available_grade_evidence_demo_machining_provider_precision_shafts_aluminum_0 ;
+    mdc:material mdc:Aluminum ;
+    mdc:materialCode "aluminum" ;
+    mdc:sequenceIndex 1 ;
+    mdc:sourceType "curated" .
+
+mdc:material_evidence_demo_machining_provider_precision_shafts_steel a mdc:MaterialEvidence ;
+    mdc:availableGrade "42CrMo4" ;
+    mdc:confidence "curated" ;
+    mdc:hasAvailableGradeEvidence mdc:available_grade_evidence_demo_machining_provider_precision_shafts_steel_0 ;
+    mdc:material mdc:Steel ;
+    mdc:materialCode "steel" ;
+    mdc:sequenceIndex 0 ;
+    mdc:sourceType "curated" .
+
+mdc:material_evidence_tasowheel_precision_gears_alloyed_carburizing_steel a mdc:MaterialEvidence ;
+    mdc:availableGrade "16MnCr5",
+        "18CrNiMo7-6",
+        "20MnCr5" ;
+    mdc:confidence "declared" ;
+    mdc:hasAvailableGradeEvidence mdc:available_grade_evidence_tasowheel_precision_gears_alloyed_carburizing_steel_0,
+        mdc:available_grade_evidence_tasowheel_precision_gears_alloyed_carburizing_steel_1,
+        mdc:available_grade_evidence_tasowheel_precision_gears_alloyed_carburizing_steel_2 ;
+    mdc:material mdc:AlloyedCarburizingSteel ;
+    mdc:materialCode "alloyed_carburizing_steel" ;
+    mdc:sequenceIndex 0 ;
+    mdc:sourceNote "Additional commonly used alloyed carburizing steels are supported, but individual additional grades are not enumerated in the current evidence." ;
+    mdc:sourceType "provider_confirmed" .
+
+mdc:material_evidence_tasowheel_precision_shafts_alloyed_carburizing_steel a mdc:MaterialEvidence ;
+    mdc:availableGrade "16MnCr5",
+        "18CrNiMo7-6",
+        "20MnCr5" ;
+    mdc:confidence "declared" ;
+    mdc:hasAvailableGradeEvidence mdc:available_grade_evidence_tasowheel_precision_shafts_alloyed_carburizing_steel_0,
+        mdc:available_grade_evidence_tasowheel_precision_shafts_alloyed_carburizing_steel_1,
+        mdc:available_grade_evidence_tasowheel_precision_shafts_alloyed_carburizing_steel_2 ;
+    mdc:material mdc:AlloyedCarburizingSteel ;
+    mdc:materialCode "alloyed_carburizing_steel" ;
+    mdc:sequenceIndex 0 ;
+    mdc:sourceNote "Additional commonly used alloyed carburizing steels are supported, but individual additional grades are not enumerated in the current evidence." ;
+    mdc:sourceType "provider_confirmed" .
+
+mdc:offering_demo_machining_provider_precision_shafts a mdc:ProviderOffering ;
+    mdc:displayName "Precision shafts" ;
+    mdc:hasFamilyCapability mdc:family_capability_demo_machining_provider_precision_shafts_outer_diameter_mm ;
+    mdc:hasGenericCapability mdc:generic_capability_demo_machining_provider_precision_shafts_batch_size,
+        mdc:generic_capability_demo_machining_provider_precision_shafts_lead_time_weeks,
+        mdc:generic_capability_demo_machining_provider_precision_shafts_surface_finish_ra_um,
+        mdc:generic_capability_demo_machining_provider_precision_shafts_weight_kg ;
+    mdc:hasMaterialEvidence mdc:material_evidence_demo_machining_provider_precision_shafts_aluminum,
+        mdc:material_evidence_demo_machining_provider_precision_shafts_steel ;
+    mdc:hasProcessEvidence mdc:process_evidence_demo_machining_provider_precision_shafts_grinding,
+        mdc:process_evidence_demo_machining_provider_precision_shafts_machining,
+        mdc:process_evidence_demo_machining_provider_precision_shafts_milling,
+        mdc:process_evidence_demo_machining_provider_precision_shafts_turning ;
+    mdc:offeredBy mdc:provider_demo_machining_provider ;
+    mdc:offeringId "demo_machining_provider_precision_shafts" ;
+    mdc:providerId "demo_machining_provider" ;
+    mdc:serviceCategory mdc:PrecisionShafts ;
+    mdc:supportStatus "confirmed" ;
+    mdc:supportsPartFamily mdc:Shaft .
+
+mdc:offering_precipart_precision_gears a mdc:ProviderOffering ;
+    mdc:displayName "High-precision custom gears" ;
+    mdc:hasFamilyCapability mdc:family_capability_precipart_precision_gears_diametral_pitch,
+        mdc:family_capability_precipart_precision_gears_gear_quality,
+        mdc:family_capability_precipart_precision_gears_module,
+        mdc:family_capability_precipart_precision_gears_outside_diameter_mm ;
+    mdc:hasPartTypeSupport mdc:part_type_support_precipart_precision_gears_crown_gear,
+        mdc:part_type_support_precipart_precision_gears_helical_gear,
+        mdc:part_type_support_precipart_precision_gears_spur_gear,
+        mdc:part_type_support_precipart_precision_gears_worm_gear ;
+    mdc:offeredBy mdc:provider_precipart ;
+    mdc:offeringId "precipart_precision_gears" ;
+    mdc:providerId "precipart" ;
+    mdc:serviceCategory mdc:PrecisionGears ;
+    mdc:supportStatus "confirmed" ;
+    mdc:supportsPartFamily mdc:Gear .
+
+mdc:offering_tasowheel_precision_gears a mdc:ProviderOffering ;
+    mdc:displayName "Precision gears" ;
+    mdc:hasFamilyCapability mdc:family_capability_tasowheel_precision_gears_diametral_pitch,
+        mdc:family_capability_tasowheel_precision_gears_gear_quality,
+        mdc:family_capability_tasowheel_precision_gears_module,
+        mdc:family_capability_tasowheel_precision_gears_outside_diameter_mm ;
+    mdc:hasGenericCapability mdc:generic_capability_tasowheel_precision_gears_batch_size,
+        mdc:generic_capability_tasowheel_precision_gears_lead_time_weeks,
+        mdc:generic_capability_tasowheel_precision_gears_surface_finish_ra_um,
+        mdc:generic_capability_tasowheel_precision_gears_weight_kg ;
+    mdc:hasMaterialEvidence mdc:material_evidence_tasowheel_precision_gears_alloyed_carburizing_steel ;
+    mdc:hasPartTypeSupport mdc:part_type_support_tasowheel_precision_gears_bevel_gear,
+        mdc:part_type_support_tasowheel_precision_gears_helical_gear,
+        mdc:part_type_support_tasowheel_precision_gears_spur_gear,
+        mdc:part_type_support_tasowheel_precision_gears_worm_gear ;
+    mdc:hasProcessEvidence mdc:process_evidence_tasowheel_precision_gears_deburring,
+        mdc:process_evidence_tasowheel_precision_gears_gear_cutting,
+        mdc:process_evidence_tasowheel_precision_gears_gear_grinding,
+        mdc:process_evidence_tasowheel_precision_gears_gear_shaping,
+        mdc:process_evidence_tasowheel_precision_gears_grinding,
+        mdc:process_evidence_tasowheel_precision_gears_hard_turning,
+        mdc:process_evidence_tasowheel_precision_gears_hobbing,
+        mdc:process_evidence_tasowheel_precision_gears_machining,
+        mdc:process_evidence_tasowheel_precision_gears_milling,
+        mdc:process_evidence_tasowheel_precision_gears_surface_grinding,
+        mdc:process_evidence_tasowheel_precision_gears_tooth_grinding,
+        mdc:process_evidence_tasowheel_precision_gears_turn_mill ;
+    mdc:offeredBy mdc:provider_tasowheel ;
+    mdc:offeringId "tasowheel_precision_gears" ;
+    mdc:providerId "tasowheel" ;
+    mdc:serviceCategory mdc:PrecisionGears ;
+    mdc:supportStatus "confirmed" ;
+    mdc:supportsPartFamily mdc:Gear .
+
+mdc:offering_tasowheel_precision_shafts a mdc:ProviderOffering ;
+    mdc:displayName "Precision shafts" ;
+    mdc:hasFamilyCapability mdc:family_capability_tasowheel_precision_shafts_length_mm,
+        mdc:family_capability_tasowheel_precision_shafts_outer_diameter_mm ;
+    mdc:hasGenericCapability mdc:generic_capability_tasowheel_precision_shafts_batch_size,
+        mdc:generic_capability_tasowheel_precision_shafts_lead_time_weeks,
+        mdc:generic_capability_tasowheel_precision_shafts_surface_finish_ra_um,
+        mdc:generic_capability_tasowheel_precision_shafts_weight_kg ;
+    mdc:hasMaterialEvidence mdc:material_evidence_tasowheel_precision_shafts_alloyed_carburizing_steel ;
+    mdc:hasPartTypeCapability mdc:part_type_capability_tasowheel_precision_shafts_splined_shaft_spline_module ;
+    mdc:hasPartTypeSupport mdc:part_type_support_tasowheel_precision_shafts_hollow_shaft,
+        mdc:part_type_support_tasowheel_precision_shafts_plain_shaft,
+        mdc:part_type_support_tasowheel_precision_shafts_splined_shaft ;
+    mdc:hasProcessEvidence mdc:process_evidence_tasowheel_precision_shafts_deburring,
+        mdc:process_evidence_tasowheel_precision_shafts_gear_cutting,
+        mdc:process_evidence_tasowheel_precision_shafts_gear_grinding,
+        mdc:process_evidence_tasowheel_precision_shafts_gear_shaping,
+        mdc:process_evidence_tasowheel_precision_shafts_grinding,
+        mdc:process_evidence_tasowheel_precision_shafts_hard_turning,
+        mdc:process_evidence_tasowheel_precision_shafts_hobbing,
+        mdc:process_evidence_tasowheel_precision_shafts_machining,
+        mdc:process_evidence_tasowheel_precision_shafts_milling,
+        mdc:process_evidence_tasowheel_precision_shafts_surface_grinding,
+        mdc:process_evidence_tasowheel_precision_shafts_tooth_grinding,
+        mdc:process_evidence_tasowheel_precision_shafts_turn_mill ;
+    mdc:offeredBy mdc:provider_tasowheel ;
+    mdc:offeringId "tasowheel_precision_shafts" ;
+    mdc:providerId "tasowheel" ;
+    mdc:serviceCategory mdc:PrecisionShafts ;
+    mdc:supportStatus "confirmed" ;
+    mdc:supportsPartFamily mdc:Shaft .
+
+mdc:part_type_capability_tasowheel_precision_shafts_splined_shaft_spline_module a mdc:CapabilityEvidence ;
+    mdc:appliesToPartType mdc:SplinedShaft ;
+    mdc:capabilityField mdc:SplineModule ;
+    mdc:confidence "declared" ;
+    mdc:fieldCode "spline_module" ;
+    mdc:maxValue 10 ;
+    mdc:minValue 0.3 ;
+    mdc:partTypeCode "splined_shaft" ;
+    mdc:sourceNote "Tasowheel confirms the module range applies to the shafts it produces; under the current MDC schema this is represented only for the confirmed splined_shaft subtype." ;
+    mdc:sourceType "provider_confirmed" .
+
+mdc:part_type_support_precipart_precision_gears_crown_gear a mdc:PartTypeSupportEvidence ;
+    mdc:confidence "inferred" ;
+    mdc:partType mdc:CrownGear ;
+    mdc:partTypeCode "crown_gear" ;
+    mdc:sourceNote "Source lists face_gear and records crown_gear as a candidate mapping requiring confirmation." ;
+    mdc:sourceType "public_web" ;
+    mdc:supportStatus "candidate_requiring_confirmation" .
+
+mdc:part_type_support_precipart_precision_gears_helical_gear a mdc:PartTypeSupportEvidence ;
+    mdc:confidence "publicly_confirmed" ;
+    mdc:partType mdc:HelicalGear ;
+    mdc:partTypeCode "helical_gear" ;
+    mdc:sourceType "public_web" ;
+    mdc:supportStatus "confirmed" .
+
+mdc:part_type_support_precipart_precision_gears_spur_gear a mdc:PartTypeSupportEvidence ;
+    mdc:confidence "publicly_confirmed" ;
+    mdc:partType mdc:SpurGear ;
+    mdc:partTypeCode "spur_gear" ;
+    mdc:sourceType "public_web" ;
+    mdc:supportStatus "confirmed" .
+
+mdc:part_type_support_precipart_precision_gears_worm_gear a mdc:PartTypeSupportEvidence ;
+    mdc:confidence "publicly_confirmed" ;
+    mdc:partType mdc:WormGear ;
+    mdc:partTypeCode "worm_gear" ;
+    mdc:sourceType "public_web" ;
+    mdc:supportStatus "confirmed" .
+
+mdc:part_type_support_tasowheel_precision_gears_bevel_gear a mdc:PartTypeSupportEvidence ;
+    mdc:confidence "declared" ;
+    mdc:partType mdc:BevelGear ;
+    mdc:partTypeCode "bevel_gear" ;
+    mdc:sourceType "provider_confirmed" ;
+    mdc:supportStatus "confirmed" .
+
+mdc:part_type_support_tasowheel_precision_gears_helical_gear a mdc:PartTypeSupportEvidence ;
+    mdc:confidence "declared" ;
+    mdc:partType mdc:HelicalGear ;
+    mdc:partTypeCode "helical_gear" ;
+    mdc:sourceType "provider_confirmed" ;
+    mdc:supportStatus "confirmed" .
+
+mdc:part_type_support_tasowheel_precision_gears_spur_gear a mdc:PartTypeSupportEvidence ;
+    mdc:confidence "declared" ;
+    mdc:partType mdc:SpurGear ;
+    mdc:partTypeCode "spur_gear" ;
+    mdc:sourceType "provider_confirmed" ;
+    mdc:supportStatus "confirmed" .
+
+mdc:part_type_support_tasowheel_precision_gears_worm_gear a mdc:PartTypeSupportEvidence ;
+    mdc:confidence "declared" ;
+    mdc:partType mdc:WormGear ;
+    mdc:partTypeCode "worm_gear" ;
+    mdc:sourceType "provider_confirmed" ;
+    mdc:supportStatus "confirmed" .
+
+mdc:part_type_support_tasowheel_precision_shafts_hollow_shaft a mdc:PartTypeSupportEvidence ;
+    mdc:confidence "declared" ;
+    mdc:partType mdc:HollowShaft ;
+    mdc:partTypeCode "hollow_shaft" ;
+    mdc:sourceType "provider_confirmed" ;
+    mdc:supportStatus "confirmed" .
+
+mdc:part_type_support_tasowheel_precision_shafts_plain_shaft a mdc:PartTypeSupportEvidence ;
+    mdc:confidence "declared" ;
+    mdc:partType mdc:PlainShaft ;
+    mdc:partTypeCode "plain_shaft" ;
+    mdc:sourceType "provider_confirmed" ;
+    mdc:supportStatus "confirmed" .
+
+mdc:part_type_support_tasowheel_precision_shafts_splined_shaft a mdc:PartTypeSupportEvidence ;
+    mdc:confidence "declared" ;
+    mdc:partType mdc:SplinedShaft ;
+    mdc:partTypeCode "splined_shaft" ;
+    mdc:sourceType "provider_confirmed" ;
+    mdc:supportStatus "confirmed" .
+
+mdc:process_evidence_demo_machining_provider_precision_shafts_grinding a mdc:ProcessEvidence ;
+    mdc:confidence "curated" ;
+    mdc:deliveryMode "unspecified" ;
+    mdc:process mdc:Grinding ;
+    mdc:processCode "grinding" ;
+    mdc:sequenceIndex 3 ;
+    mdc:sourceType "curated" .
+
+mdc:process_evidence_demo_machining_provider_precision_shafts_machining a mdc:ProcessEvidence ;
+    mdc:confidence "curated" ;
+    mdc:deliveryMode "unspecified" ;
+    mdc:process mdc:Machining ;
+    mdc:processCode "machining" ;
+    mdc:sequenceIndex 0 ;
+    mdc:sourceType "curated" .
+
+mdc:process_evidence_demo_machining_provider_precision_shafts_milling a mdc:ProcessEvidence ;
+    mdc:confidence "curated" ;
+    mdc:deliveryMode "unspecified" ;
+    mdc:process mdc:Milling ;
+    mdc:processCode "milling" ;
+    mdc:sequenceIndex 2 ;
+    mdc:sourceType "curated" .
+
+mdc:process_evidence_demo_machining_provider_precision_shafts_turning a mdc:ProcessEvidence ;
+    mdc:confidence "curated" ;
+    mdc:deliveryMode "unspecified" ;
+    mdc:process mdc:Turning ;
+    mdc:processCode "turning" ;
+    mdc:sequenceIndex 1 ;
+    mdc:sourceType "curated" .
+
+mdc:process_evidence_tasowheel_precision_gears_deburring a mdc:ProcessEvidence ;
+    mdc:confidence "declared" ;
+    mdc:deliveryMode "unspecified" ;
+    mdc:process mdc:Deburring ;
+    mdc:processCode "deburring" ;
+    mdc:sequenceIndex 3 ;
+    mdc:sourceType "provider_confirmed" .
+
+mdc:process_evidence_tasowheel_precision_gears_gear_cutting a mdc:ProcessEvidence ;
+    mdc:confidence "declared" ;
+    mdc:deliveryMode "unspecified" ;
+    mdc:process mdc:GearCutting ;
+    mdc:processCode "gear_cutting" ;
+    mdc:sequenceIndex 8 ;
+    mdc:sourceType "provider_confirmed" .
+
+mdc:process_evidence_tasowheel_precision_gears_gear_grinding a mdc:ProcessEvidence ;
+    mdc:confidence "declared" ;
+    mdc:deliveryMode "unspecified" ;
+    mdc:process mdc:GearGrinding ;
+    mdc:processCode "gear_grinding" ;
+    mdc:sequenceIndex 7 ;
+    mdc:sourceType "provider_confirmed" .
+
+mdc:process_evidence_tasowheel_precision_gears_gear_shaping a mdc:ProcessEvidence ;
+    mdc:confidence "declared" ;
+    mdc:deliveryMode "unspecified" ;
+    mdc:process mdc:GearShaping ;
+    mdc:processCode "gear_shaping" ;
+    mdc:sequenceIndex 2 ;
+    mdc:sourceType "provider_confirmed" .
+
+mdc:process_evidence_tasowheel_precision_gears_grinding a mdc:ProcessEvidence ;
+    mdc:confidence "declared" ;
+    mdc:deliveryMode "unspecified" ;
+    mdc:process mdc:Grinding ;
+    mdc:processCode "grinding" ;
+    mdc:sequenceIndex 5 ;
+    mdc:sourceType "provider_confirmed" .
+
+mdc:process_evidence_tasowheel_precision_gears_hard_turning a mdc:ProcessEvidence ;
+    mdc:confidence "declared" ;
+    mdc:deliveryMode "unspecified" ;
+    mdc:process mdc:HardTurning ;
+    mdc:processCode "hard_turning" ;
+    mdc:sequenceIndex 4 ;
+    mdc:sourceType "provider_confirmed" .
+
+mdc:process_evidence_tasowheel_precision_gears_hobbing a mdc:ProcessEvidence ;
+    mdc:confidence "declared" ;
+    mdc:deliveryMode "unspecified" ;
+    mdc:process mdc:Hobbing ;
+    mdc:processCode "hobbing" ;
+    mdc:sequenceIndex 1 ;
+    mdc:sourceType "provider_confirmed" .
+
+mdc:process_evidence_tasowheel_precision_gears_machining a mdc:ProcessEvidence ;
+    mdc:confidence "declared" ;
+    mdc:deliveryMode "unspecified" ;
+    mdc:process mdc:Machining ;
+    mdc:processCode "machining" ;
+    mdc:sequenceIndex 0 ;
+    mdc:sourceType "provider_confirmed" .
+
+mdc:process_evidence_tasowheel_precision_gears_milling a mdc:ProcessEvidence ;
+    mdc:confidence "declared" ;
+    mdc:deliveryMode "unspecified" ;
+    mdc:process mdc:Milling ;
+    mdc:processCode "milling" ;
+    mdc:sequenceIndex 10 ;
+    mdc:sourceType "provider_confirmed" .
+
+mdc:process_evidence_tasowheel_precision_gears_surface_grinding a mdc:ProcessEvidence ;
+    mdc:confidence "declared" ;
+    mdc:deliveryMode "unspecified" ;
+    mdc:process mdc:SurfaceGrinding ;
+    mdc:processCode "surface_grinding" ;
+    mdc:sequenceIndex 9 ;
+    mdc:sourceType "provider_confirmed" .
+
+mdc:process_evidence_tasowheel_precision_gears_tooth_grinding a mdc:ProcessEvidence ;
+    mdc:confidence "declared" ;
+    mdc:deliveryMode "unspecified" ;
+    mdc:process mdc:ToothGrinding ;
+    mdc:processCode "tooth_grinding" ;
+    mdc:sequenceIndex 6 ;
+    mdc:sourceType "provider_confirmed" .
+
+mdc:process_evidence_tasowheel_precision_gears_turn_mill a mdc:ProcessEvidence ;
+    mdc:confidence "declared" ;
+    mdc:deliveryMode "unspecified" ;
+    mdc:process mdc:TurnMill ;
+    mdc:processCode "turn_mill" ;
+    mdc:sequenceIndex 11 ;
+    mdc:sourceType "provider_confirmed" .
+
+mdc:process_evidence_tasowheel_precision_shafts_deburring a mdc:ProcessEvidence ;
+    mdc:confidence "declared" ;
+    mdc:deliveryMode "unspecified" ;
+    mdc:process mdc:Deburring ;
+    mdc:processCode "deburring" ;
+    mdc:sequenceIndex 3 ;
+    mdc:sourceType "provider_confirmed" .
+
+mdc:process_evidence_tasowheel_precision_shafts_gear_cutting a mdc:ProcessEvidence ;
+    mdc:confidence "declared" ;
+    mdc:deliveryMode "unspecified" ;
+    mdc:process mdc:GearCutting ;
+    mdc:processCode "gear_cutting" ;
+    mdc:sequenceIndex 8 ;
+    mdc:sourceType "provider_confirmed" .
+
+mdc:process_evidence_tasowheel_precision_shafts_gear_grinding a mdc:ProcessEvidence ;
+    mdc:confidence "declared" ;
+    mdc:deliveryMode "unspecified" ;
+    mdc:process mdc:GearGrinding ;
+    mdc:processCode "gear_grinding" ;
+    mdc:sequenceIndex 7 ;
+    mdc:sourceType "provider_confirmed" .
+
+mdc:process_evidence_tasowheel_precision_shafts_gear_shaping a mdc:ProcessEvidence ;
+    mdc:confidence "declared" ;
+    mdc:deliveryMode "unspecified" ;
+    mdc:process mdc:GearShaping ;
+    mdc:processCode "gear_shaping" ;
+    mdc:sequenceIndex 2 ;
+    mdc:sourceType "provider_confirmed" .
+
+mdc:process_evidence_tasowheel_precision_shafts_grinding a mdc:ProcessEvidence ;
+    mdc:confidence "declared" ;
+    mdc:deliveryMode "unspecified" ;
+    mdc:process mdc:Grinding ;
+    mdc:processCode "grinding" ;
+    mdc:sequenceIndex 5 ;
+    mdc:sourceType "provider_confirmed" .
+
+mdc:process_evidence_tasowheel_precision_shafts_hard_turning a mdc:ProcessEvidence ;
+    mdc:confidence "declared" ;
+    mdc:deliveryMode "unspecified" ;
+    mdc:process mdc:HardTurning ;
+    mdc:processCode "hard_turning" ;
+    mdc:sequenceIndex 4 ;
+    mdc:sourceType "provider_confirmed" .
+
+mdc:process_evidence_tasowheel_precision_shafts_hobbing a mdc:ProcessEvidence ;
+    mdc:confidence "declared" ;
+    mdc:deliveryMode "unspecified" ;
+    mdc:process mdc:Hobbing ;
+    mdc:processCode "hobbing" ;
+    mdc:sequenceIndex 1 ;
+    mdc:sourceType "provider_confirmed" .
+
+mdc:process_evidence_tasowheel_precision_shafts_machining a mdc:ProcessEvidence ;
+    mdc:confidence "declared" ;
+    mdc:deliveryMode "unspecified" ;
+    mdc:process mdc:Machining ;
+    mdc:processCode "machining" ;
+    mdc:sequenceIndex 0 ;
+    mdc:sourceType "provider_confirmed" .
+
+mdc:process_evidence_tasowheel_precision_shafts_milling a mdc:ProcessEvidence ;
+    mdc:confidence "declared" ;
+    mdc:deliveryMode "unspecified" ;
+    mdc:process mdc:Milling ;
+    mdc:processCode "milling" ;
+    mdc:sequenceIndex 10 ;
+    mdc:sourceType "provider_confirmed" .
+
+mdc:process_evidence_tasowheel_precision_shafts_surface_grinding a mdc:ProcessEvidence ;
+    mdc:confidence "declared" ;
+    mdc:deliveryMode "unspecified" ;
+    mdc:process mdc:SurfaceGrinding ;
+    mdc:processCode "surface_grinding" ;
+    mdc:sequenceIndex 9 ;
+    mdc:sourceType "provider_confirmed" .
+
+mdc:process_evidence_tasowheel_precision_shafts_tooth_grinding a mdc:ProcessEvidence ;
+    mdc:confidence "declared" ;
+    mdc:deliveryMode "unspecified" ;
+    mdc:process mdc:ToothGrinding ;
+    mdc:processCode "tooth_grinding" ;
+    mdc:sequenceIndex 6 ;
+    mdc:sourceType "provider_confirmed" .
+
+mdc:process_evidence_tasowheel_precision_shafts_turn_mill a mdc:ProcessEvidence ;
+    mdc:confidence "declared" ;
+    mdc:deliveryMode "unspecified" ;
+    mdc:process mdc:TurnMill ;
+    mdc:processCode "turn_mill" ;
+    mdc:sequenceIndex 11 ;
+    mdc:sourceType "provider_confirmed" .
+
+mdc:provider_demo_machining_provider a mdc:MaaSProvider ;
+    mdc:country "Finland" ;
+    mdc:displayName "Demo Machining Provider" ;
+    mdc:hasCertificationEvidence mdc:certification_evidence_demo_machining_provider_ISO9001_2015 ;
+    mdc:hasOffering mdc:offering_demo_machining_provider_precision_shafts ;
+    mdc:providerId "demo_machining_provider" .
+
+mdc:provider_precipart a mdc:MaaSProvider ;
+    mdc:country "Switzerland" ;
+    mdc:displayName "Precipart" ;
+    mdc:hasOffering mdc:offering_precipart_precision_gears ;
+    mdc:providerId "precipart" .
+
+mdc:provider_tasowheel a mdc:MaaSProvider ;
+    mdc:country "Finland" ;
+    mdc:displayName "Tasowheel Oy" ;
+    mdc:hasCertificationEvidence mdc:certification_evidence_tasowheel_APQP,
+        mdc:certification_evidence_tasowheel_ISO14001_2015,
+        mdc:certification_evidence_tasowheel_ISO9001_2015,
+        mdc:certification_evidence_tasowheel_ISO_TS_16949_partial ;
+    mdc:hasOffering mdc:offering_tasowheel_precision_gears,
+        mdc:offering_tasowheel_precision_shafts ;
+    mdc:providerId "tasowheel" .
+

@@ -1,0 +1,119 @@
+metadata:
+  dataset_id: demo_heat_treatment_provider_seed_v1
+  version: 1.0
+  status: curated_demo_seed
+  route_fields_included: false
+  notes:
+    - Demo heat-treatment provider for testing multi-provider catalogue loading.
+    - Not real provider data.
+    - Route/operation sequence fields are excluded from v1.
+
+providers:
+  - provider_id: demo_heat_treatment_provider
+    legal_name: Demo Heat Treatment Provider Oy
+    display_name: Demo Heat Treatment Provider
+    provider_type: MaaSProvider
+    country: Finland
+    source_type: curated
+    confidence: curated
+    facilities:
+      - facility_id: demo_heat_treatment_provider_main
+        city: Helsinki
+        country: Finland
+        confidence: curated
+    certifications:
+      - code: ISO9001_2015
+        label: ISO 9001:2015
+        confidence: curated
+        source_type: curated
+
+materials:
+  - material_id: steel
+    label: Steel
+    ontology_concept: mdc:Steel
+  - material_id: alloyed_carburizing_steel
+    label: Alloyed carburizing steel
+    ontology_concept: mdc:AlloyedCarburizingSteel
+    parent_material_id: steel
+
+material_grades: []
+
+offerings:
+  - offering_id: demo_heat_treatment_provider_heat_treatment
+    provider_id: demo_heat_treatment_provider
+    name: Demo heat treatment service
+    service_type: heat_treatment
+    ontology_service_concept: mdc:HeatTreatmentService
+    source_type: curated
+    confidence: curated
+    part_families:
+      - gear
+      - shaft
+      - transmission_component
+    processes:
+      - heat_treatment
+    supported_materials:
+      - material: steel
+        confidence: curated
+        source_type: curated
+      - material: alloyed_carburizing_steel
+        confidence: curated
+        source_type: curated
+    supported_material_grades: []
+    capabilities:
+      batch_size:
+        min: null
+        max: null
+        unit: pcs
+        confidence: unknown
+        source_type: not_confirmed
+      diameter_mm:
+        min: null
+        max: null
+        confidence: unknown
+        source_type: not_confirmed
+      weight_kg:
+        max: null
+        approximate: null
+        confidence: unknown
+        source_type: not_confirmed
+      module:
+        min: null
+        max: null
+        confidence: unknown
+        source_type: not_confirmed
+      diametral_pitch:
+        min: null
+        max: null
+        raw: null
+        normalized_order: null
+        confidence: unknown
+        source_type: not_confirmed
+      quality:
+        standard: null
+        best_class: null
+        comparison_rule: null
+        confidence: unknown
+        source_type: not_confirmed
+      lead_time_weeks:
+        min: 2
+        max: 6
+        qualifier: normal_case_dependent
+        confidence: curated
+        source_type: curated
+      surface_finish_ra_um:
+        max: null
+        confidence: unknown
+        source_type: not_confirmed
+      tolerance_mm:
+        min: null
+        confidence: unknown
+        source_type: not_confirmed
+      traceability:
+        aerospace_traceability: null
+        full_traceability: null
+        confidence: unknown
+        source_type: not_confirmed
+    notes:
+      - Demo heat-treatment provider used only for backend development tests.
+      - Capability fields with unknown values are intentionally kept explicit.

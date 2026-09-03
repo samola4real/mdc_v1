@@ -1,0 +1,280 @@
+provider:
+  provider_id: tasowheel
+  display_name: Tasowheel Oy
+  country: Finland
+  certifications:
+    - code: ISO9001_2015
+      source_type: provider_confirmed
+      confidence: declared
+    - code: ISO14001_2015
+      source_type: provider_confirmed
+      confidence: declared
+    - code: ISO_TS_16949_partial
+      source_type: provider_confirmed
+      confidence: declared
+    - code: APQP
+      source_type: provider_confirmed
+      confidence: declared
+offerings:
+  - offering_id: tasowheel_precision_gears
+    provider_id: tasowheel
+    service_category: precision_gears
+    name: Precision gears
+    part_family: gear
+    support_status: confirmed
+    supported_part_types:
+      - part_type: spur_gear
+        support_status: confirmed
+        source_type: provider_confirmed
+        confidence: declared
+      - part_type: helical_gear
+        support_status: confirmed
+        source_type: provider_confirmed
+        confidence: declared
+      - part_type: bevel_gear
+        support_status: confirmed
+        source_type: provider_confirmed
+        confidence: declared
+      - part_type: worm_gear
+        support_status: confirmed
+        source_type: provider_confirmed
+        confidence: declared
+    family_capabilities:
+      module:
+        min: 0.3
+        max: 10
+        source_type: provider_confirmed
+        confidence: declared
+        source_note: TSW questionnaire states module range 0.3-10.
+      diametral_pitch:
+        min: 2.5
+        max: 85
+        raw: DP 85-2.5
+        normalized_order: ascending
+        source_type: provider_confirmed
+        confidence: declared
+        source_note: Raw DP value preserved from TSW questionnaire.
+      outside_diameter_mm:
+        min: 10
+        max: 450
+        source_type: provider_confirmed
+        confidence: declared
+        source_note: Legacy diameter_mm mapped to harmonized gear outside_diameter_mm.
+      gear_quality:
+        standard: DIN
+        best_class: 4
+        comparison_rule: lower_or_equal_is_better
+        source_type: provider_confirmed
+        confidence: declared
+        source_note: TSW questionnaire states quality demands up to DIN4.
+    part_type_capabilities: {}
+    generic_capabilities:
+      materials:
+        - material: alloyed_carburizing_steel
+          available_grades:
+            - 18CrNiMo7-6
+            - 16MnCr5
+            - 20MnCr5
+          source_type: provider_confirmed
+          confidence: declared
+          source_note: Additional commonly used alloyed carburizing steels are supported, but individual additional grades are not enumerated in the current evidence.
+      processes:
+        - process: machining
+          delivery_mode: unspecified
+          source_type: provider_confirmed
+          confidence: declared
+        - process: hobbing
+          delivery_mode: unspecified
+          source_type: provider_confirmed
+          confidence: declared
+        - process: gear_shaping
+          delivery_mode: unspecified
+          source_type: provider_confirmed
+          confidence: declared
+        - process: deburring
+          delivery_mode: unspecified
+          source_type: provider_confirmed
+          confidence: declared
+        - process: hard_turning
+          delivery_mode: unspecified
+          source_type: provider_confirmed
+          confidence: declared
+        - process: grinding
+          delivery_mode: unspecified
+          source_type: provider_confirmed
+          confidence: declared
+        - process: tooth_grinding
+          delivery_mode: unspecified
+          source_type: provider_confirmed
+          confidence: declared
+        - process: gear_grinding
+          delivery_mode: unspecified
+          source_type: provider_confirmed
+          confidence: declared
+        - process: gear_cutting
+          delivery_mode: unspecified
+          source_type: provider_confirmed
+          confidence: declared
+        - process: surface_grinding
+          delivery_mode: unspecified
+          source_type: provider_confirmed
+          confidence: declared
+        - process: milling
+          delivery_mode: unspecified
+          source_type: provider_confirmed
+          confidence: declared
+        - process: turn_mill
+          delivery_mode: unspecified
+          source_type: provider_confirmed
+          confidence: declared
+      batch_size:
+        min: 100
+        max: 2000
+        unit: pcs
+        source_type: provider_confirmed
+        confidence: declared
+        source_note: TSW questionnaire states batch sizes 100-2000 pcs.
+      lead_time_weeks:
+        min: 8
+        max: 12
+        qualifier: normal_case_dependent
+        source_type: provider_confirmed
+        confidence: declared
+        source_note: TSW questionnaire states normal delivery time is 8-12 weeks and case dependent.
+      weight_kg:
+        max: 200
+        approximate: true
+        source_type: provider_confirmed
+        confidence: declared
+        source_note: TSW questionnaire states weights up to approximately 200 kg.
+      surface_finish_ra_um:
+        max: null
+        source_type: not_confirmed
+        confidence: unknown
+        source_note: Surface roughness/Ra is not confirmed in v1 data.
+  - offering_id: tasowheel_precision_shafts
+    provider_id: tasowheel
+    service_category: precision_shafts
+    name: Precision shafts
+    part_family: shaft
+    support_status: confirmed
+    supported_part_types:
+      - part_type: splined_shaft
+        support_status: confirmed
+        source_type: provider_confirmed
+        confidence: declared
+      - part_type: plain_shaft
+        support_status: confirmed
+        source_type: provider_confirmed
+        confidence: declared
+      - part_type: hollow_shaft
+        support_status: confirmed
+        source_type: provider_confirmed
+        confidence: declared
+    family_capabilities:
+      length_mm:
+        max: 500
+        source_type: public_web
+        confidence: publicly_confirmed
+        source_note: Tasowheel publicly states that shafts up to 500 mm in length can be produced.
+      outer_diameter_mm:
+        min: 10
+        max: 450
+        source_type: provider_confirmed
+        confidence: declared
+        source_note: Legacy diameter_mm mapped to harmonized shaft outer_diameter_mm.
+    part_type_capabilities:
+      splined_shaft:
+        spline_module:
+          min: 0.3
+          max: 10
+          source_type: provider_confirmed
+          confidence: declared
+          source_note: Tasowheel confirms the module range applies to the shafts it produces; under the current MDC schema this is represented only for the confirmed splined_shaft subtype.
+    generic_capabilities:
+      materials:
+        - material: alloyed_carburizing_steel
+          available_grades:
+            - 18CrNiMo7-6
+            - 16MnCr5
+            - 20MnCr5
+          source_type: provider_confirmed
+          confidence: declared
+          source_note: Additional commonly used alloyed carburizing steels are supported, but individual additional grades are not enumerated in the current evidence.
+      processes:
+        - process: machining
+          delivery_mode: unspecified
+          source_type: provider_confirmed
+          confidence: declared
+        - process: hobbing
+          delivery_mode: unspecified
+          source_type: provider_confirmed
+          confidence: declared
+        - process: gear_shaping
+          delivery_mode: unspecified
+          source_type: provider_confirmed
+          confidence: declared
+        - process: deburring
+          delivery_mode: unspecified
+          source_type: provider_confirmed
+          confidence: declared
+        - process: hard_turning
+          delivery_mode: unspecified
+          source_type: provider_confirmed
+          confidence: declared
+        - process: grinding
+          delivery_mode: unspecified
+          source_type: provider_confirmed
+          confidence: declared
+        - process: tooth_grinding
+          delivery_mode: unspecified
+          source_type: provider_confirmed
+          confidence: declared
+        - process: gear_grinding
+          delivery_mode: unspecified
+          source_type: provider_confirmed
+          confidence: declared
+        - process: gear_cutting
+          delivery_mode: unspecified
+          source_type: provider_confirmed
+          confidence: declared
+        - process: surface_grinding
+          delivery_mode: unspecified
+          source_type: provider_confirmed
+          confidence: declared
+        - process: milling
+          delivery_mode: unspecified
+          source_type: provider_confirmed
+          confidence: declared
+        - process: turn_mill
+          delivery_mode: unspecified
+          source_type: provider_confirmed
+          confidence: declared
+      batch_size:
+        min: 100
+        max: 2000
+        unit: pcs
+        source_type: provider_confirmed
+        confidence: declared
+        source_note: TSW questionnaire states batch sizes 100-2000 pcs.
+      lead_time_weeks:
+        min: 8
+        max: 12
+        qualifier: normal_case_dependent
+        source_type: provider_confirmed
+        confidence: declared
+        source_note: TSW questionnaire states normal delivery time is 8-12 weeks and case dependent.
+      weight_kg:
+        max: 200
+        approximate: true
+        source_type: provider_confirmed
+        confidence: declared
+        source_note: TSW questionnaire states weights up to approximately 200 kg.
+      surface_finish_ra_um:
+        max: null
+        source_type: not_confirmed
+        confidence: unknown
+        source_note: Surface roughness/Ra is not confirmed in v1 data.
+publication_metadata:
+  source_type: provider_confirmed
+  confidence: declared
