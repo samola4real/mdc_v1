@@ -60,6 +60,63 @@ A ChatGPT Vercel plugin is installed, but a direct plugin access check to the ex
 
 ---
 
+# Known Authorized Local `.gitignore` Cleanup
+
+A previous run stopped because the local worktree contained a modified root `.gitignore`.
+
+This specific local change is now understood and explicitly authorized by the user.
+
+Previously the root `.gitignore` contained:
+
+```text
+docs/
+mdc-catalog/docs/
+```
+
+Those rules are obsolete because the user intentionally decided to track MDC documentation and prompts in Git so ChatGPT/Codex can work with them.
+
+Remote `main` has already been corrected in commit:
+
+```text
+05a6f82332b257c92ad38d478603eee2844a21c3
+chore: track MDC documentation in git
+```
+
+The canonical remote `.gitignore` now keeps documentation tracked and does **not** ignore:
+
+```text
+docs/
+mdc-catalog/docs/
+```
+
+The previous local dirty diff also contained harmless/unwanted local edits such as blank-line changes and adding `.gitignore` to `.gitignore`.
+
+For this known blocker, Codex is explicitly authorized to reconcile the local root `.gitignore` to the current `origin/main` version. Do not stop merely because this known `.gitignore` modification exists.
+
+Safe intended procedure:
+
+```powershell
+cd C:\Users\Elahi\Desktop\mdc_v1
+git fetch origin
+git diff -- .gitignore
+git restore --source=origin/main -- .gitignore
+git pull --ff-only origin main
+git status
+```
+
+Equivalent safe Git commands are acceptable.
+
+Requirements:
+
+- only discard/reconcile the known root `.gitignore` modification described above;
+- do not discard unrelated user changes;
+- if any other modified/untracked files remain after `.gitignore` reconciliation, inspect them and stop only for genuinely unexpected user work;
+- confirm `mdc-catalog/docs/` remains tracked after synchronization;
+- do not re-add `docs/` or `mdc-catalog/docs/` to `.gitignore`;
+- do not add `.gitignore` to itself.
+
+---
+
 # Final API Decision
 
 There is NO URL-versioned public API family.
@@ -114,6 +171,8 @@ Do not change code unless deployment reveals a genuine defect.
 Complete the remaining M6.1 deployment gate:
 
 ```text
+reconcile known .gitignore blocker
+        ↓
 verify Vercel project/auth/settings
         ↓
 Preview deploy
@@ -137,10 +196,13 @@ From:
 C:\Users\Elahi\Desktop\mdc_v1
 ```
 
-1. Run `git status`.
-2. Pull `origin/main` if needed.
-3. Confirm local HEAD matches current remote main.
-4. Do not discard user changes if any exist. If unexpected local changes exist, stop and report them before deployment.
+1. Run `git status` and inspect the root `.gitignore` diff.
+2. If the only pre-existing modification is the known `.gitignore` change described above, reconcile it to `origin/main` using the authorized procedure in this prompt.
+3. Pull `origin/main` using fast-forward-only semantics where practical.
+4. Confirm local HEAD matches current remote main.
+5. Confirm `mdc-catalog/docs/` is tracked and not ignored.
+6. If unrelated local user changes exist, do not discard them; stop and report only those unrelated changes.
+7. Once the known `.gitignore` blocker is resolved and the worktree is otherwise safe, continue automatically to Vercel checks. Do not ask the user to perform these Git commands manually.
 
 Then work from:
 
@@ -495,22 +557,23 @@ Do not:
 
 Return only:
 
-1. CLI authentication status
-2. existing Vercel project-link status
-3. Preview environment configuration status
-4. Production environment configuration status
-5. Preview deployment URL/status
-6. Preview stable endpoint results
-7. Preview `/api/v1/...` 404 results
-8. Preview safety results
-9. Production deployment status
-10. production base URL
-11. Production stable endpoint results
-12. Production `/api/v1/...` 404 results
-13. Production safety results
-14. runtime error/log summary
-15. report update status/path
-16. Git commit hash/message
-17. `READY_TO_UPDATE_PARTNER_API_DOCUMENT` or `NOT_READY_TO_UPDATE_PARTNER_API_DOCUMENT`
+1. `.gitignore` reconciliation status
+2. CLI authentication status
+3. existing Vercel project-link status
+4. Preview environment configuration status
+5. Production environment configuration status
+6. Preview deployment URL/status
+7. Preview stable endpoint results
+8. Preview `/api/v1/...` 404 results
+9. Preview safety results
+10. Production deployment status
+11. production base URL
+12. Production stable endpoint results
+13. Production `/api/v1/...` 404 results
+14. Production safety results
+15. runtime error/log summary
+16. report update status/path
+17. Git commit hash/message
+18. `READY_TO_UPDATE_PARTNER_API_DOCUMENT` or `NOT_READY_TO_UPDATE_PARTNER_API_DOCUMENT`
 
 Do not start any next milestone automatically.
