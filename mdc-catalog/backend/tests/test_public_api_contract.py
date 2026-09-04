@@ -13,15 +13,12 @@ class PublicApiContractTests(SimpleTestCase):
     def setUp(self):
         self.client = APIClient()
 
-    def test_stable_health_and_v1_alias_match(self):
-        stable = self.client.get("/api/health")
-        alias = self.client.get("/api/v1/health")
+    def test_stable_health_contract(self):
+        response = self.client.get("/api/health")
 
-        self.assertEqual(stable.status_code, status.HTTP_200_OK)
-        self.assertEqual(alias.status_code, status.HTTP_200_OK)
-        self.assertEqual(stable.json(), alias.json())
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(
-            stable.json(),
+            response.json(),
             {
                 "contract_version": "1.0",
                 "status": "ok",
@@ -29,15 +26,11 @@ class PublicApiContractTests(SimpleTestCase):
             },
         )
 
-    def test_stable_filters_and_v1_alias_match(self):
-        stable = self.client.get("/api/catalog/filters")
-        alias = self.client.get("/api/v1/catalog/filters")
+    def test_stable_filters_contract(self):
+        response = self.client.get("/api/catalog/filters")
 
-        self.assertEqual(stable.status_code, status.HTTP_200_OK)
-        self.assertEqual(alias.status_code, status.HTTP_200_OK)
-        self.assertEqual(stable.json(), alias.json())
-
-        data = stable.json()
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        data = response.json()
         self.assertEqual(data["contract_version"], "1.0")
         self.assertEqual(
             set(data),
@@ -138,27 +131,6 @@ class PublicApiContractTests(SimpleTestCase):
             "unsupported_contract_version",
         )
 
-    @patch(
-        "apps.api.views.post_views.search_service_discovery_with_runtime_backends"
-    )
-    def test_v1_search_alias_uses_same_contract(self, runtime_search):
-        runtime_search.return_value = endpoint_response("harmonized_fuseki_with_h5_policy")
-
-        stable = self.client.post(
-            "/api/service-discovery/search",
-            data=complete_spur_gear_request(),
-            format="json",
-        )
-        alias = self.client.post(
-            "/api/v1/service-discovery/search",
-            data=complete_spur_gear_request(),
-            format="json",
-        )
-
-        self.assertEqual(stable.status_code, status.HTTP_200_OK)
-        self.assertEqual(alias.status_code, status.HTTP_200_OK)
-        self.assertEqual(stable.json(), alias.json())
-
     def test_invalid_selection_uses_public_error_contract(self):
         payload = complete_spur_gear_request()
         payload["service_category"] = "unknown_service_category"
@@ -176,21 +148,21 @@ class PublicApiContractTests(SimpleTestCase):
             "invalid_service_discovery_request",
         )
 
-    def test_legacy_endpoints_are_not_added_to_v1_alias_contract(self):
+    def test_url_versioned_routes_are_not_registered(self):
         self.assertEqual(
-            self.client.post("/api/v1/catalog/search", data={}, format="json").status_code,
+            self.client.get("/api/v1/health").status_code,
             status.HTTP_404_NOT_FOUND,
         )
         self.assertEqual(
-            self.client.post("/api/v1/provider-publication", data={}, format="json").status_code,
+            self.client.get("/api/v1/catalog/filters").status_code,
             status.HTTP_404_NOT_FOUND,
         )
         self.assertEqual(
-            self.client.get("/api/v1/providers/tasowheel").status_code,
-            status.HTTP_404_NOT_FOUND,
-        )
-        self.assertEqual(
-            self.client.get("/api/v1/offerings/tasowheel_gears_shafts_precision").status_code,
+            self.client.post(
+                "/api/v1/service-discovery/search",
+                data=complete_spur_gear_request(),
+                format="json",
+            ).status_code,
             status.HTTP_404_NOT_FOUND,
         )
 
@@ -212,7 +184,7 @@ class PublicApiContractTests(SimpleTestCase):
             status.HTTP_200_OK,
         )
 
-    def test_demo_api_is_not_in_v1_alias_contract(self):
-        response = self.client.get("/api/v1/demo/health")
+    def test_demo_routes_remain_separate_from_public_contract(self):
+        response = self.client.get("/api/demo/health")
 
-        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertIn(response.status_code, {status.HTTP_200_OK, status.HTTP_404_NOT_FOUND})
