@@ -6,9 +6,7 @@ venv/
 .vscode/
 .vercel/
 
-# Local documentation and development notes
-docs/
-mdc-catalog/docs/
+# Local development notes that remain untracked
 Chat_MDC_Dev/
 MDC_Dev_chat/
 new_Phases.md
