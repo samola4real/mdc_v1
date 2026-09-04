@@ -73,12 +73,11 @@ def service_discovery_search(request):
         internal_response = search_service_discovery_with_runtime_backends(
             canonical_request
         )
-    except ServiceDiscoveryRuntimeSearchError as exc:
+    except ServiceDiscoveryRuntimeSearchError:
         return Response(
             build_public_error(
                 code="service_discovery_search_unavailable",
                 message="Service-discovery search is temporarily unavailable.",
-                details=str(exc),
             ),
             status=status.HTTP_503_SERVICE_UNAVAILABLE,
         )
