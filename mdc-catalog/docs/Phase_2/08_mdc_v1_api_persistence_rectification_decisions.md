@@ -1,28 +1,28 @@
-# MDC v1 API, Persistence, and Rectification Decisions
+# MDC API, Persistence, and Rectification Decisions
 
 **Date:** 2026-09-04  
 **Project:** MaaSAI MaaS Dynamic Catalogue (MDC)  
-**Status:** Agreed design direction before API rectification milestone
+**Status:** Final agreed design direction before M6.1 completion
 
 ---
 
 ## 1. Purpose
 
-This report records the API and persistence decisions agreed after the first successful Vercel deployment and before starting the API rectification milestone.
+This report records the API and persistence decisions agreed after the first successful Vercel deployment and before completing the API rectification milestone.
 
 The goal is to avoid repeatedly changing partner-facing routes while MDC continues to evolve.
 
-The important principle is:
+The governing principle is:
 
-> Keep stable API URLs for Marketplace and other MaaSAI components, evolve the contract behind those URLs in a backward-compatible way, and use explicit contract metadata rather than introducing a new `/api/vN/` path for every future API revision.
+> Keep stable `/api/...` URLs for Marketplace and other MaaSAI components, evolve the contract behind those URLs in a backward-compatible way, and use explicit contract metadata instead of URL-versioned paths such as `/api/v1/`, `/api/v2/`, etc.
 
 ---
 
-## 2. Reminder: Current H1-H9 Service-Discovery Implementation
+## 2. Current H1-H9 Service-Discovery Implementation
 
-The current MDC v1 source of truth is the harmonized H1-H9 service-discovery implementation.
+The current MDC source of truth is the harmonized H1-H9 service-discovery implementation.
 
-It includes the established service-discovery flow covering:
+It includes:
 
 - harmonized service category / part family / part type registry;
 - provider publication normalization support;
@@ -35,7 +35,7 @@ It includes the established service-discovery flow covering:
 - H9 matching alignment;
 - runtime fallback behavior.
 
-The deployed search currently follows:
+The deployed search follows:
 
 ```text
 External Fuseki, if configured
@@ -51,54 +51,21 @@ The first Vercel deployment successfully used:
 harmonized_rdf_rdflib_with_h5_policy
 ```
 
-Therefore the H1-H9 service-discovery path remains the implementation that future MDC work must preserve.
+H1-H9 therefore remains the implementation that future MDC API work must preserve.
 
 ---
 
-## 3. Final Direction for the Main Search Route
+## 3. Final Search Route Decision
 
-### Current and future canonical search
+The current and future canonical search route is:
 
 ```text
 POST /api/service-discovery/search
 ```
 
-This route should remain stable for Marketplace and other MaaSAI components now and in future MDC releases.
+This route should remain stable for Marketplace and other MaaSAI components.
 
-It is the current harmonized search implementation and should not be replaced with a new `/api/v2/...`, `/api/v3/...`, etc. route whenever the API evolves.
-
-### Existing versioned route
-
-```text
-POST /api/v1/service-discovery/search
-```
-
-This route currently works and should be retained as a compatibility alias for the time being.
-
-It should not be treated as the preferred long-term partner route.
-
-### Legacy search
-
-```text
-POST /api/catalog/search
-```
-
-This is a different legacy implementation using the older catalogue/search model and legacy provider seed schema.
-
-Decision:
-
-- keep it only because it already exists and has been referenced in project deliverables;
-- do not use it for future Marketplace integration;
-- do not evolve new functionality around it;
-- do not promote it as the canonical MDC API.
-
----
-
-## 4. API Versioning Strategy
-
-The preferred strategy is **stable URLs + contract version metadata**.
-
-Instead of future URL changes such as:
+MDC will **not** use URL-versioned public routes such as:
 
 ```text
 /api/v1/service-discovery/search
@@ -106,15 +73,34 @@ Instead of future URL changes such as:
 /api/v3/service-discovery/search
 ```
 
-use one stable route:
+The previously introduced `/api/v1/...` route family was an intermediate M4 decision and is superseded by this final M6.1 architecture decision. Those routes should be removed during M6.1 rather than kept as compatibility aliases because no final partner handoff has yet established a dependency on them.
+
+### Legacy search retained only for historical/deliverable compatibility
 
 ```text
-POST /api/service-discovery/search
+POST /api/catalog/search
 ```
 
-and represent the API contract version explicitly.
+This is a separate older implementation using the legacy catalogue/search model and legacy provider seed schema.
 
-Recommended field:
+Decision:
+
+- keep it because it already exists and has been referenced in project deliverables;
+- do not use it for future Marketplace integration;
+- do not evolve new functionality around it;
+- do not promote it as the canonical MDC search API.
+
+---
+
+## 4. API Contract Versioning Strategy
+
+The final strategy is:
+
+```text
+stable URL + contract_version metadata
+```
+
+Example request:
 
 ```json
 {
@@ -128,7 +114,7 @@ Recommended field:
 }
 ```
 
-The response should also expose the applicable contract version where useful:
+Example response metadata:
 
 ```json
 {
@@ -141,21 +127,21 @@ The response should also expose the applicable contract version where useful:
 
 ### Backward compatibility principle
 
-When the contract evolves, the server should preserve the existing request contract wherever practical.
+When the contract evolves, the URL remains unchanged.
 
 For example:
 
-- `contract_version = 1.0` continues to receive v1-compatible behavior;
-- a future contract may use `2.0` internally without requiring Marketplace to change URL;
-- if `contract_version` is omitted, MDC may default to the established baseline contract if this is safe and documented.
+- `contract_version = 1.0` continues to receive the established contract;
+- a future contract may support `2.0` without introducing `/api/v2/...`;
+- if `contract_version` is omitted, MDC may default to the established baseline contract when safe and documented.
 
-This reduces coordination burden after public deployment.
+This minimizes integration changes for deployed Marketplace and MaaSAI components.
 
 ---
 
-## 5. Stable Endpoint Strategy
+## 5. Final Stable Endpoint Strategy
 
-### Intended external / partner-facing stable routes
+The intended long-term external routes are:
 
 ```text
 GET  /api/health
@@ -163,17 +149,9 @@ GET  /api/catalog/filters
 POST /api/service-discovery/search
 ```
 
-These should become the long-term stable routes given to Marketplace and other MaaSAI components.
+There is no public `/api/v1/...` route family in the final M6.1 design.
 
-### Compatibility aliases currently available
-
-```text
-GET  /api/v1/health
-GET  /api/v1/catalog/filters
-POST /api/v1/service-discovery/search
-```
-
-Keep for compatibility during rectification, but they do not need to be the routes advertised to new integrations.
+The M6.1 test suite should explicitly verify that previously introduced URL-versioned routes return `404`.
 
 ### Legacy only
 
@@ -187,20 +165,11 @@ Retain only for legacy/deliverable compatibility.
 
 ## 6. Provider APIs
 
-The current provider-detail implementation is linked to the older legacy provider seed schema.
+The current provider-detail implementation is linked to the older legacy provider seed schema, whereas the H1-H9 service-discovery path uses the harmonized provider representation.
 
-This was easy to forget because the current H1-H9 harmonized service-discovery implementation uses a newer provider representation.
+Current provider/detail routes may remain available internally/currently, but they should **not yet be advertised to external partners**.
 
-Current decision:
-
-```text
-GET /api/providers
-GET /api/providers/{provider_id}
-```
-
-may remain available internally/for current compatibility work, but they should **not yet be advertised to external partners**.
-
-Before they become external partner APIs, they should be backed by the harmonized provider model and later the durable database model rather than blindly exposing the legacy seed schema.
+Before provider browsing becomes an external partner contract, it should be backed by the harmonized provider model and later the durable database model rather than blindly exposing the legacy seed schema.
 
 The same principle applies to offering-detail APIs.
 
@@ -208,26 +177,19 @@ The same principle applies to offering-detail APIs.
 
 ## 7. Why Provider Publication Write Is Deferred
 
-Provider publication is not deferred simply because a database product has not yet been selected.
+Provider publication is not deferred only because a database product has not yet been selected.
 
-Database selection is one important dependency, but the publication API is a **state-changing production workflow** and therefore needs several things that the current Vercel pilot does not yet provide.
+It is a state-changing production workflow and needs several capabilities that the current Vercel pilot does not yet provide.
 
 ### 7.1 Durable persistence
 
-The current legacy publication flow writes provider YAML files.
+The current legacy publication flow writes provider YAML files. This is not suitable as a durable system of record on Vercel serverless infrastructure.
 
-That is not suitable for Vercel production persistence because serverless filesystem writes are not a durable system of record.
-
-A publication accepted through an API must survive:
-
-- redeployment;
-- serverless instance replacement;
-- concurrent requests;
-- application restarts.
+A publication accepted through the API must survive redeployment, serverless instance replacement, concurrent requests, and application restarts.
 
 ### 7.2 Transactional consistency
 
-A publication may eventually update more than one representation:
+Publication may eventually update:
 
 ```text
 Provider record
@@ -245,66 +207,49 @@ The operational database and RDF/Fuseki state must not silently diverge.
 
 ### 7.3 Authentication and authorization
 
-Publishing or changing provider data must not be anonymously available on the public internet.
-
-The future workflow needs to know:
-
-- which provider or trusted Marketplace component submitted the change;
-- whether it is authorized to modify that provider;
-- whether an admin/approval step is needed.
+Publishing or changing provider data must not be anonymously available on the public internet. The future workflow needs to know who submitted a change and whether that actor is authorized to modify the provider.
 
 ### 7.4 Update/version history
 
-Provider publication should support traceability such as:
-
-- created timestamp;
-- updated timestamp;
-- submitted by;
-- previous version;
-- publication status;
-- approval/rejection where relevant.
+Provider publication should support traceability including created/updated timestamps, submitted-by identity, previous version, publication status, and approval/rejection where relevant.
 
 ### 7.5 Concurrency and validation
 
-Two updates to the same provider/offering should not overwrite each other unpredictably.
-
-Therefore publication needs a durable transactional layer rather than file writes.
+Two updates to the same provider/offering should not overwrite one another unpredictably.
 
 ### Conclusion
 
-Provider publication write is deferred until we have a suitable durable persistence architecture and the minimum access-control/update workflow around it.
+Provider publication write remains deferred until durable persistence, access control, update history, and synchronization requirements are available.
 
 ---
 
 ## 8. Provider Publication Validation
 
-A validation endpoint is less risky than publication because it does not need to persist catalogue state.
+Validation is less risky than publication because it does not persist catalogue state. However, provider-publication validation remains out of external partner documentation for now.
 
-However, current decision is to keep provider-publication validation **out of external partner documentation for now**.
-
-It may later become a trusted Marketplace/internal-component endpoint.
+It may later become a trusted Marketplace/internal-component API.
 
 Important distinction:
 
 > Hidden from documentation is not the same as technically protected.
 
-When this route is activated for real integration, authentication/authorization should be considered even if it performs validation only.
+When activated for real integration, authentication/authorization should be considered even if the operation is validation-only.
 
 ---
 
 ## 9. Database Recommendation
 
-The recommended operational database for MDC is:
+The recommended operational database is:
 
 ```text
 PostgreSQL
 ```
 
-For the Vercel-hosted architecture, a managed/serverless PostgreSQL service such as **Neon** is the preferred first candidate.
+For the Vercel-hosted architecture, **Neon PostgreSQL** is the preferred first candidate.
 
 ### Why PostgreSQL fits MDC
 
-The core MDC operational model is relational:
+The core operational model is relational:
 
 ```text
 Provider
@@ -316,22 +261,11 @@ Provider
         └── publication/version state
 ```
 
-MDC will also need relationships such as:
+MDC will also need provider/offering relationships, publication history, ownership/authorization records, timestamps, and status fields.
 
-- provider → offerings;
-- offering → capabilities;
-- provider/offering → certifications;
-- provider → publication/update history;
-- ownership and authorization records;
-- timestamps/status fields.
+PostgreSQL also provides `JSONB`, which is suitable for flexible staging/custom provider input before normalization into controlled MDC fields.
 
-PostgreSQL handles this naturally.
-
-### Flexible provider-entered data
-
-PostgreSQL also provides `JSONB`, which is useful for flexible staging/custom provider fields.
-
-This supports the previously agreed MDC principle:
+Recommended direction:
 
 ```text
 Flexible provider input / staging
@@ -345,15 +279,13 @@ controlled MDC provider/offering fields
 RDF generation / semantic catalogue
 ```
 
-Therefore NoSQL is not currently recommended as the primary MDC operational database.
+NoSQL is therefore not recommended as the primary MDC operational database at this stage.
 
 ---
 
 ## 10. Long-Term Vercel Architecture
 
-Vercel should remain the host for the MDC Django REST API as MDC v1 and future functionality evolve.
-
-Recommended architecture direction:
+Vercel should remain the host for the MDC Django REST API as MDC evolves.
 
 ```text
 Marketplace / MaaSAI components
@@ -370,7 +302,7 @@ Marketplace / MaaSAI components
  record          search layer
 ```
 
-### Responsibilities
+Responsibilities:
 
 **Vercel / Django**
 - external API;
@@ -397,11 +329,9 @@ PostgreSQL and Fuseki are complementary rather than replacements for one another
 
 ## 11. External Response Shaping
 
-The partner API document should remain concise.
+The partner API document should remain concise and does not need to expose every internal H1-H9 field.
 
-It does not need to expose every internal H1-H9 search field.
-
-Internal search data may include items such as:
+Internal search data may include:
 
 ```text
 query_interpretation
@@ -414,19 +344,17 @@ implementation warnings
 
 External API responses should expose only information relevant to the calling component.
 
-This must ultimately be implemented in the API response itself, not merely hidden from the documentation.
+This must be implemented in the API response itself, not merely hidden from documentation.
 
 Recommended pattern:
 
 ```text
 Internal H1-H9 result
         ↓
-public response serializer / DTO
+public response adapter / serializer / DTO
         ↓
 Marketplace-safe response
 ```
-
-The partner document can then show shorter representative payloads, while a separate technical reference can contain complete schemas if needed.
 
 ---
 
@@ -444,15 +372,15 @@ For each external API it should contain primarily:
 - shortened representative response;
 - relevant status codes.
 
-Do not expose internal-only implementation details merely because they exist in the backend response today.
+Do not expose internal-only implementation details merely because they exist in backend runtime objects.
 
 ---
 
 ## 13. Current External Exposure Decision
 
-Before the rectification milestone is complete, do not provide the final API package to partners.
+Do not provide the final API package to partners until M6.1 has been locally tested and redeployed to Vercel.
 
-The intended final external route set is being rectified around:
+The intended external route set is:
 
 ```text
 GET  /api/health
@@ -468,22 +396,20 @@ Provider publication write remains disabled/deferred until durable persistence a
 
 ---
 
-## 14. What the Rectification Milestone Must Resolve
+## 14. M6.1 Rectification Requirements
 
-The next milestone should establish the coherent API foundation before partner integration.
-
-It should address:
+M6.1 must:
 
 1. make the stable unversioned harmonized routes the canonical API;
-2. preserve `/api/v1/...` only as compatibility aliases;
-3. introduce `contract_version` without breaking existing callers;
+2. remove the `/api/v1/...` route family;
+3. introduce `contract_version` without breaking the baseline request contract;
 4. preserve H1-H9 service-discovery behavior;
 5. leave `/api/catalog/search` as legacy-only and do not evolve it;
-6. define and implement external response shaping so internal fields are not unnecessarily exposed;
+6. implement external response shaping so internal fields are not unnecessarily exposed;
 7. keep provider list/detail internal until their data source is harmonized;
 8. keep provider-publication validation non-public for now;
 9. keep provider-publication write disabled until durable persistence/access control exists;
-10. define the PostgreSQL persistence architecture sufficiently to guide the next implementation phase, without implementing it during API rectification;
+10. define the PostgreSQL persistence architecture sufficiently to guide the next implementation phase without implementing it in M6.1;
 11. redeploy the rectified API to Vercel;
 12. verify the stable routes externally;
 13. update the Marketplace API document only after the deployed contract is verified.
@@ -496,7 +422,7 @@ It should address:
 |---|---|
 | Main search route | `POST /api/service-discovery/search` now and future |
 | H1-H9 | Preserve as current service-discovery implementation |
-| `/api/v1/...` | Keep temporarily as compatibility aliases; do not make future version progression depend on URL changes |
+| `/api/v1/...` | Remove; URL versioning is not part of final MDC API strategy |
 | API versioning | Use explicit `contract_version` and backward-compatible handling |
 | `/api/catalog/search` | Legacy only; retain because already referenced in deliverables |
 | Provider list/detail | Keep internal/not advertised until harmonized persistence/model is ready |
@@ -507,16 +433,16 @@ It should address:
 | RDF/Fuseki | Remains semantic catalogue/search layer |
 | Vercel | Continue as MDC Django/API host |
 | External responses | Deliberately shape/shorten; do not expose unnecessary internal H1-H9 details |
-| Partner handoff | Wait until rectification milestone completes |
+| Partner handoff | Wait until M6.1 completes and is verified on Vercel |
 
 ---
 
 ## 16. Next Milestone
 
-Proceed next with:
+Complete:
 
 ```text
 M6.1 — MDC API Contract Rectification
 ```
 
-The rectification milestone should be completed and verified on Vercel before starting the partner-integration milestone.
+Only after M6.1 is tested and verified on Vercel should the Marketplace API document be finalized and partner integration begin.
