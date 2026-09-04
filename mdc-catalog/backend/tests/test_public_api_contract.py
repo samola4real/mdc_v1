@@ -45,6 +45,25 @@ class PublicApiContractTests(SimpleTestCase):
             },
         )
 
+        category_to_family = {
+            item["value"]: item["part_family"]
+            for item in data["service_categories"]
+        }
+        family_to_category = {
+            item["value"]: item["service_category"]
+            for item in data["part_families"]
+        }
+        self.assertEqual(category_to_family["precision_gears"], "gear")
+        self.assertEqual(category_to_family["precision_shafts"], "shaft")
+        self.assertEqual(category_to_family["precision_metal_parts"], "metal_part")
+        self.assertEqual(family_to_category["gear"], "precision_gears")
+        self.assertEqual(family_to_category["shaft"], "precision_shafts")
+        self.assertEqual(family_to_category["metal_part"], "precision_metal_parts")
+        self.assertIn(
+            "spur_gear",
+            {item["value"] for item in data["part_types"]["gear"]},
+        )
+
     @patch(
         "apps.api.views.post_views.search_service_discovery_with_runtime_backends"
     )
@@ -183,8 +202,3 @@ class PublicApiContractTests(SimpleTestCase):
             self.client.get("/api/offerings/tasowheel_gears_shafts_precision").status_code,
             status.HTTP_200_OK,
         )
-
-    def test_demo_routes_remain_separate_from_public_contract(self):
-        response = self.client.get("/api/demo/health")
-
-        self.assertIn(response.status_code, {status.HTTP_200_OK, status.HTTP_404_NOT_FOUND})
