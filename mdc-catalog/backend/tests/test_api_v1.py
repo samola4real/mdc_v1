@@ -1,9 +1,7 @@
-
 from django.test import SimpleTestCase
 from rest_framework.test import APIClient
 
 from apps.api.search_serializers import SearchRequestSerializer
-from apps.ontology.vocabularies import PART_FAMILIES
 
 
 class ApiV1FoundationTests(SimpleTestCase):
@@ -16,33 +14,40 @@ class ApiV1FoundationTests(SimpleTestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()["status"], "ok")
         self.assertEqual(response.json()["service"], "maasai-mdc")
-        self.assertEqual(response.json()["version"], "v1")
+        self.assertEqual(response.json()["contract_version"], "1.0")
 
     def test_catalog_filters_endpoint(self):
         response = self.client.get("/api/catalog/filters")
 
         self.assertEqual(response.status_code, 200)
-
         data = response.json()
 
-        self.assertIn("service_types", data)
-        self.assertIn("part_families", data)
-        self.assertIn("processes", data)
-        self.assertIn("materials", data)
-        self.assertIn("material_grades", data)
-        self.assertIn("certifications", data)
-        self.assertIn("service_discovery", data)
-        forbidden_key = "m18" + "_service_discovery"
-        self.assertNotIn(forbidden_key, data)
+        self.assertEqual(data["contract_version"], "1.0")
+        self.assertEqual(
+            set(data),
+            {
+                "contract_version",
+                "service_categories",
+                "part_families",
+                "part_types",
+                "materials",
+                "processes",
+                "certifications",
+            },
+        )
 
-        service_values = {item["value"] for item in data["service_types"]}
+        service_values = {item["value"] for item in data["service_categories"]}
+        part_family_values = {item["value"] for item in data["part_families"]}
         process_values = {item["value"] for item in data["processes"]}
-        part_family_values = [item["value"] for item in data["part_families"]]
-        legacy_part_family_values = [item["value"] for item in PART_FAMILIES]
-        material_grade_values = {item["value"] for item in data["material_grades"]}
 
-        self.assertEqual(part_family_values, legacy_part_family_values)
-        self.assertIn("gear_manufacturing", service_values)
+        self.assertEqual(
+            service_values,
+            {"precision_gears", "precision_shafts", "precision_metal_parts"},
+        )
+        self.assertEqual(part_family_values, {"gear", "shaft", "metal_part"})
+        self.assertIn("spur_gear", {item["value"] for item in data["part_types"]["gear"]})
+        self.assertIn("hollow_shaft", {item["value"] for item in data["part_types"]["shaft"]})
+        self.assertIn("block", {item["value"] for item in data["part_types"]["metal_part"]})
         for process in [
             "machining",
             "hobbing",
@@ -58,30 +63,8 @@ class ApiV1FoundationTests(SimpleTestCase):
             "turn_mill",
         ]:
             self.assertIn(process, process_values)
-        self.assertIn("18CrNiMo7-6", material_grade_values)
-        self.assertIn("16MnCr5", material_grade_values)
-        self.assertIn("20MnCr5", material_grade_values)
 
-        service_discovery = data["service_discovery"]
-        self.assertEqual(
-            service_discovery["registry_version"],
-            "m18_harmonized_v1",
-        )
-        self.assertIs(service_discovery["search_contract_active"], True)
-
-        profiles = service_discovery["part_type_profiles"]
-        self.assertIn("spur_gear", profiles)
-        self.assertIn("hollow_shaft", profiles)
-        self.assertIn("bracket", profiles)
-
-        spur_gear = profiles["spur_gear"]
-        self.assertIn("outside_diameter_mm", spur_gear["family_common_fields"])
-        self.assertNotIn("diameter_mm", spur_gear["family_common_fields"])
-        self.assertNotIn("diameter_mm", spur_gear["part_type_specific_fields"])
-        self.assertNotIn("outer_diameter_mm", spur_gear["family_common_fields"])
-        self.assertNotIn("outer_diameter_mm", spur_gear["part_type_specific_fields"])
-
-    def test_harmonized_taxonomy_is_not_active_in_search_serializer(self):
+    def test_harmonized_taxonomy_is_not_active_in_legacy_search_serializer(self):
         serializer = SearchRequestSerializer(
             data={
                 "part_family": "metal_part",
@@ -90,7 +73,7 @@ class ApiV1FoundationTests(SimpleTestCase):
 
         self.assertFalse(serializer.is_valid())
 
-    def test_part_type_is_not_active_in_search_serializer(self):
+    def test_part_type_is_not_active_in_legacy_search_serializer(self):
         serializer = SearchRequestSerializer(
             data={
                 "part_family": "gear",
