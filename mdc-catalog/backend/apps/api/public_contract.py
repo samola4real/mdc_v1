@@ -35,22 +35,29 @@ def build_public_health_response() -> dict:
     }
 
 
-def _public_choice(item: dict) -> dict:
-    return {
-        "value": item["value"],
-        "label": item["label"],
-    }
-
-
 def build_public_catalog_filters() -> dict:
     """Return the harmonized Marketplace-facing filter contract."""
     registry = get_service_discovery_registry()
     profiles = registry["part_type_profiles"]
 
+    service_categories = [
+        {
+            "value": item["value"],
+            "label": item["label"],
+            "part_family": item["part_family"],
+        }
+        for item in registry["service_categories"]
+    ]
+
     part_families = [
-        _public_choice(item)
+        {
+            "value": item["value"],
+            "label": item["label"],
+            "service_category": item["service_category"],
+        }
         for item in registry["part_families"]
     ]
+
     part_types = {
         family["value"]: [
             {
@@ -64,10 +71,7 @@ def build_public_catalog_filters() -> dict:
 
     return {
         "contract_version": PUBLIC_CONTRACT_VERSION,
-        "service_categories": [
-            _public_choice(item)
-            for item in registry["service_categories"]
-        ],
+        "service_categories": service_categories,
         "part_families": part_families,
         "part_types": part_types,
         "materials": deepcopy(MATERIALS),
