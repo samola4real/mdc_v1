@@ -3,7 +3,7 @@
 **Date:** 2026-09-04  
 **Project:** MaaSAI MaaS Dynamic Catalogue (MDC)  
 **Milestone:** M6.1 — API Contract Rectification  
-**Status:** Partially completed — implementation and local verification passed; Vercel redeployment/external verification still pending
+**Status:** Completed - implementation, local verification, Vercel Preview verification, and Vercel Production verification passed
 
 ---
 
@@ -11,7 +11,9 @@
 
 M6.1 implementation is complete in the GitHub repository and the requested local verification has been run successfully by the user.
 
-The milestone is not yet marked fully complete because the rectified API has not yet been redeployed and externally verified on Vercel.
+The remaining Vercel deployment gate was completed on 2026-09-04.
+
+M6.1 status: completed
 
 Current state:
 
@@ -19,8 +21,8 @@ Current state:
 Implementation            PASS
 Focused local API tests   PASS
 Full local test suite     PASS
-Vercel Preview verify     PENDING
-Vercel Production verify  PENDING
+Vercel Preview verify     PASS
+Vercel Production verify  PASS
 ```
 
 The exact numeric local test counts were not captured in this report at the time of writing; the user confirmed that all requested local tests passed.
@@ -571,32 +573,85 @@ Production configuration safety tests in the repository explicitly verify:
 
 ---
 
-## 11. Vercel Preview Verification
+## 11. Vercel Project And Environment Verification
 
-Status:
+CLI authentication:
 
 ```text
-PENDING
+npx vercel@latest whoami -> samola4real-6623
 ```
 
-The M6.1 implementation has not yet been deployed to a new Vercel Preview from the evidence available at report creation time.
+Local project link:
 
-Required Preview checks:
+```text
+Project name: maasai-mdc-v1
+Project ID:   prj_DekMQdOYuuH0A5yNsCkFmOC4uD9j
+Scope/team:   mdc19
+```
 
-| Method | Endpoint | Expected |
-|---|---|---|
-| GET | `/api/health` | 200 + `contract_version=1.0` |
-| GET | `/api/catalog/filters` | 200 + harmonized external keys |
-| POST | `/api/service-discovery/search` | 200 + shaped public result |
-| GET | `/api/v1/health` | 404 |
-| GET | `/api/v1/catalog/filters` | 404 |
-| POST | `/api/v1/service-discovery/search` | 404 |
-| GET | `/api/demo/health` | 404 in production-like configuration |
-| POST | `/api/provider-publication` | 403 when publication disabled |
+Environment variable name/scope inspection was performed with:
+
+```text
+npx vercel@latest env ls
+```
+
+Required variables were present without printing secret values:
+
+| Variable | Preview | Production |
+|---|---:|---:|
+| `DJANGO_SETTINGS_MODULE` | Present | Present |
+| `DJANGO_SECRET_KEY` | Present | Present |
+| `DJANGO_ALLOWED_HOSTS` | Present | Present |
+| `MDC_DEMO_API_ENABLED` | Present | Present |
+| `MDC_PROVIDER_PUBLICATION_ENABLED` | Present | Present |
+| `FUSEKI_TIMEOUT_SECONDS` | Present | Present |
+
+Optional variables intentionally remained unset/not required for this gate:
+
+```text
+SERVICE_DISCOVERY_FUSEKI_QUERY_ENDPOINT
+CORS_ALLOWED_ORIGINS
+CSRF_TRUSTED_ORIGINS
+```
+
+Production safety flags remained configured as deployment-time environment variables and were verified by endpoint behavior:
+
+```text
+MDC_DEMO_API_ENABLED=False
+MDC_PROVIDER_PUBLICATION_ENABLED=False
+```
 
 ---
 
-## 12. Vercel Production Verification
+## 12. Vercel Preview Verification
+
+Preview deployment:
+
+```text
+URL:        https://maasai-mdc-v1-8stkezur1-mdc19.vercel.app
+Deployment: dpl_EECkvSApRDViBisrNfbj1PFvRhiv
+Inspector:  https://vercel.com/mdc19/maasai-mdc-v1/EECkvSApRDViBisrNfbj1PFvRhiv
+Status:     READY
+```
+
+The Preview deployment is protected by Vercel authentication, so direct unauthenticated HTTP smoke requests returned `401`. API behavior was verified with authenticated `vercel curl`, the verification method recommended by the Vercel CLI for protected deployments.
+
+Preview checks:
+
+| Method | Endpoint | Result |
+|---|---|---|
+| GET | `/api/health` | PASS - HTTP 200, `contract_version=1.0`, `status=ok` |
+| GET | `/api/catalog/filters` | PASS - HTTP 200, `contract_version=1.0`, exposed `service_categories`, `part_families`, `part_types`, `materials`, `processes`, `certifications` |
+| POST | `/api/service-discovery/search` | PASS - HTTP 200, `contract_version=1.0`, `result_count=2`, first result `tasowheel/tasowheel_precision_gears`; public response shape only |
+| GET | `/api/v1/health` | PASS - HTTP 404 |
+| GET | `/api/v1/catalog/filters` | PASS - HTTP 404 |
+| POST | `/api/v1/service-discovery/search` | PASS - HTTP 404 |
+| GET | `/api/demo/health` | PASS - HTTP 404 |
+| POST | `/api/provider-publication` | PASS - HTTP 403, `provider_publication_disabled` |
+
+---
+
+## 13. Vercel Production Verification
 
 Production base URL remains:
 
@@ -604,27 +659,49 @@ Production base URL remains:
 https://maasai-mdc-v1.vercel.app
 ```
 
-M6.1 production redeployment and external verification are still pending.
-
-The existing live production deployment should not be treated as evidence for the rectified contract until the new M6.1 code has been deployed.
-
-After redeployment, verify at minimum:
+Production deployment:
 
 ```text
-GET  https://maasai-mdc-v1.vercel.app/api/health
-GET  https://maasai-mdc-v1.vercel.app/api/catalog/filters
-POST https://maasai-mdc-v1.vercel.app/api/service-discovery/search
+URL:        https://maasai-mdc-v1-5tdtm4sek-mdc19.vercel.app
+Alias:      https://maasai-mdc-v1.vercel.app
+Deployment: dpl_EgaqDzXXfddZ92gaRAr9E9rZGwyN
+Inspector:  https://vercel.com/mdc19/maasai-mdc-v1/EgaqDzXXfddZ92gaRAr9E9rZGwyN
+Status:     READY
+Target:     production
 ```
 
-and verify that:
+Production smoke checks against the canonical base URL:
+
+| Method | Endpoint | Result |
+|---|---|---|
+| GET | `/api/health` | PASS - HTTP 200, `contract_version=1.0`, `status=ok` |
+| GET | `/api/catalog/filters` | PASS - HTTP 200, `contract_version=1.0`, exposed `service_categories`, `part_families`, `part_types`, `materials`, `processes`, `certifications` |
+| POST | `/api/service-discovery/search` | PASS - HTTP 200, `contract_version=1.0`, `result_count=2`, first result `tasowheel/tasowheel_precision_gears` |
+| GET | `/api/v1/health` | PASS - HTTP 404 |
+| GET | `/api/v1/catalog/filters` | PASS - HTTP 404 |
+| POST | `/api/v1/service-discovery/search` | PASS - HTTP 404 |
+| GET | `/api/demo/health` | PASS - HTTP 404 |
+| POST | `/api/provider-publication` | PASS - HTTP 403, `provider_publication_disabled` |
+
+Runtime log inspection:
 
 ```text
-/api/v1/* -> 404
+npx vercel@latest logs https://maasai-mdc-v1.vercel.app
+```
+
+The log inspection returned eight recent smoke-test entries at info level only. No error-level runtime failures were observed. The expected safety checks logged `404` for removed/demo routes and `403` for disabled provider publication.
+
+Search backend/fallback behavior:
+
+```text
+SERVICE_DISCOVERY_FUSEKI_QUERY_ENDPOINT was not configured for this gate.
+The runtime first attempts Fuseki, then falls back to local RDFLib plus H5 matching, then YAML if needed.
+The verified 200 search response returned two public-shaped results while omitting internal backend/fallback diagnostics by design.
 ```
 
 ---
 
-## 13. Git / Implementation Commits
+## 14. Git / Implementation And Deployment Commits
 
 M6.1 was implemented directly through GitHub file operations, therefore the work appears as several small commits rather than one monolithic commit.
 
@@ -649,58 +726,40 @@ b25759b  test: enforce stable unversioned public routes
 df321ff  fix: keep selection metadata out of capability lists
 ```
 
-Current implementation head at the time of local verification/report preparation:
+Current synchronized source head used for Preview and Production deployment:
 
 ```text
-df321ff7d57dd9745b28f16cc4da14334a4dcb9c
+5e5e1e8cf54d433c5a7b26283a2c09e859373c23
 ```
 
-This report itself is committed separately after the implementation.
+Additional synchronization/deployment-preparation commits now included:
+
+```text
+05a6f82 chore: track MDC documentation in git
+5e5e1e8 docs: authorize Codex to reconcile known gitignore blocker
+```
+
+Deployment IDs:
+
+```text
+Preview:    dpl_EECkvSApRDViBisrNfbj1PFvRhiv
+Production: dpl_EgaqDzXXfddZ92gaRAr9E9rZGwyN
+```
+
+This report completion is committed separately after deployment verification.
 
 ---
 
-## 14. Partner-Document Readiness
+## 15. Partner-Document Readiness
 
-The API design and local implementation are now coherent, but the Marketplace API document should not yet be finalized against the rectified contract until the Vercel deployment gate passes.
+The API design, local implementation, Preview deployment, and Production deployment are now coherent and externally verified.
 
 Current status:
 
 ```text
-NOT_READY_TO_UPDATE_PARTNER_API_DOCUMENT
-```
-
-Remaining blocker:
-
-```text
-Redeploy M6.1 to Vercel Preview, verify externally, deploy to Production, and verify the final public contract on https://maasai-mdc-v1.vercel.app.
-```
-
-After those checks pass, update this same report with the Preview/Production results and change the final status to:
-
-```text
 READY_TO_UPDATE_PARTNER_API_DOCUMENT
 ```
-
----
-
-## 15. Next Action
 
 Do not start M7 partner integration yet.
 
-Complete the remaining M6.1 deployment gate:
-
-```text
-GitHub/local green baseline
-        ↓
-Vercel Preview deployment
-        ↓
-Preview API smoke tests
-        ↓
-Vercel Production deployment
-        ↓
-Production API smoke tests
-        ↓
-update this report
-        ↓
 READY_TO_UPDATE_PARTNER_API_DOCUMENT
-```
