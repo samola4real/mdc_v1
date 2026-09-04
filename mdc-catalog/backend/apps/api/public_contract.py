@@ -104,10 +104,19 @@ def _public_capability(item: dict, *, include_reason: bool) -> dict:
     return public
 
 
+def _requirement_attributes(items: list[dict]) -> list[dict]:
+    """Exclude service/part selection checks from capability lists."""
+    return [item for item in items if item.get("match_type") != "selection"]
+
+
 def _public_result(result: dict) -> dict:
     provider = result.get("provider", {})
     offering = result.get("offering", {})
     match = result.get("match", {})
+
+    matched = _requirement_attributes(result.get("matched_attributes", []))
+    unmatched = _requirement_attributes(result.get("unmatched_attributes", []))
+    unknown = _requirement_attributes(result.get("unknown_attributes", []))
 
     return {
         "provider_id": provider.get("provider_id"),
@@ -122,15 +131,15 @@ def _public_result(result: dict) -> dict:
         },
         "matched_capabilities": [
             _public_capability(item, include_reason=False)
-            for item in result.get("matched_attributes", [])
+            for item in matched
         ],
         "unmatched_capabilities": [
             _public_capability(item, include_reason=True)
-            for item in result.get("unmatched_attributes", [])
+            for item in unmatched
         ],
         "unknown_capabilities": [
             _public_capability(item, include_reason=True)
-            for item in result.get("unknown_attributes", [])
+            for item in unknown
         ],
     }
 
