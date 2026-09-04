@@ -9,9 +9,7 @@ from apps.search.service_discovery_fuseki_service import (
     ServiceDiscoveryFusekiRetrievalError,
 )
 from apps.search.service_discovery_runtime_search import (
-    FUSEKI_FALLBACK_WARNING,
     ServiceDiscoveryRuntimeSearchError,
-    YAML_FALLBACK_WARNING,
 )
 from apps.search.service_discovery_sparql_service import (
     ServiceDiscoverySparqlRetrievalError,
@@ -96,12 +94,14 @@ class ServiceDiscoverySearchEndpointTests(SimpleTestCase):
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.json()["status"], "ok")
+        self.assertEqual(response.json()["contract_version"], "1.0")
 
     def test_existing_shared_catalog_filters_endpoint_still_works(self):
         response = self.client.get("/api/catalog/filters")
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertIn("service_types", response.json())
+        self.assertIn("service_categories", response.json())
+        self.assertIn("part_types", response.json())
 
     @override_settings(DEBUG=False, MDC_DEMO_API_ENABLED=False)
     def test_demo_health_remains_disabled_when_debug_and_flag_are_false(self):
@@ -124,6 +124,10 @@ class ServiceDiscoverySearchEndpointTests(SimpleTestCase):
         )
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(
+            response.json()["error"]["code"],
+            "invalid_service_discovery_request",
+        )
 
     def test_frontend_like_nested_payload_returns_400_not_500(self):
         response = self.client.post(
@@ -146,14 +150,10 @@ class ServiceDiscoverySearchEndpointTests(SimpleTestCase):
         )
 
         data = response.json()
-        self.assertEqual(data["status"]["search_executed"], False)
-        self.assertEqual(data["status"]["search_engine"], "not_executed")
-        self.assertEqual(
-            data["status"]["message"],
-            "Invalid service-discovery search request.",
-        )
-        self.assertIn("errors", data)
-        json.dumps(data["errors"])
+        self.assertEqual(data["contract_version"], "1.0")
+        self.assertEqual(data["error"]["code"], "invalid_service_discovery_request")
+        self.assertIn("details", data["error"])
+        json.dumps(data["error"]["details"])
 
     @patch(
         "apps.search.service_discovery_runtime_search.search_service_discovery_catalog_via_fuseki"
@@ -190,10 +190,7 @@ class ServiceDiscoverySearchEndpointTests(SimpleTestCase):
         )
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(
-            response.json()["status"]["search_engine"],
-            "harmonized_fuseki_with_h5_policy",
-        )
+        fuseki.assert_called_once()
         local_rdf.assert_not_called()
         yaml.assert_not_called()
 
@@ -224,7 +221,7 @@ class ServiceDiscoverySearchEndpointTests(SimpleTestCase):
         )
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertIn(FUSEKI_FALLBACK_WARNING, response.json()["warnings"])
+        local_rdf.assert_called_once()
         yaml.assert_not_called()
 
     @patch(
@@ -255,7 +252,7 @@ class ServiceDiscoverySearchEndpointTests(SimpleTestCase):
         )
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertIn(YAML_FALLBACK_WARNING, response.json()["warnings"])
+        yaml.assert_called_once()
 
     @patch(
         "apps.api.views.post_views.search_service_discovery_with_runtime_backends"
@@ -272,11 +269,15 @@ class ServiceDiscoverySearchEndpointTests(SimpleTestCase):
         )
 
         self.assertEqual(response.status_code, status.HTTP_503_SERVICE_UNAVAILABLE)
+        self.assertEqual(
+            response.json()["error"]["code"],
+            "service_discovery_search_unavailable",
+        )
 
     @patch(
         "apps.search.service_discovery_runtime_search.search_service_discovery_catalog_via_fuseki"
     )
-    def test_response_contract_fields_are_present(self, fuseki):
+    def test_public_response_contract_fields_are_present(self, fuseki):
         fuseki.return_value = endpoint_response("harmonized_fuseki_with_h5_policy")
 
         response = self.client.post(
@@ -286,16 +287,23 @@ class ServiceDiscoverySearchEndpointTests(SimpleTestCase):
         )
 
         data = response.json()
-        self.assertIs(data["status"]["search_executed"], True)
-        self.assertIn("search_engine", data["status"])
         for field in [
+            "contract_version",
             "request_id",
-            "consumer_id",
+            "service_category",
+            "part_family",
+            "part_type",
             "result_count",
             "results",
-            "warnings",
         ]:
             self.assertIn(field, data)
+        for internal_field in [
+            "consumer_id",
+            "query_interpretation",
+            "warnings",
+            "status",
+        ]:
+            self.assertNotIn(internal_field, data)
 
     def test_endpoint_is_not_registered_under_demo_api(self):
         response = self.client.post(
