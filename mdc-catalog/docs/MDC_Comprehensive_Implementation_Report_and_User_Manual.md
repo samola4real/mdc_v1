@@ -1,4 +1,4 @@
-# MaaSAI Manufacturing Data Catalogue (MDC)
+# MaaSAI MaaS Dynamic Catalogue (MDC)
 
 ## Comprehensive Implementation Report and User Manual
 
@@ -51,7 +51,7 @@
 
 ## 1. Executive Summary
 
-The MaaSAI Manufacturing Data Catalogue is a working API-first pilot for publishing manufacturing-provider capabilities and finding providers against structured service requests. The implementation has moved beyond static demonstration files: PostgreSQL is the operational source of truth, trusted lifecycle APIs validate and persist provider data, and a transactional outbox records semantic synchronization work. RDF and Apache Jena Fuseki form a derived semantic query layer. The public discovery endpoint uses the same deterministic matching semantics whether candidates came from remote Fuseki, local RDF, or the harmonized fallback catalogue.
+The MaaSAI MaaS Dynamic Catalogue is a working API-first pilot for publishing manufacturing-provider capabilities and finding providers against structured service requests. The implementation has moved beyond static demonstration files: PostgreSQL is the operational source of truth, trusted lifecycle APIs validate and persist provider data, and a transactional outbox records semantic synchronization work. RDF and Apache Jena Fuseki form a derived semantic query layer. The public discovery endpoint uses the same deterministic matching semantics whether candidates came from remote Fuseki, local RDF, or the harmonized fallback catalogue.
 
 The current canonical public API consists of three unversioned paths:
 
@@ -71,13 +71,26 @@ Trusted providers and operators use a separate lifecycle surface:
 
 The trusted boundary uses a bearer service token. Mutating requests require `X-MDC-Actor-Id`. Updates use strong ETags and optimistic concurrency through the canonical `If-Match` header; the deployed Vercel pilot also accepts `X-MDC-If-Match` as a temporary transport compatibility header. A missing precondition returns `428`, a stale revision returns `412`, and malformed preconditions return `400`.
 
-Every accepted lifecycle write runs in a database transaction. It changes the provider or offering, records a `ProviderPublication`, and creates one or more `CatalogueSyncEvent` outbox rows. It does not call Fuseki inside the request transaction. A trusted operator later runs the Django synchronization command, which rebuilds RDF from the complete active PostgreSQL catalogue and replaces the remote named graph. This separation protects request latency, makes failures durable and retryable, and preserves PostgreSQL as the authoritative state.
+Every accepted lifecycle write runs in a database transaction. It changes the provider or offering, records a `ProviderPublication`, and creates one or more `CatalogueSyncEvent` outbox rows. It does not call Fuseki inside the request transaction. A trusted operator later runs the Django synchronization command, which rebuilds RDF from the complete active PostgreSQL catalogue and replaces the configured Fuseki default graph. This separation protects request latency, makes failures durable and retryable, and preserves PostgreSQL as the authoritative state.
 
 The current hosted pilot uses Django on Vercel and managed PostgreSQL on Neon. The accepted P3.5 proof used an external Fuseki instance reached through a temporary Cloudflare Quick Tunnel. Vercel-side semantic synchronization remained disabled; graph writes came from a trusted operator environment. That tunnel arrangement is validation infrastructure, not the intended permanent production topology.
 
 Phase 3 is complete. P3.4 recorded `45 passed`, `0 failed` across the deployed lifecycle flow. It left a controlled provider and two offerings in PostgreSQL with pending outbox work. P3.5 then processed the four publications and five events (`selected=4; succeeded=4; failed=0; noop=0; events=5`), measured `731` Fuseki triples, and proved that the controlled provider appeared in deployed canonical discovery. P3.6 supplies a future AWS-readiness plan; no AWS migration has yet occurred.
 
 The pilot is intentionally bounded. It has no Marketplace frontend or Marketplace identity integration, no public synchronization endpoint, no route-sequencing engine, no pricing or quotation engine, no live capacity scheduler, and no CAD/2D/3D geometry analysis. Those are possible future work rather than current claims.
+
+### 1.1 How to use this manual
+
+| Reader | Start here | What to use |
+|---|---|---|
+| Lay reader or project manager | Sections 1–6, 10, 12, and 26–29 | Purpose, architecture, evidence, limitations, roadmap, and terms |
+| Marketplace/consumer integrator | Sections 13–14 and 18 | Public URL policy, filter contract, discovery payloads, and results |
+| Trusted provider integrator | Sections 9 and 14–17 | Publication rules, authentication, ETags, registration, and updates |
+| Tester/Postman user | Sections 19–21 and Appendix C–D | Ordered HTTP tests and accepted P3.4/P3.5 reproduction |
+| MDC developer/operator | Sections 6–8, 11–12, and 20–25 | Code map, persistence, matching, synchronization, security, and recovery |
+| AWS/platform engineer | Sections 23–24 and 27–28 | Current boundary, configuration, cleanup, migration, cutover, and rollback |
+
+> **New CMM consumer integration.** Start with only `GET /api/health`, `GET /api/catalog/filters`, and `POST /api/service-discovery/search` unless a separate trusted lifecycle integration is explicitly agreed. The provider lifecycle routes are a distinct authenticated integration surface and must not be added to a consumer client by default.
 
 ---
 
@@ -96,6 +109,12 @@ The **harmonized contract** is the current controlled representation shared by p
 An **ETag** is a strong quoted revision fingerprint returned with a provider or offering read. A client sends it back in `If-Match` before a PATCH. This prevents one editor from unknowingly overwriting a newer edit. The **outbox** is the set of durable `CatalogueSyncEvent` rows written in the same transaction as domain changes. It is a queue of semantic work, not a public HTTP endpoint.
 
 The **pilot** is the verified current deployment and data flow. **Production settings** means Django's hardened configuration profile; it does not mean every pilot dependency is already a permanent enterprise platform. **Future AWS readiness** refers to the P3.6 plan and recommendations, not a completed cloud migration.
+
+### 2.1 Relationship to the Cloud MaaS Marketplace
+
+The **Cloud MaaS Marketplace (CMM)** is the intended external user and integration context for provider onboarding and consumer discovery. MDC supplies the catalogue APIs and matching behavior; the current pilot does not implement the CMM user interface, Marketplace login, or end-user identity journey.
+
+On the consumer side, CMM can read the current controlled choices from `/api/catalog/filters` and submit canonical discovery requests. On the provider side, a separately agreed integration can validate, register, and update provider records through the trusted lifecycle surface. The pilot protects that surface with a shared bearer token, actor attribution, and ETags. A later CMM integration should replace or front the shared-token boundary with Marketplace identity and per-provider authorization without changing PostgreSQL persistence or publication semantics.
 
 ---
 
@@ -165,7 +184,7 @@ Three distinctions prevent historical material from being mistaken for current b
 
 1. The current paths are defined in `backend/apps/api/urls.py`, not old prose.
 2. The current public JSON schema is defined by the service-discovery serializers and public response builder, not the legacy catalogue serializer.
-3. Current candidates ultimately represent active PostgreSQL providers and offerings; YAML is still valuable for bootstrap, regression tests, and the final runtime fallback.
+3. PostgreSQL is the authoritative operational state, and operator synchronization builds the remote Fuseki default graph from active database providers and offerings. Runtime continuity also includes local RDFLib and harmonized-YAML fallback paths; those paths can reflect generated or curated fallback artifacts rather than a fresh database read. YAML remains bootstrap, regression-test, and fallback material and does not become authoritative.
 
 ---
 
@@ -369,13 +388,15 @@ Tasowheel evidence amendments were applied across H1–H8: source facts were cor
 | H2 | Provider publication contract | Strict provider/offering schema, server-owned offering IDs, evidence metadata, deterministic normalization |
 | H3 | Harmonized provider YAML | Parallel migration preserved auditable source material while providing current-shaped records |
 | H4 | Consumer contract | Strict search selection, grouped requirements, policy defaults, and response validation |
-| H5 | Matcher | Deterministic `full_match`, `partial_match`, and `unknown_match`; `any`/`all`, unknown policy, score filtering |
+| H5 | Matcher | Deterministic `full_match`, `partial_match`, and `unknown_match`; `any`/`all`/`score_only`, unknown policy, score filtering |
 | H6 | RDF generation | Stable IRIs, sequence and explicit-null fidelity, normalized ordering, complete catalogue projection |
 | H7 | Local SPARQL | RDFLib reconstruction feeds the same matcher with request-scoped records and evidence intact |
 | H8 | Remote SPARQL | Fuseki candidate retrieval and graph execution preserve H7 semantics |
 | H9 | Alignment/readiness | Remote Fuseki, local RDF, and harmonized-record paths return equal public results for the gate scenarios |
 
-H5 treats primary selection separately from optional capability evaluation. Service category, family, and type select credible offerings; optional requirements can reduce a full match to partial or make evidence unknown. With `keep_as_unknown`, candidates with insufficient evidence can remain as `unknown_match`. With `reject_unknown`, those candidates are filtered. `optional_match_mode: any` accepts at least one matched or partial optional evaluation; `all` requires every optional evaluation to match. `minimum_score` can add a numeric threshold.
+H5 treats primary selection separately from optional capability evaluation. Service category and family are hard candidate filters; requested part-type support and submitted requirements determine status and score. `optional_match_mode: any` marks the internal optional policy satisfied when no optional criteria exist or at least one evaluation is matched or partially matched. `all` marks it satisfied only when every submitted optional criterion is matched, or none exist. `score_only` always marks it satisfied and leaves comparison to the score.
+
+The optional mode computes the internal boolean `optional_policy_satisfied`; it does **not** remove a candidate by itself, and public response shaping does not expose that boolean. Candidate removal occurs when `unknown_policy: reject_unknown` rejects unknown requested part-type or requirement evidence and/or when `minimum_score` excludes a result below the configured 0–1 threshold. `keep_as_unknown` retains unknown evidence for explanation.
 
 The public response renames the internal attribute collections to `matched_capabilities`, `unmatched_capabilities`, and `unknown_capabilities`. It deliberately omits internal retrieval status, warnings, evidence/provenance diagnostics, and query interpretation. H9 verified result equality after this public shaping, not merely that each backend returned some candidates.
 
@@ -471,7 +492,53 @@ No authentication. Success `200`:
 
 #### `GET /api/catalog/filters`
 
-No authentication. Success `200` returns `contract_version` plus `service_categories`, `part_families`, `part_types`, `materials`, `processes`, and `certifications`. Values are derived from the current registry and are the supported consumer selections.
+No authentication. Success `200` returns `contract_version` plus five arrays (`service_categories`, `part_families`, `materials`, `processes`, and `certifications`) and a `part_types` object keyed by part family. Values are derived from the current registry and are the supported consumer selections. This compact structural excerpt uses one real item per collection; the live response includes every registered item:
+
+```json
+{
+  "contract_version": "1.0",
+  "service_categories": [
+    {
+      "value": "precision_metal_parts",
+      "label": "Precision metal parts",
+      "part_family": "metal_part"
+    }
+  ],
+  "part_families": [
+    {
+      "value": "metal_part",
+      "label": "Metal part",
+      "service_category": "precision_metal_parts"
+    }
+  ],
+  "part_types": {
+    "metal_part": [
+      {
+        "value": "bracket",
+        "label": "Bracket"
+      }
+    ]
+  },
+  "materials": [
+    {
+      "value": "steel",
+      "label": "Steel"
+    }
+  ],
+  "processes": [
+    {
+      "value": "milling",
+      "label": "Milling"
+    }
+  ],
+  "certifications": [
+    {
+      "value": "ISO9001_2015",
+      "label": "ISO 9001:2015"
+    }
+  ]
+}
+```
 
 #### `POST /api/service-discovery/search`
 
@@ -525,7 +592,7 @@ The example result illustrates schema and a known provider; actual count, order,
 
 #### `POST /api/provider-publication/validation`
 
-Requires `Authorization: Bearer <token>`. Actor is not needed because validation is non-mutating. When `MDC_PROVIDER_VALIDATION_ENABLED` is false, returns `403`. A valid publication returns `200` with `contract_version`, `valid: true`, and `normalized_payload`. An invalid publication returns `400`, `valid: false`, and validation details. No Provider, Offering, Certification, Publication, or SyncEvent row is changed.
+Requires `Authorization: Bearer <token>`. Actor is not needed because validation is non-mutating. When `MDC_PROVIDER_VALIDATION_ENABLED` is false, returns `403`. A valid publication returns `200` with `contract_version`, `valid: true`, and `normalized_payload`. An invalid publication returns `400`, `valid: false`, and validation details. Authentication failure returns `401`; required authentication with no configured server token returns `503`. No Provider, Offering, Certification, Publication, or SyncEvent row is changed.
 
 #### `POST /api/provider-publication`
 
@@ -552,35 +619,47 @@ Typical success:
 
 #### `GET /api/providers/{provider_id}`
 
-Requires bearer authentication. Returns `200` and a strong `ETag` header. The body contains `contract_version`, provider identity/name/country/status, custom fields, publication metadata, certifications, and offering summaries. Unknown provider returns `404`; missing/bad token returns `401`.
+Requires bearer authentication. Returns `200` and a strong `ETag` header. The body contains `contract_version`, provider identity/name/country/status, custom fields, publication metadata, certifications, and offering summaries. Unknown provider returns `404`; missing/bad token returns `401`; required authentication with no server-side token configured returns `503`.
 
 #### `PATCH /api/providers/{provider_id}`
 
 Requires bearer authentication, actor, and a current strong ETag. Canonical precondition header is `If-Match`; the Vercel pilot also accepts `X-MDC-If-Match`. Allowed body fields are `provider_name`, `country`, `status`, `certifications`, `publication_metadata`, and `custom_provider_fields`. Supplied collection/object fields replace their previous values. `provider_id` and `offerings` are rejected.
 
-Success returns `200`, a new ETag, and an accepted update result with publication/outbox state. Missing precondition returns `428`; stale returns `412`; malformed, weak, wildcard, list, conflicting canonical/compatibility values, or invalid payload returns `400`; missing provider returns `404`.
+Success returns `200`, a new ETag, and an accepted update result with publication/outbox state. Missing precondition returns `428`; stale returns `412`; malformed, weak, wildcard, list, conflicting canonical/compatibility values, or invalid payload returns `400`; missing provider returns `404`; authentication returns `401` or auth-configuration `503`; a disabled publication feature returns `403`.
 
 ### 14.4 Trusted offering resources
 
 #### `GET /api/providers/{provider_id}/offerings`
 
-Requires bearer authentication. Returns `200` with `contract_version`, `provider_id`, and full offering projections. Unknown provider returns `404`. Individual list items do not carry independent HTTP ETag headers; read the selected offering detail before PATCH.
+Requires bearer authentication. Returns `200` with `contract_version`, `provider_id`, and full offering projections. Unknown provider returns `404`; authentication returns `401` or auth-configuration `503`. Individual list items do not carry independent HTTP ETag headers; read the selected offering detail before PATCH.
 
 #### `POST /api/providers/{provider_id}/offerings`
 
-Requires bearer authentication and actor. The body is a complete offering without provider/owned identity. The server derives `offering_id`. Success returns `201`, accepted update metadata, the new `offering_id`, and a provider ETag. Duplicate category-derived identity returns `409` with `offering_already_exists`; unknown provider returns `404`; invalid body returns `400`.
+Requires bearer authentication and actor. The body is a complete offering without provider/owned identity. The server derives `offering_id`. Success returns `201`, accepted update metadata, the new `offering_id`, and a strong ETag for the newly created offering. A client may retain this ETag or GET the offering immediately before PATCH. Duplicate category-derived identity returns `409` with `offering_already_exists`; unknown provider returns `404`; invalid body returns `400`; authentication returns `401` or auth-configuration `503`; a disabled publication feature returns `403`.
 
 #### `GET /api/offerings/{offering_id}`
 
-Requires bearer authentication. Returns `200`, a strong `ETag`, and the full offering projection: contract version, provider ID, offering ID/name, controlled category/family/support, supported part types, capability maps, custom maps, and `is_active`. Unknown offering returns `404`.
+Requires bearer authentication. Returns `200`, a strong `ETag`, and the full offering projection: contract version, provider ID, offering ID/name, controlled category/family/support, supported part types, capability maps, custom maps, and `is_active`. Unknown offering returns `404`; authentication returns `401` or auth-configuration `503`.
 
 #### `PATCH /api/offerings/{offering_id}`
 
-Requires bearer authentication, actor, and current ETag. Allowed fields are `offering_name`, `support_status`, `supported_part_types`, `family_capabilities`, `part_type_capabilities`, `generic_capabilities`, `custom_offering_fields`, `custom_capability_fields`, and `is_active`. Provider, offering identity, service category, and part family are immutable. Success returns `200` and a new offering ETag. Error semantics mirror provider PATCH.
+Requires bearer authentication, actor, and current ETag. Allowed fields are `offering_name`, `support_status`, `supported_part_types`, `family_capabilities`, `part_type_capabilities`, `generic_capabilities`, `custom_offering_fields`, `custom_capability_fields`, and `is_active`. Provider, offering identity, service category, and part family are immutable. Success returns `200` and a new offering ETag. Possible errors are `400`, `401`, `403`, `404`, `412`, `428`, and auth-configuration/write-unavailable `503`.
 
 ### 14.5 Authentication failure behavior
 
 If lifecycle auth is required but the server has no configured service token, trusted routes return `503` with `trusted_lifecycle_auth_unavailable`. Missing or incorrect credentials return `401` with `trusted_lifecycle_auth_required` and a `WWW-Authenticate: Bearer` header. Comparisons use constant-time checking. Actor values are stripped, length-bounded, and reject control characters.
+
+Representative current error envelope:
+
+```json
+{
+  "contract_version": "1.0",
+  "error": {
+    "code": "trusted_lifecycle_auth_required",
+    "message": "Trusted provider lifecycle authentication is required."
+  }
+}
+```
 
 ### 14.6 Guarded demo endpoints
 
@@ -610,15 +689,15 @@ This matrix completes the per-endpoint integration fields. “No body” means c
 | Endpoint | Required inputs and example | Success response | Operational/error notes | Primary implementation |
 |---|---|---|---|---|
 | `GET /api/health` | Public; `Accept`; no body/path parameter | Exact `200` JSON in 14.1 | `405` for wrong method | `views/get_views.py::health` |
-| `GET /api/catalog/filters` | Public; `Accept`; no body | `200`: contract plus six controlled arrays | Use returned values for client controls | `views/get_views.py::catalog_filters`, H1 registry |
+| `GET /api/catalog/filters` | Public; `Accept`; no body | `200`: contract plus six controlled structures (five arrays and a family-keyed `part_types` mapping) | Use returned values for client controls | `views/get_views.py::catalog_filters`, H1 registry |
 | `POST /api/service-discovery/search` | Public JSON; fields/examples in 14.1 and 18 | `200`: exact public response shape in 14.1 | `400` invalid; `503` all backends failed | `views/post_views.py::service_discovery_search`, search serializer, public contract |
 | `POST /api/provider-publication/validation` | Validation flag; bearer; publication in 15.1 | `200`: `{contract_version, valid, message, warnings, normalized_payload}` | Non-mutating; `400` invalid/contract, `401`, `403`, auth-config `503` | `views/post_views.py`, publication serializer/normalizer |
 | `POST /api/provider-publication` | Publication flag; bearer, actor, JSON; 15.1 | `201`: accepted create response in 14.2 | Atomic; `400`, `401`, `403`, duplicate `409`, redacted `503` | post view, `register_provider` |
 | `GET /api/providers/{provider_id}` | Bearer; external path ID; no body | `200` + ETag: contract, core provider fields, certifications, offering summaries | Includes lifecycle states; `401`, `404`, auth-config `503` | `views/get_views.py`, lifecycle repository |
 | `PATCH /api/providers/{provider_id}` | Publication flag; bearer, actor, strong precondition; body in 16/C.2 | `200` + new ETag: accepted update with IDs/publication/sync state | Replace supplied collections; `400`, `401`, `403`, `404`, `412`, `428`, `503` | post view, provider patch serializer/write service |
-| `GET /api/providers/{provider_id}/offerings` | Bearer; provider path ID; no body | `200`: `{contract_version, provider_id, offerings}` with full projections | List items have no HTTP ETag; `401`, `404` | `views/get_views.py`, lifecycle repository |
-| `POST /api/providers/{provider_id}/offerings` | Publication flag; bearer, actor; body in 17/C.3 | `201`: accepted result plus `offering_id`; provider ETag | Server owns ID; `400`, `401`, `403`, `404`, `409`, `503` | post view, offering create serializer/write service |
-| `GET /api/offerings/{offering_id}` | Bearer; external path ID; no body | `200` + ETag: contract and full offering projection | Includes inactive records; `401`, `404` | `views/get_views.py`, lifecycle repository |
+| `GET /api/providers/{provider_id}/offerings` | Bearer; provider path ID; no body | `200`: `{contract_version, provider_id, offerings}` with full projections | List items have no HTTP ETag; `401`, `404`, `503` | `views/get_views.py`, lifecycle repository |
+| `POST /api/providers/{provider_id}/offerings` | Publication flag; bearer, actor; body in 17/C.3 | `201`: accepted result plus `offering_id`; new offering ETag | Server owns ID; `400`, `401`, `403`, `404`, `409`, `503` | post view, offering create serializer/write service |
+| `GET /api/offerings/{offering_id}` | Bearer; external path ID; no body | `200` + ETag: contract and full offering projection | Includes inactive records; `401`, `404`, `503` | `views/get_views.py`, lifecycle repository |
 | `PATCH /api/offerings/{offering_id}` | Publication flag; bearer, actor, strong precondition; body in 17/C.4 | `200` + new ETag: accepted update plus `offering_id` | Identity/category/family immutable; `400`, `401`, `403`, `404`, `412`, `428`, `503` | post view, offering patch serializer/write service |
 
 Every accepted write result uses `status: "accepted"`, `operation`, `provider_id`, a dynamic `publication_id`, `publication_status: "sync_pending"`, `sync_status: "pending"`, and `offering_ids`. Offering create/update also supplies `offering_id`. Sync status describes durable work at response time; it does not claim that Fuseki already contains the change.
@@ -789,7 +868,7 @@ Create an offering under its provider. Do not put provider or offering ID in the
 }
 ```
 
-POST to `/api/providers/{provider_id}/offerings`. The expected identity is `{provider_id}_precision_shafts`. Because identity is category-derived and unique, repeating this request returns `409`. Listing offerings verifies the collection, but GET the exact `/api/offerings/{offering_id}` to capture its update ETag.
+POST to `/api/providers/{provider_id}/offerings`. The expected identity is `{provider_id}_precision_shafts`. A successful response carries a strong ETag for this newly created offering. Because identity is category-derived and unique, repeating the request returns `409`. A client can retain the response ETag, while this manual's safer demonstration flow lists the collection and GETs `/api/offerings/{offering_id}` immediately before PATCH to capture the current offering ETag.
 
 Example offering PATCH:
 
@@ -917,7 +996,9 @@ After P3.5 synchronization, deployed canonical search returned `p34_api_validati
 
 ### 18.4 Reading results
 
-`full_match` means all evaluated required/optional conditions needed by policy matched. `partial_match` means the selected offering is relevant but some evaluated capabilities only partially matched or did not all satisfy the optional policy. `unknown_match` means the primary selection is credible but current provider evidence cannot decide one or more relevant requirements under `keep_as_unknown`. `reject_unknown` removes unknown candidates. A result array can be empty; this is a valid `200`, distinct from a `503` backend failure.
+`full_match` means the requested part type is confirmed and every submitted criterion matched. `partial_match` means the part type is confirmed but at least one submitted criterion is partial, unmatched, or unknown. `unknown_match` means the requested part type itself is unknown or only a candidate requiring confirmation. With `keep_as_unknown`, unknown evidence remains explainable. `reject_unknown` excludes a candidate whose requested part type or any requested criterion is unknown. A result array can be empty; this is a valid `200`, distinct from a `503` backend failure.
+
+The three `optional_match_mode` values are `any`, `all`, and `score_only`. They compute an internal policy-satisfaction flag but never filter candidates on their own. The public response omits that internal flag. Use `minimum_score` for score-based exclusion and `unknown_policy: reject_unknown` for unknown-evidence exclusion.
 
 Matched, unmatched, and unknown capability arrays explain public decisions without exposing internal evidence records. Scores allow stable ranking and optional thresholding; they are not quotations, probabilities, capacity commitments, or quality guarantees. Consumers should show uncertainty to users and confirm commercial/manufacturing suitability directly with the provider.
 
@@ -1088,15 +1169,19 @@ Create a collection named **MDC Provider Lifecycle and Discovery**. The bodies b
 
 #### 02 Catalogue filters
 
-- `GET {{base_url}}/api/catalog/filters`; expect `200`, contract `1.0`, and controlled arrays.
+- `GET {{base_url}}/api/catalog/filters`; expect `200`, contract `1.0`, five controlled arrays, and the family-keyed `part_types` mapping.
 - Assert the chosen values:
 
 ```javascript
 pm.test("Required controlled values are advertised", function () {
   const body = pm.response.json();
-  pm.expect(body.service_categories).to.include("precision_metal_parts");
-  pm.expect(body.part_families).to.include("metal_part");
-  pm.expect(body.part_types).to.include("bracket");
+  const serviceCategories = body.service_categories.map(item => item.value);
+  const partFamilies = body.part_families.map(item => item.value);
+  const metalPartTypes = (body.part_types.metal_part || []).map(item => item.value);
+
+  pm.expect(serviceCategories).to.include("precision_metal_parts");
+  pm.expect(partFamilies).to.include("metal_part");
+  pm.expect(metalPartTypes).to.include("bracket");
 });
 ```
 
@@ -1396,11 +1481,29 @@ The bearer token authorizes the trusted lifecycle as one service-level principal
 - Remote Fuseki query support plus local RDF/fallback paths.
 - Durable publication/outbox records and an operator synchronization command.
 
-### 24.2 Temporary validation mechanisms
+### 24.2 Accepted Phase-3 pilot configuration snapshot
+
+The accepted P3.4/P3.5 production validation used this feature and security posture:
+
+```text
+MDC_PROVIDER_VALIDATION_ENABLED=True
+MDC_PROVIDER_PUBLICATION_ENABLED=True
+MDC_PROVIDER_LIFECYCLE_AUTH_REQUIRED=True
+MDC_PROVIDER_LIFECYCLE_ACTOR_REQUIRED=True
+MDC_PROVIDER_CONCURRENCY_REQUIRED=True
+MDC_CATALOG_SYNC_ENABLED=False
+MDC_DEMO_API_ENABLED=False
+```
+
+This is an accepted Phase-3 evidence snapshot, not a permanent guarantee about a later deployment. Recheck the actual deployment configuration after every environment, platform, credential, or release change. Keep synchronization off in the public application unless a separately approved architecture explicitly changes the operator boundary.
+
+### 24.3 Temporary validation mechanisms
 
 P3.3 and P3.5 used a local/external Fuseki service made reachable through a Cloudflare Quick Tunnel. The endpoint allowed Vercel's discovery runtime to query the updated graph. A Quick Tunnel URL is ephemeral and should not be considered a service-level endpoint. If the tunnel stops or changes, deployed remote Fuseki querying fails and the runtime may fall back; direct P3.5 remote proof will fail until configuration is updated.
 
-### 24.3 Routine operations
+After the tunnel is no longer required, remove or replace the temporary Vercel `SERVICE_DISCOVERY_FUSEKI_QUERY_ENDPOINT` and redeploy. Leaving a dead endpoint configured adds avoidable remote-query timeout and fallback delay. Never expose the Fuseki Graph Store endpoint or write credentials through Vercel/public clients. Before long-term production or AWS use, rotate pilot database and Fuseki credentials where appropriate through the approved migration procedure.
+
+### 24.4 Routine operations
 
 1. Keep Vercel production settings explicit and graph sync false.
 2. Apply Django migrations to the intended managed database before enabling write behavior.
@@ -1412,7 +1515,7 @@ P3.3 and P3.5 used a local/external Fuseki service made reachable through a Clou
 
 Relevant configuration names include `DJANGO_SETTINGS_MODULE`, `DJANGO_SECRET_KEY`, `DJANGO_DEBUG`, `DJANGO_ALLOWED_HOSTS`, `DATABASE_URL`, lifecycle feature/auth/actor/concurrency settings, `MDC_CATALOG_SYNC_PROCESSING_LEASE_SECONDS`, and the Fuseki query/Graph Store endpoint and optional Basic-auth settings. Appendix B provides the complete grouped list.
 
-### 24.4 Deployment interpretation
+### 24.5 Deployment interpretation
 
 Vercel and Neon are the current validated pilot. The temporary tunnel is a validation bridge. None of them should be described as the already completed AWS target. Under P3.6 the application contract, identifiers, matching behavior, PostgreSQL authority, and rebuildable semantic layer remain unchanged while hosting, networking, worker execution, secrets, monitoring, and cutover practices become production-grade.
 
@@ -1479,7 +1582,7 @@ These limitations do not invalidate the accepted P3.4/P3.5 proof. They define wh
 
 ### 27.1 Planned and credible next steps
 
-The next deployment program should implement P3.6 rather than reopening Phase 3. It should package Django and Fuseki for the selected AWS compute, provision private PostgreSQL and graph networking, move secrets to managed stores, create a trusted sync task, establish logs/metrics/alerts, automate safe delivery, migrate data, rebuild RDF, and run the same end-to-end acceptance before traffic cutover.
+The next deployment program should implement the accepted P3.6 AWS migration/readiness plan rather than reopening Phase 3. It should package Django and Fuseki for the selected AWS compute, provision private PostgreSQL and graph networking, move secrets to managed stores, create a trusted sync task, establish logs/metrics/alerts, automate safe delivery, migrate data, rebuild RDF, and run the same end-to-end acceptance before traffic cutover.
 
 Identity should then move from one shared token toward the MaaSAI Marketplace integration's actual trust model. A credible sequence is gateway or application JWT validation, stable subject/organization mapping, per-provider authorization, scoped operations, audit correlation, expiry/revocation, and rate limits. The provider lifecycle payload and persistence semantics can remain stable while the principal becomes stronger.
 
@@ -1628,11 +1731,11 @@ Migration preserves the three canonical public routes, absence of a public `/api
 | POST | `/api/provider-publication/validation` | Trusted | Bearer; validation feature | `200` valid | `400`, `401`, `403`, `503` auth unavailable |
 | POST | `/api/provider-publication` | Trusted write | Bearer, actor, publication feature | `201` | `400`, `401`, `403`, `409`, `503` |
 | GET | `/api/providers/{provider_id}` | Trusted | Bearer | `200` + ETag | `401`, `404`, `503` auth unavailable |
-| PATCH | `/api/providers/{provider_id}` | Trusted write | Bearer, actor, strong precondition | `200` + new ETag | `400`, `401`, `404`, `412`, `428`, `503` |
-| GET | `/api/providers/{provider_id}/offerings` | Trusted | Bearer | `200` | `401`, `404` |
-| POST | `/api/providers/{provider_id}/offerings` | Trusted write | Bearer, actor, publication feature | `201` | `400`, `401`, `403`, `404`, `409`, `503` |
-| GET | `/api/offerings/{offering_id}` | Trusted | Bearer | `200` + ETag | `401`, `404` |
-| PATCH | `/api/offerings/{offering_id}` | Trusted write | Bearer, actor, strong precondition | `200` + new ETag | `400`, `401`, `404`, `412`, `428`, `503` |
+| PATCH | `/api/providers/{provider_id}` | Trusted write | Bearer, actor, strong precondition | `200` + new ETag | `400`, `401`, `403`, `404`, `412`, `428`, `503` |
+| GET | `/api/providers/{provider_id}/offerings` | Trusted | Bearer | `200` | `401`, `404`, `503` |
+| POST | `/api/providers/{provider_id}/offerings` | Trusted write | Bearer, actor, publication feature | `201` + new offering ETag | `400`, `401`, `403`, `404`, `409`, `503` |
+| GET | `/api/offerings/{offering_id}` | Trusted | Bearer | `200` + ETag | `401`, `404`, `503` |
+| PATCH | `/api/offerings/{offering_id}` | Trusted write | Bearer, actor, strong precondition | `200` + new ETag | `400`, `401`, `403`, `404`, `412`, `428`, `503` |
 | POST | `/api/catalog/search` | Legacy | Legacy behavior | compatibility response | Historical `service_type` contract; not for new clients |
 | GET | `/api/demo/health` | Local/demo | Demo gate | demo response | Production `404` |
 | GET | `/api/demo/service-discovery/backend-status` | Local/demo | Demo gate | diagnostic | Production `404` |
