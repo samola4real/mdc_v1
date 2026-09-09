@@ -101,6 +101,29 @@ MDC_CATALOG_SYNC_ENABLED = env_bool(
     False,
 )
 
+# M7.6 trusted provider-lifecycle boundary. Local development remains backwards
+# compatible by default; production settings override the required flags to true.
+MDC_PROVIDER_LIFECYCLE_AUTH_REQUIRED = env_bool(
+    "MDC_PROVIDER_LIFECYCLE_AUTH_REQUIRED",
+    False,
+)
+MDC_PROVIDER_LIFECYCLE_SERVICE_TOKEN = os.getenv(
+    "MDC_PROVIDER_LIFECYCLE_SERVICE_TOKEN",
+    "",
+).strip()
+MDC_PROVIDER_LIFECYCLE_ACTOR_REQUIRED = env_bool(
+    "MDC_PROVIDER_LIFECYCLE_ACTOR_REQUIRED",
+    False,
+)
+MDC_PROVIDER_CONCURRENCY_REQUIRED = env_bool(
+    "MDC_PROVIDER_CONCURRENCY_REQUIRED",
+    False,
+)
+MDC_CATALOG_SYNC_PROCESSING_LEASE_SECONDS = env_float(
+    "MDC_CATALOG_SYNC_PROCESSING_LEASE_SECONDS",
+    900,
+)
+
 
 ALLOWED_HOSTS = env_list(
     "DJANGO_ALLOWED_HOSTS",
@@ -192,7 +215,7 @@ TEMPLATES = [
                 "django.contrib.messages.context_processors.messages",
             ],
         },
-    },
+    }
 ]
 
 WSGI_APPLICATION = "config.wsgi.application"
