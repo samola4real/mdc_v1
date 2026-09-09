@@ -13,6 +13,8 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 import os
 from pathlib import Path
 
+from dotenv import load_dotenv
+
 from config.env import env_bool, env_float, env_list
 from config.database import database_config
 
@@ -20,6 +22,11 @@ from config.database import database_config
 BASE_DIR = Path(__file__).resolve().parent.parent
 #* app level Dirs
 PROJECT_ROOT = BASE_DIR.parent
+
+# Canonical local MDC application configuration.
+# Deployed/platform environment variables always win over values in .env.
+load_dotenv(PROJECT_ROOT / ".env", override=False)
+
 CURATED_DATA_DIR = PROJECT_ROOT / "data" / "curated"
 GENERATED_DATA_DIR = PROJECT_ROOT / "data" / "generated"
 PROVIDER_SEED_DIR = CURATED_DATA_DIR / "providers"
@@ -30,10 +37,10 @@ PROVIDER_SEED_DIR = CURATED_DATA_DIR / "providers"
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
-# SECURITY WARNING: keep the secret key used in production secret!
+# Local-only fallback. Production settings require DJANGO_SECRET_KEY explicitly.
 SECRET_KEY = os.getenv(
     "DJANGO_SECRET_KEY",
-    "django-insecure-5z!dhlzj!(0=nuyk(fj(h(obp(%gao5efy$0nk^=(6gp*_wzw!",
+    "django-insecure-local-development-only",
 )
 
 # SECURITY WARNING: don't run with debug turned on in production!
