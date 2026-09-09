@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from hashlib import sha256
 from hmac import compare_digest
 
 from django.conf import settings
@@ -39,7 +38,9 @@ def _validated_actor_id(request) -> tuple[str | None, Response | None]:
     actor_id = raw.strip()
     if not actor_id:
         return None, None
-    if len(actor_id) > MAX_ACTOR_LENGTH or any(ord(character) < 32 for character in actor_id):
+    if len(actor_id) > MAX_ACTOR_LENGTH or any(
+        ord(character) < 32 or ord(character) == 127 for character in actor_id
+    ):
         return None, _error(
             "invalid_actor_attribution",
             "The lifecycle actor identifier is invalid.",
@@ -77,7 +78,7 @@ def authenticate_lifecycle_request(request, *, write: bool = False):
         scheme, separator, supplied_token = authorization.partition(" ")
         valid = (
             bool(separator)
-            and scheme == "Bearer"
+            and scheme.lower() == "bearer"
             and bool(supplied_token)
             and compare_digest(supplied_token, configured_token)
         )
@@ -98,15 +99,6 @@ def authenticate_lifecycle_request(request, *, write: bool = False):
             )
 
     return LifecycleSecurityContext(actor_id=actor_id), None
-
-
-def build_entity_etag(entity_type: str, external_id: str, updated_at) -> str:
-    """Build a strong opaque ETag without exposing internal timestamps."""
-    timestamp = updated_at.isoformat() if updated_at is not None else ""
-    digest = sha256(
-        f"{entity_type}:{external_id}:{timestamp}".encode("utf-8")
-    ).hexdigest()
-    return f'"{digest}"'
 
 
 def get_if_match_or_error(request):
