@@ -97,6 +97,7 @@ def make_valid_provider_publication_payload() -> dict:
     }
 
 
+@override_settings(MDC_PROVIDER_PUBLICATION_ENABLED=True)
 class ProviderPublicationApiTests(SimpleTestCase):
     def setUp(self):
         self.client = APIClient()

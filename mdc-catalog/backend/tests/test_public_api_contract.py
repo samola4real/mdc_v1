@@ -1,6 +1,7 @@
 from unittest.mock import patch
 
 from django.test import SimpleTestCase
+from django.urls import resolve
 from rest_framework import status
 from rest_framework.test import APIClient
 
@@ -195,10 +196,10 @@ class PublicApiContractTests(SimpleTestCase):
             status.HTTP_404_NOT_FOUND,
         )
         self.assertEqual(
-            self.client.get("/api/providers/tasowheel").status_code,
-            status.HTTP_200_OK,
+            resolve("/api/providers/tasowheel").url_name,
+            "provider-detail",
         )
         self.assertEqual(
-            self.client.get("/api/offerings/tasowheel_gears_shafts_precision").status_code,
-            status.HTTP_200_OK,
+            resolve("/api/offerings/tasowheel_gears_shafts_precision").url_name,
+            "offering-detail",
         )

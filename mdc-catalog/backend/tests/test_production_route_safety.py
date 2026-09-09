@@ -13,6 +13,7 @@ PRODUCTION_ROUTE_SETTINGS = {
     "DEBUG": False,
     "MDC_DEMO_API_ENABLED": False,
     "MDC_PROVIDER_PUBLICATION_ENABLED": False,
+    "MDC_PROVIDER_VALIDATION_ENABLED": False,
     "SECURE_SSL_REDIRECT": True,
 }
 
@@ -87,3 +88,11 @@ class ProductionRouteSafetyTests(SimpleTestCase):
             response.json()["error"]["code"],
             "provider_publication_disabled",
         )
+
+    def test_provider_validation_unavailable_by_default_in_production(self):
+        response = self.client.post(
+            "/api/provider-publication/validation",
+            data={}, format="json", secure=True,
+        )
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.json()["error"]["code"], "provider_validation_disabled")

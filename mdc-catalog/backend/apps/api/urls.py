@@ -23,9 +23,19 @@ urlpatterns = [
         name="provider-publication",
     ),
     path(
+        "provider-publication/validation",
+        views.provider_publication_validation,
+        name="provider-publication-validation",
+    ),
+    path(
         "providers/<str:provider_id>",
         views.provider_detail,
         name="provider-detail",
+    ),
+    path(
+        "providers/<str:provider_id>/offerings",
+        views.provider_offerings,
+        name="provider-offerings",
     ),
     path(
         "offerings/<str:offering_id>",
