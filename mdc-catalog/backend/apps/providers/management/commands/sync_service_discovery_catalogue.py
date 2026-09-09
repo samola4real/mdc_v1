@@ -14,6 +14,7 @@ from apps.providers.catalogue_sync_service import (
     CatalogueSyncTransportError,
     process_pending_catalogue_sync,
     rebuild_service_discovery_catalogue,
+    recover_stale_processing_sync,
 )
 
 
@@ -41,16 +42,33 @@ class Command(BaseCommand):
             action="store_true",
             help="Explicitly replace Fuseki from the current DB catalogue without outbox changes.",
         )
+        parser.add_argument(
+            "--recover-stale",
+            action="store_true",
+            help=(
+                "Recover expired PROCESSING outbox leases to FAILED/retryable state "
+                "without contacting Fuseki."
+            ),
+        )
 
     def handle(self, *args, **options):
         rebuild = options["rebuild"]
+        recover_stale = options["recover_stale"]
         limit = options["limit"]
         publication_id = options["publication_id"]
 
-        if rebuild and (limit is not None or publication_id is not None):
-            raise CommandError("--rebuild cannot be combined with --limit or --publication-id.")
-        if limit is not None and publication_id is not None:
-            raise CommandError("--limit cannot be combined with --publication-id.")
+        selected_modes = sum(
+            [
+                bool(rebuild),
+                bool(recover_stale),
+                publication_id is not None,
+                limit is not None,
+            ]
+        )
+        if selected_modes > 1:
+            raise CommandError(
+                "--rebuild, --recover-stale, --limit, and --publication-id are mutually exclusive."
+            )
         if limit is not None and limit <= 0:
             raise CommandError("--limit must be greater than zero.")
 
@@ -61,6 +79,16 @@ class Command(BaseCommand):
                     self.style.SUCCESS(
                         "Catalogue rebuild succeeded; "
                         f"triples synchronized: {result['triple_count']}."
+                    )
+                )
+                return
+
+            if recover_stale:
+                result = recover_stale_processing_sync()
+                self.stdout.write(
+                    self.style.SUCCESS(
+                        "Catalogue sync lease recovery completed; "
+                        f"events={result['events']}; publications={result['publications']}."
                     )
                 )
                 return
