@@ -4,6 +4,7 @@ from copy import deepcopy
 
 from django.db.models import Prefetch
 
+from apps.providers.lifecycle_revision import build_entity_etag
 from apps.providers.models import Offering, Provider, ProviderCertification
 
 
@@ -29,8 +30,8 @@ def _offering_summary(offering):
     }
 
 
-def _offering_payload(offering):
-    return {
+def _offering_payload(offering, *, include_etag=False):
+    payload = {
         **_offering_summary(offering),
         "provider_id": offering.provider.provider_id,
         "supported_part_types": deepcopy(offering.supported_part_types),
@@ -40,6 +41,11 @@ def _offering_payload(offering):
         "custom_offering_fields": deepcopy(offering.custom_offering_fields),
         "custom_capability_fields": deepcopy(offering.custom_capability_fields),
     }
+    if include_etag:
+        payload["_etag"] = build_entity_etag(
+            "offering", offering.offering_id, offering.updated_at
+        )
+    return payload
 
 
 def get_provider_lifecycle(provider_id):
@@ -76,6 +82,9 @@ def get_provider_lifecycle(provider_id):
         "offerings": [
             _offering_summary(offering) for offering in provider.lifecycle_offerings
         ],
+        "_etag": build_entity_etag(
+            "provider", provider.provider_id, provider.updated_at
+        ),
     }
 
 
@@ -98,4 +107,8 @@ def get_offering_lifecycle(offering_id):
         .select_related("provider")
         .first()
     )
-    return _offering_payload(offering) if offering is not None else None
+    return (
+        _offering_payload(offering, include_etag=True)
+        if offering is not None
+        else None
+    )
