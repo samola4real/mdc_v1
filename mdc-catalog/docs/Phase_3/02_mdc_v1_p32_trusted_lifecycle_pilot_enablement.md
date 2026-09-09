@@ -27,12 +27,14 @@ P3.2 does not reduce the intended functionality. It enables it in a short sequen
 1. enable validation only — no database mutation;
 2. verify authentication + validation + non-mutation;
 3. enable provider publication/write lifecycle;
-4. register one controlled pilot provider and verify read/update concurrency behavior;
+4. register one controlled pilot provider and verify provider/offering read-update concurrency behavior;
 5. keep catalogue synchronization disabled until the later real-Fuseki gate.
 
 This keeps rollback simple while still completing the full trusted lifecycle pilot.
 
 ## Stage A — validation-only enablement
+
+**STATUS: PASS**
 
 Production configuration:
 
@@ -46,18 +48,19 @@ MDC_PROVIDER_LIFECYCLE_ACTOR_REQUIRED=True
 MDC_PROVIDER_CONCURRENCY_REQUIRED=True
 ```
 
-Expected behavior:
+Observed deployment smoke results:
 
-| Check | Expected |
-| --- | --- |
-| public discovery | unchanged, 200 |
-| anonymous validation | 401 |
-| authenticated valid validation | 200, `valid=true` |
-| authenticated invalid validation | 400 |
-| authenticated provider write | 403 |
-| provider/publication/sync-event DB counts | unchanged |
+```text
+PASS public health unchanged: 200
+PASS anonymous validation rejected: 401
+PASS authenticated valid validation: 200
+PASS authenticated invalid validation: 400
+PASS provider writes still disabled: 403
+PASS trusted DB read still works: 200
+P3.2 Stage A validation smoke PASS
+```
 
-Baseline before Stage A:
+Database baseline before Stage A:
 
 ```text
 providers=3
@@ -67,9 +70,23 @@ publications=0
 sync_events=0
 ```
 
+Database verification after Stage A:
+
+```text
+providers=3
+offerings=4
+certifications=5
+publications=0
+sync_events=0
+```
+
+Therefore the deployed validation flow is confirmed non-mutating.
+
 ## Stage B — controlled write enablement
 
-Only after Stage A passes:
+**STATUS: READY TO RUN**
+
+Production configuration:
 
 ```text
 MDC_PROVIDER_VALIDATION_ENABLED=True
@@ -77,25 +94,43 @@ MDC_PROVIDER_PUBLICATION_ENABLED=True
 MDC_CATALOG_SYNC_ENABLED=False
 ```
 
-The pilot write will use a dedicated/demo provider identity so existing Tasowheel, Precipart, and seeded provider records are not edited.
+The controlled write smoke uses the dedicated provider ID:
 
-Planned write checks:
+```text
+p32_pilot_provider
+```
 
-- authenticated provider registration succeeds;
-- actor attribution is persisted in `ProviderPublication.submitted_by_external_id`;
-- provider GET succeeds and returns an opaque ETag;
+Existing Tasowheel, Precipart, and seeded provider records are not edited.
+
+The Stage B smoke verifies:
+
+- anonymous provider registration remains rejected;
+- authenticated provider registration succeeds (or safely reuses the same fixed pilot identity on rerun);
+- provider GET returns an opaque ETag;
 - provider PATCH with current `If-Match` succeeds;
-- stale `If-Match` returns 412 and does not overwrite the newer state;
-- accepted writes create publication/outbox history;
-- catalogue sync remains pending because `MDC_CATALOG_SYNC_ENABLED=False`;
+- stale provider `If-Match` returns 412;
+- a second controlled offering can be created;
+- offering GET returns an opaque ETag;
+- offering PATCH with current `If-Match` succeeds;
+- stale offering `If-Match` returns 412;
+- accepted writes remain `sync_pending` because catalogue synchronization is disabled;
+- public catalogue filters remain available;
 - no real Fuseki write occurs.
+
+After the smoke run, PostgreSQL evidence must confirm:
+
+- the pilot provider and offerings exist;
+- `ProviderPublication.submitted_by_external_id` records `p32:trusted-write-smoke`;
+- publication history exists for accepted writes;
+- corresponding sync events remain pending;
+- no event was processed remotely while `MDC_CATALOG_SYNC_ENABLED=False`.
 
 ## P3.2 acceptance
 
 P3.2 is complete when:
 
 - validation-only trusted flow passes and is proved non-mutating;
-- controlled provider registration/update passes;
+- controlled provider registration/update and offering create/update pass;
 - authentication, actor attribution, and ETag/If-Match are verified on the deployed pilot;
 - public discovery remains unchanged;
 - `/api/v1/...` remains absent;
