@@ -7,6 +7,7 @@ from django.test import TestCase, override_settings
 from django.utils import timezone
 
 from apps.providers.catalogue_sync_service import (
+    CatalogueSyncConfigurationError,
     STALE_PROCESSING_FAILURE_CODE,
     process_publication_sync,
     recover_stale_processing_sync,
@@ -128,7 +129,7 @@ class CatalogueSyncRecoveryTests(TestCase):
             "invalid", age_seconds=600
         )
         with self.assertRaisesMessage(
-            Exception,
+            CatalogueSyncConfigurationError,
             "MDC_CATALOG_SYNC_PROCESSING_LEASE_SECONDS must be a positive number.",
         ):
             recover_stale_processing_sync()
