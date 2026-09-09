@@ -2,7 +2,13 @@
 
 ## Status
 
-**IN PROGRESS.** Code/configuration review is complete and the deployment procedure is fixed. One environment preparation step and one Vercel production deployment/smoke run remain.
+**COMPLETE.** The current Phase 3 baseline has been deployed successfully to the temporary Vercel pilot, connected to managed PostgreSQL, and verified with the automated production smoke gate.
+
+Successful marker:
+
+```text
+READY_FOR_P32_TRUSTED_LIFECYCLE_PILOT_ENABLEMENT
+```
 
 ## Target
 
@@ -20,9 +26,7 @@ managed PostgreSQL (temporary Neon pilot)
 
 Future target remains AWS. P3.1 does not introduce Vercel- or Neon-specific domain logic.
 
-## Existing Vercel baseline
-
-Existing pilot project:
+## Deployment baseline
 
 ```text
 project: maasai-mdc-v1
@@ -33,151 +37,133 @@ entrypoint: backend.config.wsgi:application
 settings: config.settings_production
 ```
 
-The repository already contains the Vercel-compatible `pyproject.toml`, `.python-version`, production settings, backend import-path support, and runtime dependencies established during M5/M6. No `vercel.json` is required for this baseline.
+The canonical public API remains unversioned under `/api/...`; `/api/v1/...` is intentionally absent.
 
-The prior Vercel deployment predates M7 persistence/security work and therefore must be redeployed from the current Phase 3 baseline.
+## Managed PostgreSQL state
 
-## Current managed PostgreSQL state
-
-The temporary Neon validation project/database exists, but inspection at the start of P3.1 found:
+The local canonical `.env` used for the P3.1 deployment baseline was confirmed to point to the temporary Neon database named:
 
 ```text
-mdc_validation tables: 0
+neondb
 ```
 
-Therefore `mdc_validation` must receive the existing Django migrations and harmonized provider import before it can serve as the deployed lifecycle database. This is an environment preparation operation, not a new schema design.
-
-Do not run tests against `mdc_validation`; Django tests must continue using isolated test databases.
-
-## Deployment feature policy
-
-The first P3.1 deployment must keep all mutation/semantic-write switches disabled:
-
-```text
-MDC_PROVIDER_PUBLICATION_ENABLED=False
-MDC_PROVIDER_VALIDATION_ENABLED=False
-MDC_CATALOG_SYNC_ENABLED=False
-```
-
-Trusted lifecycle security stays enabled even while lifecycle features are disabled:
-
-```text
-MDC_PROVIDER_LIFECYCLE_AUTH_REQUIRED=True
-MDC_PROVIDER_LIFECYCLE_ACTOR_REQUIRED=True
-MDC_PROVIDER_CONCURRENCY_REQUIRED=True
-```
-
-A real lifecycle service token should be stored only in Vercel secret/environment configuration. It must not be committed or pasted into project reports.
-
-## Required production environment variables
-
-Minimum P3.1 production set:
-
-```text
-DJANGO_SETTINGS_MODULE=config.settings_production
-DJANGO_SECRET_KEY=<secret>
-DJANGO_ALLOWED_HOSTS=.vercel.app
-DATABASE_URL=<mdc_validation PostgreSQL URL>
-MDC_DEMO_API_ENABLED=False
-MDC_PROVIDER_PUBLICATION_ENABLED=False
-MDC_PROVIDER_VALIDATION_ENABLED=False
-MDC_CATALOG_SYNC_ENABLED=False
-MDC_PROVIDER_LIFECYCLE_AUTH_REQUIRED=True
-MDC_PROVIDER_LIFECYCLE_SERVICE_TOKEN=<secret>
-MDC_PROVIDER_LIFECYCLE_ACTOR_REQUIRED=True
-MDC_PROVIDER_CONCURRENCY_REQUIRED=True
-SERVICE_DISCOVERY_FUSEKI_QUERY_ENDPOINT=
-SERVICE_DISCOVERY_FUSEKI_GRAPH_STORE_ENDPOINT=
-FUSEKI_TIMEOUT_SECONDS=5
-FUSEKI_SYNC_TIMEOUT_SECONDS=10
-```
-
-`CORS_ALLOWED_ORIGINS` and `CSRF_TRUSTED_ORIGINS` remain empty until the Marketplace frontend origin is known.
-
-## Database preparation
-
-From `mdc-catalog/backend`, with the local `.env` pointing to the temporary `mdc_validation` database:
-
-```powershell
-Remove-Item Env:DATABASE_URL -ErrorAction SilentlyContinue
-& '..\..\.venv\Scripts\python.exe' manage.py migrate
-& '..\..\.venv\Scripts\python.exe' manage.py import_service_discovery_providers
-```
-
-Expected curated import baseline:
-
-```text
-3 providers
-4 offerings
-5 certifications
-```
-
-Then verify without exposing credentials:
-
-```powershell
-& '..\..\.venv\Scripts\python.exe' manage.py shell -c "from django.db import connection; from apps.providers.models import Provider,Offering,ProviderCertification; connection.ensure_connection(); print('backend=',connection.vendor); print('providers=',Provider.objects.count(),'offerings=',Offering.objects.count(),'certifications=',ProviderCertification.objects.count())"
-```
-
-Expected:
+The database was migrated and seeded successfully with the accepted harmonized baseline:
 
 ```text
 backend= postgresql
-providers= 3 offerings= 4 certifications= 5
+providers= 3
+offerings= 4
+certifications= 5
 ```
 
-## Vercel deployment
+Direct read-only Neon verification also confirmed the same 3/4/5 counts.
 
-The connected ChatGPT Vercel integration is not currently exposing the project/team in this session, so P3.1 uses the already-established local Vercel CLI path rather than blocking on plugin access.
+The separate `mdc_validation` database remains unused for this deployment baseline and was not modified as part of final P3.1 deployment.
 
-From `C:\Users\Elahi\Desktop\mdc_v1\mdc-catalog`:
+## Production feature policy
 
-```powershell
-npx vercel@latest --prod
+Mutation and semantic-write switches remain disabled:
+
+```text
+MDC_PROVIDER_PUBLICATION_ENABLED=False
+MDC_PROVIDER_VALIDATION_ENABLED=False
+MDC_CATALOG_SYNC_ENABLED=False
 ```
 
-If production environment variables are not yet updated, configure them in Vercel before this command. Secrets must be entered interactively or through the Vercel dashboard, never placed in shell history or Git.
+Trusted lifecycle security remains enabled:
 
-## Mandatory smoke gate
+```text
+MDC_PROVIDER_LIFECYCLE_AUTH_REQUIRED=True
+MDC_PROVIDER_LIFECYCLE_ACTOR_REQUIRED=True
+MDC_PROVIDER_CONCURRENCY_REQUIRED=True
+```
 
-After deployment, verify the production alias:
+The lifecycle service token is stored only in Vercel secret/environment configuration and was not committed or written into reports.
+
+## Runtime dependency correction
+
+The first P3.1 production deployment built successfully but returned HTTP 500 on `/api/health` after `DATABASE_URL` was introduced.
+
+Root cause: Vercel installs Python dependencies from `pyproject.toml`, while PostgreSQL runtime dependencies had only been present in `requirements/base.txt`.
+
+The following dependencies were added to `pyproject.toml`:
+
+```text
+psycopg[binary]==3.2.12
+dj-database-url==3.0.1
+```
+
+Fix commit:
+
+```text
+d27ee8a9e7f561e01b46ef74606844593e6c0f98
+fix: include PostgreSQL runtime dependencies for Vercel
+```
+
+After redeployment, the full P3.1 smoke gate passed.
+
+## Production smoke verification
+
+Target:
 
 ```text
 https://maasai-mdc-v1.vercel.app
 ```
 
-Required outcomes:
+Observed results:
 
-| Request | Expected |
+| Request | Result |
 | --- | --- |
-| `GET /api/health` | 200, `contract_version: 1.0` |
+| `GET /api/health` | 200 |
 | `GET /api/catalog/filters` | 200 |
-| `POST /api/service-discovery/search` | 200 with normal discovery result |
+| `POST /api/service-discovery/search` | 200 |
 | `GET /api/v1/health` | 404 |
 | `GET /api/v1/catalog/filters` | 404 |
 | `POST /api/v1/service-discovery/search` | 404 |
 | `GET /api/demo/health` | 404 |
-| anonymous `GET /api/providers/tasowheel` | 401 when lifecycle token is configured |
-| anonymous `POST /api/provider-publication` | 401 when lifecycle token is configured |
-| authenticated lifecycle write while publication flag is False | 403 |
+| anonymous `GET /api/providers/tasowheel` | 401 |
+| anonymous `POST /api/provider-publication` | 401 |
+| authenticated `GET /api/providers/tasowheel` | 200 |
+| authenticated provider write while publication disabled | 403 |
 
-Public discovery must remain independent of the lifecycle bearer credential.
+Final smoke result:
+
+```text
+P3.1 deployment smoke PASS
+```
+
+This confirms all of the following at once:
+
+- canonical public discovery remains available without lifecycle authentication;
+- `/api/v1/...` remains absent;
+- demo routes remain disabled;
+- Vercel can connect successfully to the managed PostgreSQL catalogue;
+- the deployed database can return the Tasowheel lifecycle record;
+- anonymous lifecycle access is rejected;
+- valid lifecycle authentication does not bypass the publication feature flag;
+- provider writes remain disabled in production;
+- no real remote Fuseki write was enabled or exercised.
 
 ## P3.1 acceptance
 
-P3.1 is complete when all of the following are true:
+All P3.1 gates are satisfied:
 
-- current Phase 3 baseline deployed on Vercel;
-- production runtime uses `config.settings_production`;
-- deployed `DATABASE_URL` points to prepared managed PostgreSQL;
-- public canonical discovery smoke tests pass;
-- `/api/v1/...` remains absent;
-- demo remains disabled;
-- trusted lifecycle boundary rejects anonymous requests;
-- lifecycle writes remain feature-disabled;
-- no real remote Fuseki write occurs;
-- no secrets are committed or printed in reports.
+- current Phase 3 baseline deployed on Vercel — **PASS**;
+- production runtime uses `config.settings_production` — **PASS**;
+- managed PostgreSQL connectivity — **PASS**;
+- catalogue baseline 3 providers / 4 offerings / 5 certifications — **PASS**;
+- public canonical discovery — **PASS**;
+- `/api/v1/...` absent — **PASS**;
+- demo disabled — **PASS**;
+- trusted lifecycle authentication boundary — **PASS**;
+- authenticated DB-backed lifecycle read — **PASS**;
+- lifecycle writes feature-disabled — **PASS**;
+- no remote Fuseki mutation — **PASS**;
+- no secret committed to Git/report — **PASS**.
 
-Successful marker:
+## Next step
+
+Proceed to P3.2: trusted lifecycle pilot enablement. Enable capabilities progressively rather than all at once, beginning with validation and trusted reads before provider registration/update writes.
 
 ```text
 READY_FOR_P32_TRUSTED_LIFECYCLE_PILOT_ENABLEMENT
