@@ -16,6 +16,7 @@ class Provider(models.Model):
     country = models.CharField(max_length=100)
     status = models.CharField(max_length=16, choices=Status.choices, default=Status.DRAFT)
     custom_provider_fields = models.JSONField(default=dict, blank=True)
+    publication_metadata = models.JSONField(default=dict, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -47,6 +48,7 @@ class Offering(models.Model):
     custom_offering_fields = models.JSONField(default=dict, blank=True)
     custom_capability_fields = models.JSONField(default=dict, blank=True)
     is_active = models.BooleanField(default=True)
+    sequence_index = models.PositiveIntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -63,6 +65,9 @@ class ProviderCertification(models.Model):
     source_type = models.CharField(max_length=64)
     confidence = models.CharField(max_length=64)
     source_note = models.TextField(null=True, blank=True)
+    # An omitted note differs from an explicitly supplied null in canonical records.
+    source_note_present = models.BooleanField(default=False)
+    sequence_index = models.PositiveIntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
