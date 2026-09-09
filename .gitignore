@@ -43,3 +43,5 @@ Thumbs.db
 
 # Duplicate local data archives
 mdc-catalog/data/curated/*.zip
+mdc-catalog/env.example
+.gitignore
