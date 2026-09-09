@@ -100,8 +100,11 @@ class DemoApiFoundationTests(SimpleTestCase):
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         data = response.json()
-        self.assertIn("service_types", data)
+        self.assertEqual(data["contract_version"], "1.0")
+        self.assertIn("service_categories", data)
+        self.assertNotIn("service_types", data)
         self.assertIn("part_families", data)
+        self.assertIn("part_types", data)
 
     @override_settings(MDC_DEMO_API_ENABLED=True)
     def test_demo_routes_do_not_exist_under_shared_service_discovery_paths(self):

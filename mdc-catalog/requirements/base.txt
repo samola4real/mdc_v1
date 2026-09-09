@@ -9,3 +9,5 @@ pyshacl
 python-dotenv
 requests
 PyYAML
+psycopg[binary]
+dj-database-url
