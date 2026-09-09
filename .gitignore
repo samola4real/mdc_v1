@@ -2,7 +2,7 @@
 .venv/
 venv/
 
-# Editor settings
+# Editor and deployment-tool local state
 .vscode/
 .vercel/
 
@@ -20,6 +20,9 @@ __pycache__/
 htmlcov/
 
 # Local environment and secret files
+# Canonical MDC local application configuration is mdc-catalog/.env.
+# Ignore it and all environment variants/tool-generated secret files
+# such as .env.local, .env.production, etc. Keep only safe examples tracked.
 .env
 .env.*
 !.env.example
