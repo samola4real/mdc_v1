@@ -40,6 +40,22 @@ MDC_CATALOG_SYNC_ENABLED = env_bool(
     False,
 )
 
+# M7.6 production lifecycle boundary. These requirements remain on even while
+# publication/validation feature flags are disabled, so later enablement cannot
+# silently expose anonymous or stale-update lifecycle access.
+MDC_PROVIDER_LIFECYCLE_AUTH_REQUIRED = env_bool(
+    "MDC_PROVIDER_LIFECYCLE_AUTH_REQUIRED",
+    True,
+)
+MDC_PROVIDER_LIFECYCLE_ACTOR_REQUIRED = env_bool(
+    "MDC_PROVIDER_LIFECYCLE_ACTOR_REQUIRED",
+    True,
+)
+MDC_PROVIDER_CONCURRENCY_REQUIRED = env_bool(
+    "MDC_PROVIDER_CONCURRENCY_REQUIRED",
+    True,
+)
+
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 SESSION_COOKIE_SECURE = env_bool("DJANGO_SESSION_COOKIE_SECURE", True)
 CSRF_COOKIE_SECURE = env_bool("DJANGO_CSRF_COOKIE_SECURE", True)
