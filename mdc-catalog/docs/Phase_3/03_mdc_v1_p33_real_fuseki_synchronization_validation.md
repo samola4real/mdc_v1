@@ -2,7 +2,7 @@
 
 ## Status
 
-**IN PROGRESS.** P3.2 is complete. P3.3 validates the real PostgreSQL -> RDF -> Fuseki synchronization path and proves that deployed public discovery can consume the synchronized graph.
+**IN PROGRESS — LOCAL GATES PASSED.** P3.2 is complete. P3.3 has now validated the real PostgreSQL -> RDF -> local Fuseki synchronization path. Only the final remotely reachable/Vercel-consumption gate remains.
 
 ## Goal
 
@@ -34,7 +34,7 @@ PostgreSQL remains the operational source of truth. Fuseki remains the semantic/
 
 ## Starting P3.3 database state
 
-Verified against the temporary pilot database `neondb`:
+Verified against the temporary pilot database `neondb` before synchronization:
 
 ```text
 providers=4
@@ -44,7 +44,7 @@ publications=5
 sync_events=6
 ```
 
-All six sync events are currently:
+All six sync events initially were:
 
 ```text
 status=pending
@@ -61,7 +61,7 @@ This identity is important for P3.3 because it does not exist in the original cu
 
 ## Existing synchronization implementation
 
-M7.5 already provides the required durable implementation:
+M7.5 provides the durable implementation:
 
 - `apps.providers.catalogue_sync_service` builds the RDF graph from the current active DB-backed catalogue;
 - the configured Fuseki default graph is replaced through Graph Store Protocol `PUT`;
@@ -97,7 +97,7 @@ HEAD http://localhost:3030/mdc/data?default without credentials -> 401
 HEAD http://localhost:3030/mdc/data?default with admin credentials -> 200
 ```
 
-Therefore the `mdc` dataset is alive, SPARQL query access works, and Graph Store writes are correctly protected by HTTP authentication.
+Therefore the `mdc` dataset is alive, SPARQL query access works, and Graph Store writes are protected by HTTP authentication.
 
 ## P3.3 Fuseki write authentication
 
@@ -128,7 +128,7 @@ MDC_PROVIDER_PUBLICATION_ENABLED=True
 MDC_CATALOG_SYNC_ENABLED=False   # Vercel production
 ```
 
-The Vercel deployment keeps serverless semantic writes disabled. The controlled synchronization run is executed from the trusted local operator environment against the same `neondb` PostgreSQL database and the existing local Fuseki dataset.
+The Vercel deployment keeps serverless semantic writes disabled. The controlled synchronization run was executed from the trusted local operator environment against the same `neondb` PostgreSQL database and the existing local Fuseki dataset.
 
 For that local management-command invocation only:
 
@@ -142,70 +142,87 @@ SERVICE_DISCOVERY_FUSEKI_PASSWORD=<local secret-backed password>
 
 The deployed application later needs a remotely reachable Fuseki SPARQL query endpoint. The local dataset can be exposed temporarily through a controlled tunnel for the final Vercel-consumption gate; permanent cloud Fuseki hosting is not required for this pilot.
 
-## Stage A — non-mutating local Fuseki preflight
+## Stage A — non-mutating local Fuseki preflight — PASSED
 
-Run:
+Command:
 
 ```text
 python scripts/p33_fuseki_preflight.py
 ```
 
-The preflight:
+Confirmed output:
 
-- checks that `DATABASE_URL` is configured without printing it;
-- checks both Fuseki endpoint variables;
-- validates HTTP(S) endpoint syntax;
-- verifies the SPARQL query endpoint with a harmless `ASK`;
-- verifies protected Graph Store access using authenticated `HEAD` only;
-- accepts localhost for the local synchronization gate;
-- `--require-remote` is reserved for the later deployed/Vercel gate.
+```text
+PASS DATABASE_URL configured (value hidden)
+PASS Fuseki query endpoint configured: http://localhost:3030/mdc/sparql
+PASS Fuseki graph-store endpoint configured: http://localhost:3030/mdc/data?default
+PASS Fuseki write credentials configured (values hidden)
+INFO Fuseki is local-only; local synchronization gate can proceed, remote/Vercel gate remains pending
+PASS Fuseki SPARQL ASK reachable (graph_has_triples=true)
+PASS Fuseki graph-store authenticated HEAD: 200
+PASS no graph write attempted
+P3.3 Fuseki preflight PASS
+```
 
-No graph write occurs during this preflight.
+## Stage B — controlled real synchronization — PASSED
 
-## Stage B — controlled real synchronization
-
-After Stage A and the focused authentication tests pass, execute the management command from `mdc-catalog` with local sync enabled:
+Executed from `mdc-catalog` with local sync enabled:
 
 ```powershell
 $env:MDC_CATALOG_SYNC_ENABLED = "True"
 & '..\.venv\Scripts\python.exe' backend\manage.py sync_service_discovery_catalogue
-```
-
-The command will process the pending publication outbox. Because the M7.5 implementation rebuilds/replaces the whole current graph for each selected publication, the small P3.3 pilot may perform several equivalent full-graph PUTs while advancing each publication/event to its durable success state. This is acceptable for the small validation dataset; optimization is not required for the P3.3 gate.
-
-After the command, remove the local override:
-
-```powershell
 Remove-Item Env:MDC_CATALOG_SYNC_ENABLED -ErrorAction SilentlyContinue
 ```
 
-## Stage C — PostgreSQL success evidence
+Confirmed result:
 
-After synchronization, verify:
+```text
+Catalogue synchronization: selected=5; succeeded=5; failed=0; noop=0; events=6.
+Catalogue synchronization completed successfully.
+```
 
-- all six current P3.2 sync events are `succeeded`;
-- each has `attempt_count >= 1`;
-- `last_error` is empty;
-- the five P3.2 publication records are `synced`;
-- completion timestamps are populated;
-- no provider/offering business data was changed by synchronization.
+The real authenticated Graph Store path therefore processed all five pending publications and all six outbox events successfully.
 
-## Stage D — Fuseki graph evidence
+## Stage C — PostgreSQL success evidence — PASSED
 
-Run:
+Read-only post-sync verification against `neondb` confirmed:
+
+```text
+CatalogueSyncEvent:
+status=succeeded
+events=6
+min_attempts=1
+max_attempts=1
+with_errors=0
+
+ProviderPublication for p32_pilot_provider:
+status=synced
+publications=5
+completed=5
+```
+
+Therefore all six P3.2 sync events succeeded exactly once, no error code remained, and all five P3.2 publication records completed as `synced`.
+
+## Stage D — Fuseki graph evidence — PASSED
+
+Command:
 
 ```text
 python scripts/p33_fuseki_verify.py --direct-only
 ```
 
-Required evidence:
+Confirmed output:
 
-- SPARQL endpoint responds;
-- graph contains triples;
-- graph contains `mdc:providerId "p32_pilot_provider"`;
-- graph contains the controlled P3.2 offering data.
+```text
+PASS Fuseki graph contains triples: 702
+PASS Fuseki contains provider: p32_pilot_provider
+PASS Fuseki contains offering: p32_pilot_provider_precision_metal_parts
+P3.3 direct Fuseki verification PASS
+```
 
-## Stage E — deployed discovery consumes synchronized Fuseki
+This proves the DB-created P3.2 provider and offering are present in the synchronized semantic graph.
+
+## Stage E — deployed discovery consumes synchronized Fuseki — PENDING
 
 Expose the local Fuseki query endpoint through a temporary controlled public tunnel, set the resulting `SERVICE_DISCOVERY_FUSEKI_QUERY_ENDPOINT` in Vercel Production, redeploy, and run:
 
@@ -234,19 +251,19 @@ no /api/v1 route
 
 P3.3 is complete when all of the following are true:
 
-- the existing real Fuseki `mdc` dataset is used;
-- non-mutating local query + authenticated Graph Store preflight passes;
-- the pending PostgreSQL outbox is processed by the real Graph Store Protocol path;
-- outbox/publication statuses prove durable synchronization success;
-- direct SPARQL proves the synchronized graph contains `p32_pilot_provider`;
-- a temporary remotely reachable query path is available for the Vercel gate;
-- Vercel production is configured with that Fuseki query endpoint;
-- canonical deployed service discovery returns `p32_pilot_provider` from the synchronized graph;
-- PostgreSQL remains the operational source of truth;
-- no Fuseki credentials are committed or printed;
-- no public synchronization endpoint is introduced.
+- the existing real Fuseki `mdc` dataset is used — **PASS**;
+- non-mutating local query + authenticated Graph Store preflight passes — **PASS**;
+- the pending PostgreSQL outbox is processed by the real Graph Store Protocol path — **PASS**;
+- outbox/publication statuses prove durable synchronization success — **PASS**;
+- direct SPARQL proves the synchronized graph contains `p32_pilot_provider` — **PASS**;
+- a temporary remotely reachable query path is available for the Vercel gate — **PENDING**;
+- Vercel production is configured with that Fuseki query endpoint — **PENDING**;
+- canonical deployed service discovery returns `p32_pilot_provider` from the synchronized graph — **PENDING**;
+- PostgreSQL remains the operational source of truth — **PASS**;
+- no Fuseki credentials are committed or printed — **PASS**;
+- no public synchronization endpoint is introduced — **PASS**.
 
-Target marker:
+Target marker after Stage E:
 
 ```text
 READY_FOR_P34_MARKETPLACE_PROVIDER_UI_INTEGRATION
