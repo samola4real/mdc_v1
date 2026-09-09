@@ -82,8 +82,7 @@ SERVICE_DISCOVERY_FUSEKI_GRAPH_STORE_ENDPOINT = os.getenv(
 ).strip()
 
 # Optional secret-backed HTTP Basic authentication for protected Fuseki writes.
-# Both values must be supplied together. They are intentionally separate from
-# endpoint URLs so credentials never need to be embedded in configuration URLs.
+# Both values must be supplied together and are kept separate from endpoint URLs.
 SERVICE_DISCOVERY_FUSEKI_USERNAME = os.getenv(
     "SERVICE_DISCOVERY_FUSEKI_USERNAME",
     "",
@@ -222,9 +221,9 @@ TEMPLATES = [
         "APP_DIRS": True,
         "OPTIONS": {
             "context_processors": [
+                "django.template.context_processors.request",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
-                "django.template.context_processors.request",
             ],
         },
     }
@@ -240,7 +239,7 @@ DATABASES = {"default": database_config(BASE_DIR, os.getenv("DATABASE_URL"))}
 
 
 # Password validation
-# https://docs.djangoproject.com/en/5.2/topics/auth/passwords/#password-validation
+# https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
 
 AUTH_PASSWORD_VALIDATORS = [
     {
