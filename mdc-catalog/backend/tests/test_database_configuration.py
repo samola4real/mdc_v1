@@ -74,6 +74,7 @@ assert base.DATABASES['default'] == database_config(base.BASE_DIR, os.environ['D
 assert production.DATABASES == base.DATABASES
 assert production.MDC_PROVIDER_PUBLICATION_ENABLED is False
 assert production.MDC_PROVIDER_VALIDATION_ENABLED is False
+assert production.MDC_CATALOG_SYNC_ENABLED is False
 """
         for value in ("", self.database_url + "?sslmode=require"):
             with self.subTest(postgresql=bool(value)):
