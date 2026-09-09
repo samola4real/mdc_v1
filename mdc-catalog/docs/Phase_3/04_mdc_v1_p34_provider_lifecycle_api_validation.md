@@ -34,6 +34,21 @@ P3.4 does **not** build or integrate:
 
 The purpose is to prove that the already implemented lifecycle contract is sufficient for a future Marketplace or other trusted client.
 
+## Starting P3.4 database baseline
+
+Read-only verification against the pilot `neondb` before the P3.4 validation run confirmed:
+
+```text
+providers=4
+offerings=6
+publications=5
+sync_events=6
+p34_providers=0
+p34_offerings=0
+```
+
+Therefore the controlled P3.4 provider does not exist before the first P3.4 run, and any later P3.4 provider/offering/publication/outbox records can be attributed to this milestone.
+
 ## Production policy during P3.4
 
 The trusted pilot remains:
