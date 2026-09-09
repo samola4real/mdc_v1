@@ -3,9 +3,15 @@
 
 This is a controlled pilot write against the deployed lifecycle API. It creates
 (or safely reuses on rerun) one clearly named P3.2 pilot provider, exercises
-provider ETag/If-Match concurrency, adds one second offering, and exercises
-offering concurrency. The bearer token is read from the environment and is
-never printed.
+provider and offering optimistic concurrency, and keeps semantic sync disabled.
+
+The production Vercel pilot uses X-MDC-If-Match rather than the standard
+If-Match request header because the platform boundary can apply HTTP
+conditional semantics after the Django write has already committed. The API
+continues to support canonical If-Match; this script uses the transport-safe
+pilot alias only for the temporary Vercel deployment.
+
+The bearer token is read from the environment and is never printed.
 """
 
 from __future__ import annotations
@@ -21,6 +27,7 @@ TOKEN = os.getenv("MDC_PROVIDER_LIFECYCLE_SERVICE_TOKEN", "").strip()
 ACTOR = "p32:trusted-write-smoke"
 PROVIDER_ID = "p32_pilot_provider"
 OFFERING_ID = f"{PROVIDER_ID}_precision_gears"
+CONCURRENCY_HEADER = "X-MDC-If-Match"
 
 PROVIDER_PAYLOAD = {
     "contract_version": "1.0",
@@ -110,17 +117,14 @@ def main() -> int:
         "X-MDC-Actor-Id": ACTOR,
     }
 
-    # Public API must stay healthy while lifecycle writes are enabled.
     code, data, _ = request("GET", "/api/health")
     expect("public health unchanged", code, 200)
     if not isinstance(data, dict) or data.get("contract_version") != "1.0":
         raise AssertionError("health contract_version is not 1.0")
 
-    # Anonymous write must still be rejected.
     code, _, _ = request("POST", "/api/provider-publication", payload=PROVIDER_PAYLOAD)
     expect("anonymous provider registration rejected", code, 401)
 
-    # Controlled provider registration. A 409 is accepted only for safe reruns.
     code, data, _ = request(
         "POST", "/api/provider-publication", payload=PROVIDER_PAYLOAD, headers=trusted
     )
@@ -135,14 +139,12 @@ def main() -> int:
     else:
         raise AssertionError(f"authenticated provider registration: expected 201/409, got {code}")
 
-    # Fetch provider and current ETag.
     code, data, headers = request("GET", f"/api/providers/{PROVIDER_ID}", headers=trusted)
     expect("trusted provider read", code, 200)
     if not isinstance(data, dict) or data.get("provider_id") != PROVIDER_ID:
         raise AssertionError("trusted provider read returned unexpected provider")
     provider_etag = require_etag(headers, "provider read")
 
-    # Update with If-Match, then prove stale ETag is rejected.
     provider_patch = {
         "contract_version": "1.0",
         "custom_provider_fields": {
@@ -151,14 +153,14 @@ def main() -> int:
         },
     }
     patch_headers = dict(trusted)
-    patch_headers["If-Match"] = provider_etag
+    patch_headers[CONCURRENCY_HEADER] = provider_etag
     code, data, headers = request(
         "PATCH",
         f"/api/providers/{PROVIDER_ID}",
         payload=provider_patch,
         headers=patch_headers,
     )
-    expect("provider update with current If-Match", code, 200)
+    expect("provider update with current revision", code, 200)
     if not isinstance(data, dict) or data.get("publication_status") != "sync_pending":
         raise AssertionError("provider update did not create sync_pending publication")
     new_provider_etag = require_etag(headers, "provider update")
@@ -171,9 +173,8 @@ def main() -> int:
         payload=provider_patch,
         headers=patch_headers,
     )
-    expect("stale provider If-Match rejected", code, 412)
+    expect("stale provider revision rejected", code, 412)
 
-    # Create a second offering. 409 is accepted only for safe reruns.
     code, data, _ = request(
         "POST",
         f"/api/providers/{PROVIDER_ID}/offerings",
@@ -189,7 +190,6 @@ def main() -> int:
     else:
         raise AssertionError(f"authenticated offering creation: expected 201/409, got {code}")
 
-    # Fetch offering, update it with If-Match, then prove stale ETag is rejected.
     code, data, headers = request("GET", f"/api/offerings/{OFFERING_ID}", headers=trusted)
     expect("trusted offering read", code, 200)
     if not isinstance(data, dict) or data.get("offering_id") != OFFERING_ID:
@@ -201,14 +201,14 @@ def main() -> int:
         "offering_name": "Pilot precision gears - verified",
     }
     offering_patch_headers = dict(trusted)
-    offering_patch_headers["If-Match"] = offering_etag
+    offering_patch_headers[CONCURRENCY_HEADER] = offering_etag
     code, data, headers = request(
         "PATCH",
         f"/api/offerings/{OFFERING_ID}",
         payload=offering_patch,
         headers=offering_patch_headers,
     )
-    expect("offering update with current If-Match", code, 200)
+    expect("offering update with current revision", code, 200)
     if not isinstance(data, dict) or data.get("publication_status") != "sync_pending":
         raise AssertionError("offering update did not create sync_pending publication")
     new_offering_etag = require_etag(headers, "offering update")
@@ -221,9 +221,8 @@ def main() -> int:
         payload=offering_patch,
         headers=offering_patch_headers,
     )
-    expect("stale offering If-Match rejected", code, 412)
+    expect("stale offering revision rejected", code, 412)
 
-    # Public discovery still must remain available.
     code, _, _ = request("GET", "/api/catalog/filters")
     expect("public filters unchanged", code, 200)
 
