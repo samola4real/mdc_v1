@@ -75,12 +75,26 @@ assert production.DATABASES == base.DATABASES
 assert production.MDC_PROVIDER_PUBLICATION_ENABLED is False
 assert production.MDC_PROVIDER_VALIDATION_ENABLED is False
 assert production.MDC_CATALOG_SYNC_ENABLED is False
+assert production.MDC_PROVIDER_LIFECYCLE_AUTH_REQUIRED is True
+assert production.MDC_PROVIDER_LIFECYCLE_ACTOR_REQUIRED is True
+assert production.MDC_PROVIDER_CONCURRENCY_REQUIRED is True
 """
         for value in ("", self.database_url + "?sslmode=require"):
             with self.subTest(postgresql=bool(value)):
-                # Keep only OS necessities; no developer Django or database settings.
+                # Keep only OS necessities; block local .env values for settings whose
+                # production defaults are under test by defining them as empty.
                 env = {key: os.environ[key] for key in ("SYSTEMROOT", "PATH", "TEMP", "TMP") if key in os.environ}
-                env.update(DATABASE_URL=value, DJANGO_SECRET_KEY="isolated-test-secret")
+                env.update(
+                    DATABASE_URL=value,
+                    DJANGO_SECRET_KEY="isolated-test-secret",
+                    MDC_PROVIDER_PUBLICATION_ENABLED="",
+                    MDC_PROVIDER_VALIDATION_ENABLED="",
+                    MDC_CATALOG_SYNC_ENABLED="",
+                    MDC_PROVIDER_LIFECYCLE_AUTH_REQUIRED="",
+                    MDC_PROVIDER_LIFECYCLE_ACTOR_REQUIRED="",
+                    MDC_PROVIDER_CONCURRENCY_REQUIRED="",
+                    MDC_PROVIDER_LIFECYCLE_SERVICE_TOKEN="",
+                )
                 result = subprocess.run([sys.executable, "-c", script], env=env,
                                         cwd=Path(__file__).resolve().parents[1],
                                         capture_output=True, text=True, timeout=30)
