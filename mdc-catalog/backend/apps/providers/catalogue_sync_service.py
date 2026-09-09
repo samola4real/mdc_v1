@@ -1,4 +1,4 @@
-"""Durable PostgreSQL outbox -> RDF/Fuseki synchronization for M7.5.
+"""Durable PostgreSQL outbox -> RDF/Fuseki synchronization.
 
 PostgreSQL remains the operational source of truth. The semantic catalogue is
 rebuilt from the current active DB-backed canonical projection and replaces the
@@ -10,6 +10,7 @@ from __future__ import annotations
 import math
 import socket
 from dataclasses import dataclass
+from datetime import timedelta
 from typing import Any
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlparse
@@ -17,7 +18,7 @@ from urllib.request import Request, urlopen
 
 from django.conf import settings
 from django.db import DatabaseError, transaction
-from django.db.models import Count, Max, Min
+from django.db.models import Count, Max, Min, Q
 from django.utils import timezone
 
 from apps.ontology.service_discovery_rdf_generator import (
@@ -58,6 +59,7 @@ ELIGIBLE_EVENT_STATUSES = (
     CatalogueSyncEvent.Status.PENDING,
     CatalogueSyncEvent.Status.FAILED,
 )
+STALE_PROCESSING_FAILURE_CODE = "processing_lease_expired"
 
 
 @dataclass(frozen=True)
@@ -89,22 +91,39 @@ def _configured_graph_store_endpoint(endpoint: str | None = None) -> str:
     return resolved
 
 
-def _timeout_seconds(timeout_seconds: float | None = None) -> float:
-    if timeout_seconds is not None:
-        value = timeout_seconds
-    else:
-        value = getattr(settings, "FUSEKI_SYNC_TIMEOUT_SECONDS", 10.0)
+def _positive_finite_number(value, setting_name: str) -> float:
     try:
-        value = float(value)
+        parsed = float(value)
     except (TypeError, ValueError) as exc:
         raise CatalogueSyncConfigurationError(
-            "FUSEKI_SYNC_TIMEOUT_SECONDS must be a positive number."
+            f"{setting_name} must be a positive number."
         ) from exc
-    if not math.isfinite(value) or value <= 0:
+    if not math.isfinite(parsed) or parsed <= 0:
         raise CatalogueSyncConfigurationError(
-            "FUSEKI_SYNC_TIMEOUT_SECONDS must be a positive number."
+            f"{setting_name} must be a positive number."
         )
-    return value
+    return parsed
+
+
+def _timeout_seconds(timeout_seconds: float | None = None) -> float:
+    value = (
+        timeout_seconds
+        if timeout_seconds is not None
+        else getattr(settings, "FUSEKI_SYNC_TIMEOUT_SECONDS", 10.0)
+    )
+    return _positive_finite_number(value, "FUSEKI_SYNC_TIMEOUT_SECONDS")
+
+
+def _processing_lease_seconds(stale_after_seconds: float | None = None) -> float:
+    value = (
+        stale_after_seconds
+        if stale_after_seconds is not None
+        else getattr(settings, "MDC_CATALOG_SYNC_PROCESSING_LEASE_SECONDS", 900)
+    )
+    return _positive_finite_number(
+        value,
+        "MDC_CATALOG_SYNC_PROCESSING_LEASE_SECONDS",
+    )
 
 
 def replace_service_discovery_graph_in_fuseki(
@@ -134,8 +153,6 @@ def replace_service_discovery_graph_in_fuseki(
     )
     try:
         with urlopen(request, timeout=timeout) as response:
-            # Reading is unnecessary. A successful 2xx response is sufficient and
-            # avoids accidentally retaining/logging server response content.
             status_code = getattr(response, "status", 200)
             if status_code < 200 or status_code >= 300:
                 raise CatalogueSyncTransportError(
@@ -157,13 +174,6 @@ def _build_current_db_graph():
 
 
 def _catalogue_write_watermark() -> tuple[int, Any]:
-    """Return a monotonic-enough token for M7 lifecycle writes.
-
-    Every accepted M7.4 lifecycle write creates at least one sync event. Count +
-    latest event creation time therefore changes whenever a newer committed write
-    can make a whole-graph snapshot stale. Bootstrap import is deliberately outside
-    the live write path and is handled through explicit --rebuild.
-    """
     value = CatalogueSyncEvent.objects.aggregate(
         total=Count("id"), latest_created_at=Max("created_at")
     )
@@ -212,11 +222,14 @@ def _claim_publication(publication_id) -> SyncAttempt | None:
         if not events:
             return None
 
+        claimed_at = timezone.now()
         for event in events:
             event.status = CatalogueSyncEvent.Status.PROCESSING
             event.attempt_count += 1
             event.last_error = ""
-            event.processed_at = None
+            # M7.6 uses processed_at as the processing lease start while a row is
+            # PROCESSING, then replaces it with success/failure completion time.
+            event.processed_at = claimed_at
         CatalogueSyncEvent.objects.bulk_update(
             events,
             ["status", "attempt_count", "last_error", "processed_at"],
@@ -230,6 +243,64 @@ def _claim_publication(publication_id) -> SyncAttempt | None:
             publication_id=publication.id,
             event_ids=tuple(event.id for event in events),
         )
+
+
+def recover_stale_processing_sync(
+    *,
+    stale_after_seconds: float | None = None,
+) -> dict[str, int]:
+    """Return abandoned PROCESSING rows to a visible, retryable failed state.
+
+    Recovery is database-only. It never calls RDF generation or Fuseki. Rows are
+    locked before mutation so a finalizer cannot be silently overwritten.
+    """
+    _ensure_sync_enabled()
+    lease_seconds = _processing_lease_seconds(stale_after_seconds)
+    now = timezone.now()
+    cutoff = now - timedelta(seconds=lease_seconds)
+
+    with transaction.atomic():
+        stale_events = list(
+            CatalogueSyncEvent.objects.select_for_update()
+            .filter(status=CatalogueSyncEvent.Status.PROCESSING)
+            .filter(
+                Q(processed_at__lt=cutoff)
+                | Q(processed_at__isnull=True, created_at__lt=cutoff)
+            )
+            .order_by("created_at", "id")
+        )
+        if not stale_events:
+            return {"events": 0, "publications": 0}
+
+        publication_ids = {event.publication_id for event in stale_events}
+        publications = {
+            publication.id: publication
+            for publication in ProviderPublication.objects.select_for_update().filter(
+                id__in=publication_ids
+            )
+        }
+
+        for event in stale_events:
+            event.status = CatalogueSyncEvent.Status.FAILED
+            event.last_error = STALE_PROCESSING_FAILURE_CODE
+            event.processed_at = now
+        CatalogueSyncEvent.objects.bulk_update(
+            stale_events,
+            ["status", "last_error", "processed_at"],
+        )
+
+        for publication in publications.values():
+            publication.status = ProviderPublication.Status.SYNC_FAILED
+            publication.completed_at = None
+        ProviderPublication.objects.bulk_update(
+            list(publications.values()),
+            ["status", "completed_at"],
+        )
+
+    return {
+        "events": len(stale_events),
+        "publications": len(publications),
+    }
 
 
 def _finalize_success(attempt: SyncAttempt) -> None:
@@ -328,13 +399,9 @@ def process_publication_sync(
             timeout_seconds=timeout_seconds,
         )
 
-        # Whole-graph PUTs from concurrent workers are safe only if no newer
-        # lifecycle write committed while this snapshot was being generated/sent.
-        # If that happened, leave this publication retryable so a later run
-        # reconverges Fuseki to the latest PostgreSQL state.
         if _catalogue_write_watermark() != watermark_before:
             raise CatalogueChangedDuringSync()
-    except Exception as exc:  # settle the durable outbox before returning a safe result
+    except Exception as exc:
         failure_code = _safe_failure_code(exc)
         _finalize_failure(attempt, failure_code)
         return {
@@ -392,7 +459,7 @@ def process_pending_catalogue_sync(
             endpoint=endpoint,
             timeout_seconds=timeout_seconds,
         )
-        status = result["status"]
-        summary[status] += 1
+        status_name = result["status"]
+        summary[status_name] += 1
         summary["events"] += result["event_count"]
     return summary
