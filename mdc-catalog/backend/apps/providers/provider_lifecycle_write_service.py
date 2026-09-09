@@ -9,6 +9,7 @@ from django.utils import timezone
 from apps.api.service_discovery_publication_serializers import (
     validate_lifecycle_offering,
 )
+from apps.providers.lifecycle_revision import build_entity_etag
 from apps.providers.models import (
     CatalogueSyncEvent,
     Offering,
@@ -28,6 +29,11 @@ class LifecycleConflict(Exception):
 
 
 class LifecycleNotFound(Exception):
+    def __init__(self, entity):
+        self.entity = entity
+
+
+class LifecyclePreconditionFailed(Exception):
     def __init__(self, entity):
         self.entity = entity
 
@@ -101,7 +107,13 @@ def _provider_snapshot(provider):
     }
 
 
-def _create_publication(provider, operation, submitted_payload):
+def _create_publication(
+    provider,
+    operation,
+    submitted_payload,
+    *,
+    actor_id=None,
+):
     now = timezone.now()
     return ProviderPublication.objects.create(
         provider=provider,
@@ -111,6 +123,7 @@ def _create_publication(provider, operation, submitted_payload):
         contract_version="1.0",
         submitted_payload=deepcopy(submitted_payload),
         normalized_payload=_provider_snapshot(provider),
+        submitted_by_external_id=actor_id,
         validated_at=now,
         persisted_at=now,
     )
@@ -157,7 +170,30 @@ def _create_offering(provider, item, sequence_index, *, offering_id=None):
     )
 
 
-def _result(publication, provider, offering_ids, *, offering_id=None):
+def _entity_etag(entity_type, row):
+    external_id = row.provider_id if entity_type == "provider" else row.offering_id
+    return build_entity_etag(entity_type, external_id, row.updated_at)
+
+
+def _assert_expected_etag(entity_type, row, expected_etag):
+    if expected_etag is None:
+        return
+    if not compare_etags(_entity_etag(entity_type, row), expected_etag):
+        raise LifecyclePreconditionFailed(entity_type)
+
+
+def compare_etags(current_etag, expected_etag):
+    # ETags are opaque SHA-256 values generated server-side. Exact comparison is
+    # intentional; weak/list/wildcard preconditions are not accepted in M7.6.
+    return current_etag == expected_etag
+
+
+def _touch_provider(provider):
+    provider.updated_at = timezone.now()
+    provider.save(update_fields=["updated_at"])
+
+
+def _result(publication, provider, offering_ids, *, offering_id=None, etag=None):
     result = {
         "contract_version": "1.0",
         "status": "accepted",
@@ -170,10 +206,12 @@ def _result(publication, provider, offering_ids, *, offering_id=None):
     }
     if offering_id is not None:
         result["offering_id"] = offering_id
+    if etag is not None:
+        result["_etag"] = etag
     return result
 
 
-def register_provider(validated_data, submitted_payload):
+def register_provider(validated_data, submitted_payload, *, actor_id=None):
     provider_id = validated_data["provider_id"]
     normalized = normalize_service_discovery_publication(validated_data)
     if Provider.objects.filter(provider_id=provider_id).exists():
@@ -198,8 +236,13 @@ def register_provider(validated_data, submitted_payload):
                 )
                 for index, item in enumerate(validated_data["offerings"])
             ]
+            # Provider revision represents the aggregate exposed by provider GET.
+            _touch_provider(provider)
             publication = _create_publication(
-                provider, ProviderPublication.Operation.CREATE, submitted_payload
+                provider,
+                ProviderPublication.Operation.CREATE,
+                submitted_payload,
+                actor_id=actor_id,
             )
             _create_sync_event(publication, CatalogueSyncEvent.EntityType.PROVIDER, provider_id)
             for offering in offerings:
@@ -207,7 +250,10 @@ def register_provider(validated_data, submitted_payload):
                     publication, CatalogueSyncEvent.EntityType.OFFERING, offering.offering_id
                 )
         return _result(
-            publication, provider, [offering.offering_id for offering in offerings]
+            publication,
+            provider,
+            [offering.offering_id for offering in offerings],
+            etag=_entity_etag("provider", provider),
         )
     except IntegrityError as exc:
         try:
@@ -220,13 +266,22 @@ def register_provider(validated_data, submitted_payload):
         raise LifecycleWriteError from exc
 
 
-def update_provider(provider_id, changes, submitted_payload):
+def update_provider(
+    provider_id,
+    changes,
+    submitted_payload,
+    *,
+    actor_id=None,
+    expected_etag=None,
+):
     try:
         with transaction.atomic():
             try:
                 provider = Provider.objects.select_for_update().get(provider_id=provider_id)
             except Provider.DoesNotExist as exc:
                 raise LifecycleNotFound("provider") from exc
+
+            _assert_expected_etag("provider", provider, expected_etag)
 
             update_fields = []
             for field in (
@@ -236,14 +291,18 @@ def update_provider(provider_id, changes, submitted_payload):
                 if field in changes:
                     setattr(provider, field, deepcopy(changes[field]))
                     update_fields.append(field)
-            if update_fields:
-                provider.save(update_fields=[*update_fields, "updated_at"])
             if "certifications" in changes:
                 provider.certifications.all().delete()
                 _create_certifications(provider, changes["certifications"])
 
+            provider.updated_at = timezone.now()
+            provider.save(update_fields=[*update_fields, "updated_at"])
+
             publication = _create_publication(
-                provider, ProviderPublication.Operation.UPDATE, submitted_payload
+                provider,
+                ProviderPublication.Operation.UPDATE,
+                submitted_payload,
+                actor_id=actor_id,
             )
             _create_sync_event(
                 publication, CatalogueSyncEvent.EntityType.PROVIDER, provider.provider_id
@@ -252,12 +311,23 @@ def update_provider(provider_id, changes, submitted_payload):
                 provider.offerings.order_by("sequence_index", "offering_id")
                 .values_list("offering_id", flat=True)
             )
-        return _result(publication, provider, offering_ids)
+        return _result(
+            publication,
+            provider,
+            offering_ids,
+            etag=_entity_etag("provider", provider),
+        )
     except DatabaseError as exc:
         raise LifecycleWriteError from exc
 
 
-def add_provider_offering(provider_id, offering_data, submitted_payload):
+def add_provider_offering(
+    provider_id,
+    offering_data,
+    submitted_payload,
+    *,
+    actor_id=None,
+):
     offering_id = generate_offering_id(provider_id, offering_data["service_category"])
     try:
         with transaction.atomic():
@@ -271,14 +341,22 @@ def add_provider_offering(provider_id, offering_data, submitted_payload):
             offering = _create_offering(
                 provider, offering_data, 0 if maximum is None else maximum + 1
             )
+            _touch_provider(provider)
             publication = _create_publication(
-                provider, ProviderPublication.Operation.UPDATE, submitted_payload
+                provider,
+                ProviderPublication.Operation.UPDATE,
+                submitted_payload,
+                actor_id=actor_id,
             )
             _create_sync_event(
                 publication, CatalogueSyncEvent.EntityType.OFFERING, offering.offering_id
             )
         return _result(
-            publication, provider, [offering.offering_id], offering_id=offering.offering_id
+            publication,
+            provider,
+            [offering.offering_id],
+            offering_id=offering.offering_id,
+            etag=_entity_etag("offering", offering),
         )
     except LifecycleConflict:
         raise
@@ -293,7 +371,14 @@ def add_provider_offering(provider_id, offering_data, submitted_payload):
         raise LifecycleWriteError from exc
 
 
-def update_offering(offering_id, changes, submitted_payload):
+def update_offering(
+    offering_id,
+    changes,
+    submitted_payload,
+    *,
+    actor_id=None,
+    expected_etag=None,
+):
     try:
         with transaction.atomic():
             try:
@@ -305,6 +390,8 @@ def update_offering(offering_id, changes, submitted_payload):
             except Offering.DoesNotExist as exc:
                 raise LifecycleNotFound("offering") from exc
             provider = Provider.objects.select_for_update().get(pk=offering.provider_id)
+            _assert_expected_etag("offering", offering, expected_etag)
+
             complete = {
                 "service_category": offering.service_category,
                 "offering_name": changes.get("offering_name", offering.offering_name),
@@ -321,15 +408,24 @@ def update_offering(offering_id, changes, submitted_payload):
                 if field in changes:
                     setattr(offering, field, deepcopy(changes[field]))
                     update_fields.append(field)
+            offering.updated_at = timezone.now()
             offering.save(update_fields=[*update_fields, "updated_at"])
+            _touch_provider(provider)
             publication = _create_publication(
-                provider, ProviderPublication.Operation.UPDATE, submitted_payload
+                provider,
+                ProviderPublication.Operation.UPDATE,
+                submitted_payload,
+                actor_id=actor_id,
             )
             _create_sync_event(
                 publication, CatalogueSyncEvent.EntityType.OFFERING, offering.offering_id
             )
         return _result(
-            publication, provider, [offering.offering_id], offering_id=offering.offering_id
+            publication,
+            provider,
+            [offering.offering_id],
+            offering_id=offering.offering_id,
+            etag=_entity_etag("offering", offering),
         )
     except DatabaseError as exc:
         raise LifecycleWriteError from exc
