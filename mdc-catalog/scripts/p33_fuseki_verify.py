@@ -36,16 +36,19 @@ SEARCH_PAYLOAD = {
 
 
 def read_dotenv_value(name: str) -> str:
+    """Read .env with last-assignment-wins semantics, matching dotenv behavior."""
     if not DOTENV_PATH.exists():
         return ""
+    resolved = ""
     for raw_line in DOTENV_PATH.read_text(encoding="utf-8").splitlines():
         line = raw_line.strip()
         if not line or line.startswith("#") or "=" not in line:
             continue
-        key, value = line.split("=", 1)
-        if key.strip() == name:
-            return value.strip().strip('"').strip("'")
-    return ""
+        key, raw_value = line.split("=", 1)
+        if key.strip() != name:
+            continue
+        resolved = raw_value.strip().strip('"').strip("'")
+    return resolved
 
 
 def env_value(name: str) -> str:
