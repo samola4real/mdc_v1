@@ -36,6 +36,7 @@ class P33FusekiWriteAuthenticationTests(SimpleTestCase):
     )
     def test_basic_authorization_header_is_added_without_changing_payload(self):
         captured = {}
+        expected_graph = self.graph()
 
         def fake_urlopen(request, timeout):
             captured["authorization"] = request.get_header("Authorization")
@@ -46,13 +47,15 @@ class P33FusekiWriteAuthenticationTests(SimpleTestCase):
             return _Response()
 
         with patch("apps.providers.catalogue_sync_service.urlopen", side_effect=fake_urlopen):
-            replace_service_discovery_graph_in_fuseki(self.graph())
+            replace_service_discovery_graph_in_fuseki(expected_graph)
 
         expected = base64.b64encode(b"admin:secret-value").decode("ascii")
         self.assertEqual(captured["authorization"], f"Basic {expected}")
         self.assertEqual(captured["method"], "PUT")
         self.assertIn("text/turtle", captured["content_type"])
-        self.assertIn(b"urn:test:s", captured["body"])
+        actual_graph = Graph()
+        actual_graph.parse(data=captured["body"].decode("utf-8"), format="turtle")
+        self.assertEqual(set(actual_graph), set(expected_graph))
         self.assertEqual(captured["timeout"], 2)
 
     @override_settings(
