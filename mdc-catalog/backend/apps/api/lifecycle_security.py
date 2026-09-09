@@ -114,12 +114,17 @@ def get_if_match_or_error(request):
         return None, None
 
     value = value.strip()
-    if len(value) > MAX_IF_MATCH_LENGTH or not (
-        value.startswith('"') and value.endswith('"')
-    ):
+    invalid = (
+        len(value) > MAX_IF_MATCH_LENGTH
+        or value.startswith("W/")
+        or "," in value
+        or value == "*"
+        or not (value.startswith('"') and value.endswith('"'))
+    )
+    if invalid:
         return None, _error(
             "invalid_concurrency_precondition",
-            "If-Match must contain a valid strong lifecycle ETag.",
+            "If-Match must contain one valid strong lifecycle ETag.",
             status.HTTP_400_BAD_REQUEST,
         )
     return value, None
