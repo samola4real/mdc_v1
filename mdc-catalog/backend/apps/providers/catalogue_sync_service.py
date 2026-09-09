@@ -7,6 +7,7 @@ configured Fuseki default graph through the Graph Store Protocol.
 
 from __future__ import annotations
 
+import base64
 import math
 import socket
 from dataclasses import dataclass
@@ -91,6 +92,22 @@ def _configured_graph_store_endpoint(endpoint: str | None = None) -> str:
     return resolved
 
 
+def _graph_store_authorization_header() -> str | None:
+    username = getattr(settings, "SERVICE_DISCOVERY_FUSEKI_USERNAME", "") or ""
+    password = getattr(settings, "SERVICE_DISCOVERY_FUSEKI_PASSWORD", "") or ""
+    username = username.strip()
+
+    if bool(username) != bool(password):
+        raise CatalogueSyncConfigurationError(
+            "Fuseki synchronization username and password must be configured together."
+        )
+    if not username:
+        return None
+
+    token = base64.b64encode(f"{username}:{password}".encode("utf-8")).decode("ascii")
+    return f"Basic {token}"
+
+
 def _positive_finite_number(value, setting_name: str) -> float:
     try:
         parsed = float(value)
@@ -135,6 +152,7 @@ def replace_service_discovery_graph_in_fuseki(
     """Replace the configured Fuseki default graph with one Turtle document."""
     resolved_endpoint = _configured_graph_store_endpoint(endpoint)
     timeout = _timeout_seconds(timeout_seconds)
+    authorization = _graph_store_authorization_header()
     try:
         serialized = graph.serialize(format="turtle")
     except Exception:
@@ -142,13 +160,16 @@ def replace_service_discovery_graph_in_fuseki(
             "Catalogue RDF serialization failed."
         ) from None
     body = serialized if isinstance(serialized, bytes) else serialized.encode("utf-8")
+    headers = {
+        "Content-Type": "text/turtle; charset=utf-8",
+        "Accept": "text/plain, */*;q=0.1",
+    }
+    if authorization:
+        headers["Authorization"] = authorization
     request = Request(
         resolved_endpoint,
         data=body,
-        headers={
-            "Content-Type": "text/turtle; charset=utf-8",
-            "Accept": "text/plain, */*;q=0.1",
-        },
+        headers=headers,
         method="PUT",
     )
     try:
