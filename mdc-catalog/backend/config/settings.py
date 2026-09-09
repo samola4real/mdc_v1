@@ -73,7 +73,19 @@ SERVICE_DISCOVERY_FUSEKI_QUERY_ENDPOINT = os.getenv(
     "",
 )
 
+# M7.5 uses the Graph Store Protocol for one-shot default-graph replacement.
+# Keep this explicit/blank by default so semantic writes are never inferred from
+# a query endpoint or enabled accidentally.
+SERVICE_DISCOVERY_FUSEKI_GRAPH_STORE_ENDPOINT = os.getenv(
+    "SERVICE_DISCOVERY_FUSEKI_GRAPH_STORE_ENDPOINT",
+    "",
+).strip()
+
 FUSEKI_TIMEOUT_SECONDS = env_float("FUSEKI_TIMEOUT_SECONDS", 10)
+FUSEKI_SYNC_TIMEOUT_SECONDS = env_float(
+    "FUSEKI_SYNC_TIMEOUT_SECONDS",
+    FUSEKI_TIMEOUT_SECONDS,
+)
 
 MDC_DEMO_API_ENABLED = env_bool("MDC_DEMO_API_ENABLED", True)
 MDC_PROVIDER_PUBLICATION_ENABLED = env_bool(
@@ -82,6 +94,10 @@ MDC_PROVIDER_PUBLICATION_ENABLED = env_bool(
 )
 MDC_PROVIDER_VALIDATION_ENABLED = env_bool(
     "MDC_PROVIDER_VALIDATION_ENABLED",
+    False,
+)
+MDC_CATALOG_SYNC_ENABLED = env_bool(
+    "MDC_CATALOG_SYNC_ENABLED",
     False,
 )
 
