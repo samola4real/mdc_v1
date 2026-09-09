@@ -7,6 +7,7 @@ configured Fuseki default graph through the Graph Store Protocol.
 
 from __future__ import annotations
 
+import math
 import socket
 from dataclasses import dataclass
 from typing import Any
@@ -99,7 +100,7 @@ def _timeout_seconds(timeout_seconds: float | None = None) -> float:
         raise CatalogueSyncConfigurationError(
             "FUSEKI_SYNC_TIMEOUT_SECONDS must be a positive number."
         ) from exc
-    if value <= 0:
+    if not math.isfinite(value) or value <= 0:
         raise CatalogueSyncConfigurationError(
             "FUSEKI_SYNC_TIMEOUT_SECONDS must be a positive number."
         )
@@ -115,7 +116,12 @@ def replace_service_discovery_graph_in_fuseki(
     """Replace the configured Fuseki default graph with one Turtle document."""
     resolved_endpoint = _configured_graph_store_endpoint(endpoint)
     timeout = _timeout_seconds(timeout_seconds)
-    serialized = graph.serialize(format="turtle")
+    try:
+        serialized = graph.serialize(format="turtle")
+    except Exception:
+        raise ServiceDiscoveryRdfGenerationError(
+            "Catalogue RDF serialization failed."
+        ) from None
     body = serialized if isinstance(serialized, bytes) else serialized.encode("utf-8")
     request = Request(
         resolved_endpoint,
@@ -171,12 +177,17 @@ def rebuild_service_discovery_catalogue(
 ) -> dict[str, int]:
     """Explicit DB -> RDF -> Fuseki rebuild without fabricating outbox history."""
     _ensure_sync_enabled()
+    watermark_before = _catalogue_write_watermark()
     graph = _build_current_db_graph()
+    if _catalogue_write_watermark() != watermark_before:
+        raise CatalogueChangedDuringSync()
     replace_service_discovery_graph_in_fuseki(
         graph,
         endpoint=endpoint,
         timeout_seconds=timeout_seconds,
     )
+    if _catalogue_write_watermark() != watermark_before:
+        raise CatalogueChangedDuringSync()
     return {"triple_count": len(graph)}
 
 

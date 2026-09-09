@@ -3,10 +3,15 @@ import uuid
 from django.core.management.base import BaseCommand, CommandError
 from django.db import DatabaseError
 
+from apps.ontology.service_discovery_rdf_generator import (
+    ServiceDiscoveryRdfGenerationError,
+)
 from apps.providers.catalogue_sync_service import (
+    CatalogueChangedDuringSync,
     CatalogueSyncConfigurationError,
     CatalogueSyncDisabled,
     CatalogueSyncNotFound,
+    CatalogueSyncTransportError,
     process_pending_catalogue_sync,
     rebuild_service_discovery_catalogue,
 )
@@ -44,6 +49,8 @@ class Command(BaseCommand):
 
         if rebuild and (limit is not None or publication_id is not None):
             raise CommandError("--rebuild cannot be combined with --limit or --publication-id.")
+        if limit is not None and publication_id is not None:
+            raise CommandError("--limit cannot be combined with --publication-id.")
         if limit is not None and limit <= 0:
             raise CommandError("--limit must be greater than zero.")
 
@@ -68,6 +75,14 @@ class Command(BaseCommand):
             raise CommandError(str(exc)) from None
         except CatalogueSyncNotFound as exc:
             raise CommandError(str(exc)) from None
+        except CatalogueChangedDuringSync:
+            raise CommandError(
+                "Catalogue changed during synchronization; retry is required."
+            ) from None
+        except CatalogueSyncTransportError:
+            raise CommandError("Catalogue synchronization transport failed.") from None
+        except ServiceDiscoveryRdfGenerationError:
+            raise CommandError("Catalogue RDF generation failed.") from None
         except DatabaseError:
             raise CommandError("Catalogue synchronization database operation failed.") from None
         except ValueError as exc:

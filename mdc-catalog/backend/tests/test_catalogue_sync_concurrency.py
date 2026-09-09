@@ -106,3 +106,15 @@ class CatalogueSyncConcurrencyTests(TestCase):
                 "1",
                 stdout=out,
             )
+
+    def test_publication_selection_rejects_limit(self):
+        _provider, publication, _event = self.make_publication("selected")
+        with self.assertRaises(CommandError):
+            call_command(
+                "sync_service_discovery_catalogue",
+                "--publication-id",
+                str(publication.id),
+                "--limit",
+                "1",
+                stdout=StringIO(),
+            )

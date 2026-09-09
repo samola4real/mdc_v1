@@ -7,8 +7,11 @@ from django.test import TestCase, override_settings
 from rdflib import Graph
 
 from apps.ontology.service_discovery_rdf_generator import build_service_discovery_graph
+from apps.ontology.service_discovery_rdf_generator import ServiceDiscoveryRdfGenerationError
 from apps.ontology.service_discovery_rdf_mappings import offering_resource
 from apps.providers.catalogue_sync_service import (
+    CatalogueChangedDuringSync,
+    CatalogueSyncConfigurationError,
     CatalogueSyncDisabled,
     CatalogueSyncTransportError,
     process_pending_catalogue_sync,
@@ -267,3 +270,49 @@ class CatalogueSyncServiceTests(TestCase):
         self.assertIn("failed=1", combined)
         self.assertNotIn("private endpoint", combined)
         self.assertNotIn("response body", combined)
+
+    def test_rebuild_transport_failure_is_safe_command_error(self):
+        out = StringIO()
+        with patch(
+            "apps.providers.catalogue_sync_service.replace_service_discovery_graph_in_fuseki",
+            side_effect=CatalogueSyncTransportError("private endpoint response body"),
+        ):
+            with self.assertRaises(CommandError) as context:
+                call_command("sync_service_discovery_catalogue", "--rebuild", stdout=out)
+        combined = out.getvalue() + str(context.exception)
+        self.assertIn("transport failed", combined)
+        self.assertNotIn("private endpoint", combined)
+
+    def test_rebuild_rdf_failure_is_safe_command_error(self):
+        with patch(
+            "apps.providers.catalogue_sync_service._build_current_db_graph",
+            side_effect=ServiceDiscoveryRdfGenerationError("private source path"),
+        ):
+            with self.assertRaises(CommandError) as context:
+                call_command("sync_service_discovery_catalogue", "--rebuild")
+        self.assertEqual(str(context.exception), "Catalogue RDF generation failed.")
+
+    def test_rebuild_serialization_failure_is_safe_command_error(self):
+        with patch.object(
+            Graph,
+            "serialize",
+            side_effect=OSError("private source path"),
+        ):
+            with self.assertRaises(CommandError) as context:
+                call_command("sync_service_discovery_catalogue", "--rebuild")
+        self.assertEqual(str(context.exception), "Catalogue RDF generation failed.")
+
+    def test_rebuild_detects_concurrent_catalogue_change(self):
+        with patch(
+            "apps.providers.catalogue_sync_service._catalogue_write_watermark",
+            side_effect=[(1, None), (2, None)],
+        ), patch(
+            "apps.providers.catalogue_sync_service.replace_service_discovery_graph_in_fuseki"
+        ) as replace:
+            with self.assertRaises(CatalogueChangedDuringSync):
+                rebuild_service_discovery_catalogue()
+        replace.assert_not_called()
+
+    def test_non_finite_sync_timeout_is_rejected(self):
+        with self.assertRaises(CatalogueSyncConfigurationError):
+            rebuild_service_discovery_catalogue(timeout_seconds=float("nan"))
