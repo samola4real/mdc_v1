@@ -2,7 +2,7 @@
 
 ## Status
 
-**IN PROGRESS — LOCAL GATES PASSED.** P3.2 is complete. P3.3 has now validated the real PostgreSQL -> RDF -> local Fuseki synchronization path. Only the final remotely reachable/Vercel-consumption gate remains.
+**COMPLETE.** P3.3 has validated the real PostgreSQL -> RDF -> Fuseki synchronization path and proved that deployed canonical service discovery can consume the synchronized semantic catalogue.
 
 ## Goal
 
@@ -34,7 +34,7 @@ PostgreSQL remains the operational source of truth. Fuseki remains the semantic/
 
 ## Starting P3.3 database state
 
-Verified against the temporary pilot database `neondb` before synchronization:
+Verified against the pilot database `neondb` before synchronization:
 
 ```text
 providers=4
@@ -57,7 +57,7 @@ The controlled provider created in P3.2 is:
 p32_pilot_provider
 ```
 
-This identity is important for P3.3 because it does not exist in the original curated YAML baseline. Finding it through deployed service discovery after synchronization is therefore positive evidence that the synchronized Fuseki graph is being queried.
+This provider did not exist in the original curated YAML baseline. Its appearance through deployed service discovery after synchronization therefore provides positive evidence that the synchronized Fuseki graph is being consumed.
 
 ## Existing synchronization implementation
 
@@ -78,7 +78,7 @@ python backend/manage.py sync_service_discovery_catalogue
 
 P3.3 does not add a public synchronization endpoint.
 
-## Confirmed local Fuseki pilot
+## Confirmed Fuseki pilot
 
 The existing Docker container is:
 
@@ -86,22 +86,23 @@ The existing Docker container is:
 mdc-fuseki
 image: stain/jena-fuseki
 host port: 3030
+dataset: mdc
 ```
 
-Verified evidence:
+Verified local evidence:
 
 ```text
 GET http://localhost:3030/$/ping -> 200
 POST http://localhost:3030/mdc/sparql with ASK -> boolean true
 HEAD http://localhost:3030/mdc/data?default without credentials -> 401
-HEAD http://localhost:3030/mdc/data?default with admin credentials -> 200
+HEAD http://localhost:3030/mdc/data?default with credentials -> 200
 ```
 
 Therefore the `mdc` dataset is alive, SPARQL query access works, and Graph Store writes are protected by HTTP authentication.
 
 ## P3.3 Fuseki write authentication
 
-P3.3 adds optional secret-backed HTTP Basic authentication for protected Graph Store writes:
+P3.3 added optional secret-backed HTTP Basic authentication for protected Graph Store writes:
 
 ```text
 SERVICE_DISCOVERY_FUSEKI_USERNAME
@@ -114,23 +115,23 @@ Rules:
 - when credentials are used, username and password must be configured together;
 - credentials are sent only in the Graph Store HTTP `Authorization` header;
 - credentials are not embedded in endpoint URLs;
-- credentials are never committed or printed by P3.3 tooling.
+- credentials are not committed or printed by P3.3 tooling.
 
 The local `.env` remains ignored by Git (`.env*`, except `.env.example`).
 
-## P3.3 deployment policy
+## Deployment policy
 
-During the first real synchronization gate:
+During P3.3, Vercel Production remained:
 
 ```text
 MDC_PROVIDER_VALIDATION_ENABLED=True
 MDC_PROVIDER_PUBLICATION_ENABLED=True
-MDC_CATALOG_SYNC_ENABLED=False   # Vercel production
+MDC_CATALOG_SYNC_ENABLED=False
 ```
 
-The Vercel deployment keeps serverless semantic writes disabled. The controlled synchronization run was executed from the trusted local operator environment against the same `neondb` PostgreSQL database and the existing local Fuseki dataset.
+Semantic writes were performed only from the trusted local operator environment against `neondb` and the local Fuseki dataset.
 
-For that local management-command invocation only:
+For the local management-command invocation only:
 
 ```text
 MDC_CATALOG_SYNC_ENABLED=True
@@ -140,7 +141,7 @@ SERVICE_DISCOVERY_FUSEKI_USERNAME=<local secret-backed username>
 SERVICE_DISCOVERY_FUSEKI_PASSWORD=<local secret-backed password>
 ```
 
-The deployed application later needs a remotely reachable Fuseki SPARQL query endpoint. The local dataset can be exposed temporarily through a controlled tunnel for the final Vercel-consumption gate; permanent cloud Fuseki hosting is not required for this pilot.
+For the final deployed-consumption gate, only the Fuseki SPARQL query endpoint was made temporarily remotely reachable through a Cloudflare Quick Tunnel. Vercel was not given the Graph Store endpoint or Fuseki write credentials.
 
 ## Stage A — non-mutating local Fuseki preflight — PASSED
 
@@ -163,6 +164,8 @@ PASS Fuseki graph-store authenticated HEAD: 200
 PASS no graph write attempted
 P3.3 Fuseki preflight PASS
 ```
+
+Focused P3.3 Fuseki write-authentication tests also passed.
 
 ## Stage B — controlled real synchronization — PASSED
 
@@ -201,7 +204,7 @@ publications=5
 completed=5
 ```
 
-Therefore all six P3.2 sync events succeeded exactly once, no error code remained, and all five P3.2 publication records completed as `synced`.
+Therefore all six P3.2 sync events succeeded exactly once, no error remained, and all five P3.2 publication records completed as `synced`.
 
 ## Stage D — Fuseki graph evidence — PASSED
 
@@ -222,22 +225,44 @@ P3.3 direct Fuseki verification PASS
 
 This proves the DB-created P3.2 provider and offering are present in the synchronized semantic graph.
 
-## Stage E — deployed discovery consumes synchronized Fuseki — PENDING
+## Stage E — deployed discovery consumes synchronized Fuseki — PASSED
 
-Expose the local Fuseki query endpoint through a temporary controlled public tunnel, set the resulting `SERVICE_DISCOVERY_FUSEKI_QUERY_ENDPOINT` in Vercel Production, redeploy, and run:
+A temporary Cloudflare Quick Tunnel exposed the local Fuseki query endpoint for the final Vercel-consumption gate. The tunnel was left running during validation.
 
-```text
-python scripts/p33_fuseki_preflight.py --require-remote
-python scripts/p33_fuseki_verify.py
-```
-
-The final verification requires the deployed canonical response to include:
+Confirmed remote evidence:
 
 ```text
-provider_id = p32_pilot_provider
+remote SPARQL endpoint reachable: PASS
+p33_fuseki_preflight.py --require-remote: PASS
+Fuseki triple count: 702
+p32_pilot_provider present: PASS
+p32_pilot_provider_precision_metal_parts present: PASS
 ```
 
-Because that provider was created in PostgreSQL during P3.2 and was not part of the original curated YAML baseline, its appearance in deployed service discovery is the key proof that the synchronized semantic catalogue is being consumed.
+Vercel Production verification:
+
+```text
+project/scope: mdc19/maasai-mdc-v1
+SERVICE_DISCOVERY_FUSEKI_QUERY_ENDPOINT configured: PASS
+MDC_CATALOG_SYNC_ENABLED=False: PASS
+Fuseki Graph Store endpoint not configured in Vercel: PASS
+Fuseki write credentials not configured in Vercel: PASS
+production deployment: PASS
+stable alias: https://maasai-mdc-v1.vercel.app
+```
+
+Canonical deployed discovery verification:
+
+```text
+GET /api/health -> 200
+contract_version -> 1.0
+POST /api/service-discovery/search -> p32_pilot_provider returned
+python scripts/p33_fuseki_verify.py -> PASS
+```
+
+Because `p32_pilot_provider` was created in PostgreSQL during P3.2 and was not part of the original curated YAML baseline, its appearance in deployed canonical service discovery proves that the deployed runtime consumed the synchronized Fuseki graph.
+
+No application code changes, Git commits, or Git pushes were required for the final remote gate. The final gate involved only environment/configuration changes and production redeployment.
 
 Public contract rules remain unchanged:
 
@@ -249,22 +274,26 @@ no /api/v1 route
 
 ## P3.3 acceptance
 
-P3.3 is complete when all of the following are true:
+All P3.3 acceptance gates are satisfied:
 
-- the existing real Fuseki `mdc` dataset is used — **PASS**;
-- non-mutating local query + authenticated Graph Store preflight passes — **PASS**;
-- the pending PostgreSQL outbox is processed by the real Graph Store Protocol path — **PASS**;
-- outbox/publication statuses prove durable synchronization success — **PASS**;
-- direct SPARQL proves the synchronized graph contains `p32_pilot_provider` — **PASS**;
-- a temporary remotely reachable query path is available for the Vercel gate — **PENDING**;
-- Vercel production is configured with that Fuseki query endpoint — **PENDING**;
-- canonical deployed service discovery returns `p32_pilot_provider` from the synchronized graph — **PENDING**;
+- real Fuseki `mdc` dataset used — **PASS**;
+- non-mutating local query + authenticated Graph Store preflight — **PASS**;
+- real PostgreSQL outbox processed through Graph Store Protocol — **PASS**;
+- outbox/publication durable synchronization state — **PASS**;
+- direct SPARQL contains `p32_pilot_provider` — **PASS**;
+- remotely reachable temporary query path available for Vercel — **PASS**;
+- Vercel Production configured with the Fuseki query endpoint — **PASS**;
+- canonical deployed discovery returns `p32_pilot_provider` — **PASS**;
 - PostgreSQL remains the operational source of truth — **PASS**;
-- no Fuseki credentials are committed or printed — **PASS**;
-- no public synchronization endpoint is introduced — **PASS**.
+- Fuseki write credentials are not committed or configured in Vercel — **PASS**;
+- no public synchronization endpoint introduced — **PASS**;
+- no application-code change required for the final remote gate — **PASS**.
 
-Target marker after Stage E:
+## Completion marker
 
 ```text
-READY_FOR_P34_MARKETPLACE_PROVIDER_UI_INTEGRATION
+P3.3 COMPLETE
+READY_FOR_P34_PROVIDER_LIFECYCLE_API_VALIDATION
 ```
+
+P3.4 is intentionally an API-validation milestone, not Marketplace integration and not frontend development. The planned gate is a controlled reusable test script that exercises provider registration, reads, updates, offering lifecycle, authentication, actor requirements, ETags/concurrency, validation failures, and publication/outbox behavior. Application code should change only if that validation exposes a genuine backend defect.
