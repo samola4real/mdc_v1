@@ -16,7 +16,7 @@ from urllib.request import Request, urlopen
 
 from django.conf import settings
 from django.db import DatabaseError, transaction
-from django.db.models import Min
+from django.db.models import Count, Max, Min
 from django.utils import timezone
 
 from apps.ontology.service_discovery_rdf_generator import (
@@ -47,6 +47,10 @@ class CatalogueSyncNotFound(CatalogueSyncError):
 
 class CatalogueSyncTransportError(CatalogueSyncError):
     """Safe wrapper that intentionally excludes endpoint/response details."""
+
+
+class CatalogueChangedDuringSync(CatalogueSyncError):
+    """A newer committed lifecycle write made the just-built graph stale."""
 
 
 ELIGIBLE_EVENT_STATUSES = (
@@ -146,6 +150,20 @@ def _build_current_db_graph():
     return build_service_discovery_graph(provider_records=provider_records)
 
 
+def _catalogue_write_watermark() -> tuple[int, Any]:
+    """Return a monotonic-enough token for M7 lifecycle writes.
+
+    Every accepted M7.4 lifecycle write creates at least one sync event. Count +
+    latest event creation time therefore changes whenever a newer committed write
+    can make a whole-graph snapshot stale. Bootstrap import is deliberately outside
+    the live write path and is handled through explicit --rebuild.
+    """
+    value = CatalogueSyncEvent.objects.aggregate(
+        total=Count("id"), latest_created_at=Max("created_at")
+    )
+    return value["total"], value["latest_created_at"]
+
+
 def rebuild_service_discovery_catalogue(
     *,
     endpoint: str | None = None,
@@ -183,14 +201,11 @@ def _claim_publication(publication_id) -> SyncAttempt | None:
         if not events:
             return None
 
-        now = timezone.now()
         for event in events:
             event.status = CatalogueSyncEvent.Status.PROCESSING
             event.attempt_count += 1
             event.last_error = ""
-            # While PROCESSING, processed_at records the start of this attempt.
-            # It is replaced with the completion/failure timestamp on finalization.
-            event.processed_at = now
+            event.processed_at = None
         CatalogueSyncEvent.objects.bulk_update(
             events,
             ["status", "attempt_count", "last_error", "processed_at"],
@@ -240,6 +255,8 @@ def _finalize_success(attempt: SyncAttempt) -> None:
 
 
 def _safe_failure_code(exc: Exception) -> str:
+    if isinstance(exc, CatalogueChangedDuringSync):
+        return "catalogue_changed_during_sync"
     if isinstance(exc, CatalogueSyncTransportError):
         return "fuseki_transport_error"
     if isinstance(exc, CatalogueSyncConfigurationError):
@@ -289,12 +306,23 @@ def process_publication_sync(
         return {"status": "noop", "event_count": 0, "triple_count": 0}
 
     try:
+        watermark_before = _catalogue_write_watermark()
         graph = _build_current_db_graph()
+        if _catalogue_write_watermark() != watermark_before:
+            raise CatalogueChangedDuringSync()
+
         replace_service_discovery_graph_in_fuseki(
             graph,
             endpoint=endpoint,
             timeout_seconds=timeout_seconds,
         )
+
+        # Whole-graph PUTs from concurrent workers are safe only if no newer
+        # lifecycle write committed while this snapshot was being generated/sent.
+        # If that happened, leave this publication retryable so a later run
+        # reconverges Fuseki to the latest PostgreSQL state.
+        if _catalogue_write_watermark() != watermark_before:
+            raise CatalogueChangedDuringSync()
     except Exception as exc:  # settle the durable outbox before returning a safe result
         failure_code = _safe_failure_code(exc)
         _finalize_failure(attempt, failure_code)
