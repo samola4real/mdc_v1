@@ -4,9 +4,11 @@ Date: 2026-09-09
 
 ## Status and synchronization
 
-M7.1 local foundation is complete. All local acceptance gates pass, with the existing optional remote Fuseki integration skips retained. Ready for review of the separate Neon provisioning/connection gate; that gate has not started.
+M7.1 local foundation is complete. All local acceptance gates pass, with the existing optional remote Fuseki integration skips retained. Ready for review of the separate managed PostgreSQL provisioning/connection gate; that gate has not started.
 
 The initial worktree was clean on `main`. `git fetch origin` confirmed that HEAD and `origin/main` were both `7575727852b247aad85a6672b3e2fff716fab37b` (`docs: add M7.1 PostgreSQL Django foundation Codex prompt`), so no pull was needed. No unrelated changes were present or discarded.
+
+The first push was rejected because two documentation commits arrived remotely during implementation: `f517e16` (AWS target/infrastructure portability decision) and `5cfa8a9` (cloud-portable M7.1 prompt). Both were fetched, read, and merged without force-pushing. The updated prompt and [infrastructure portability decision](10a_mdc_v1_infrastructure_portability_decision.md) are reflected in this final report. These remote changes do not alter executable code or tests.
 
 All seven repository assumptions in Task 08 were confirmed: empty provider models, SQLite default, production settings inheriting that default, missing PostgreSQL dependencies, existing harmonized serializer/normalizer, file-backed legacy publication, and unchanged H1-H9 runtime. One organizational detail matters: public GET/POST handlers now live in `apps/api/views/get_views.py` and `post_views.py`; `views/__init__.py` loads retained legacy handlers from `views.py`. Both the current package and legacy implementation were inspected.
 
@@ -160,8 +162,10 @@ The canonical public endpoints remain `GET /api/health`, `GET /api/catalog/filte
 
 Implementation commit: `325874b` — `feat: add M7.1 provider persistence foundation`.
 
-This report is committed separately as `docs: report M7.1 persistence foundation verification`, allowing it to reference the already-created implementation commit. Both commits are intended for the requested normal push to `origin/main`; final remote synchronization is verified after that push and reported in the console response. No secrets, actual `.env`, `.vercel/`, SQLite databases, or generated runtime artifacts are included.
+Initial report commit: `131c37e` — `docs: report M7.1 persistence foundation verification`. The subsequent merge commit, `merge: integrate M7.1 infrastructure portability decision`, preserves the two concurrent remote documentation commits and updates this report to the revised gate wording. Final remote synchronization is verified after the normal push and reported in the console response. No secrets, actual `.env`, `.vercel/`, SQLite databases, or generated runtime artifacts are included.
+
+The persistence foundation is cloud-provider-neutral: it uses Django ORM, standard PostgreSQL fields/constraints, psycopg, and environment-based URL parsing. There are no Neon or AWS SDKs, host-specific conventions, provider-only extensions, branching assumptions, or Vercel-specific persistence/domain dependencies. Generic `database.invalid` URL tests verify configuration without Neon conventions. AWS is the long-term deployment target; Vercel and possible Neon hosting remain temporary pilot infrastructure. Moving the database host requires deployment/configuration and operational data migration, not a redesign of these models or the API layer. No AWS infrastructure was provisioned or configured.
 
 PostgreSQL URL configuration and driver installation were verified locally; actual PostgreSQL/Neon connectivity, PostgreSQL migration execution, and hosted JSONB behavior remain for the next gate. This task did not provision Neon, change Vercel configuration/environment, deploy, import YAML, switch runtime data sources, add provider lifecycle endpoints, enable publication, implement sync processing, or update partner API documentation. M7.2 has not started.
 
-READY_FOR_M71_NEON_CONNECTION_GATE
+READY_FOR_M71_MANAGED_POSTGRES_CONNECTION_GATE

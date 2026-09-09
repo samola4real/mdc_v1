@@ -37,6 +37,12 @@ Approved M7 design baseline:
 mdc-catalog/docs/Phase_2/10_mdc_v1_m7_persistence_provider_lifecycle_plan.md
 ```
 
+Infrastructure portability decision:
+
+```text
+mdc-catalog/docs/Phase_2/10a_mdc_v1_infrastructure_portability_decision.md
+```
+
 M6.1 is complete and production verified. Current external public APIs must remain unchanged:
 
 ```text
@@ -48,6 +54,24 @@ POST /api/service-discovery/search
 There is no public `/api/v1/...` URL family.
 
 Current provider publication remains production-disabled.
+
+## Long-term hosting context
+
+The future integrated MaaSAI Marketplace, MDC, and related catalogue services are expected to run on AWS.
+
+The current Vercel deployment and possible Neon PostgreSQL connection are temporary pilot/development infrastructure only. They must NOT become architectural dependencies.
+
+Therefore M7.1 must be cloud-provider-neutral at application level:
+
+```text
+Django / DRF
+     ↓
+standard PostgreSQL via Django ORM + environment-based connection
+```
+
+Do not add Neon-specific application SDKs, APIs, extensions, branching assumptions, or schema dependencies. Do not add Vercel-specific persistence/domain logic.
+
+The implementation must be portable so a future migration from a temporary Neon PostgreSQL host to an AWS-hosted PostgreSQL service can be performed primarily through deployment/configuration changes rather than redesigning the MDC models or API layer.
 
 ---
 
@@ -78,7 +102,7 @@ Django persistence models
         ↓
 initial migrations
         ↓
-PostgreSQL / Neon-ready database configuration
+portable PostgreSQL-ready database configuration
         ↓
 model/configuration tests
         ↓
@@ -95,11 +119,12 @@ M7.1 must NOT yet:
 - enable provider publication in production;
 - create RDF/Fuseki synchronization workers;
 - provision a Neon project/database;
+- provision AWS database infrastructure;
 - change Vercel environment variables;
 - deploy to Vercel;
 - start M7.2.
 
-Remote Neon provisioning/connection will be reviewed as the next gate after the local schema/configuration foundation is accepted.
+Remote managed-PostgreSQL provisioning/connection will be reviewed as the next gate after the local schema/configuration foundation is accepted. Neon may be used for the current Vercel pilot, but it is not a permanent MDC dependency.
 
 ---
 
@@ -110,7 +135,7 @@ From repository root:
 1. Run `git status`.
 2. Pull `origin/main` if needed.
 3. Confirm the worktree is clean before implementation.
-4. Read the M7 plan and the current provider/publication/search code relevant to this task.
+4. Read the M7 plan, the infrastructure portability decision, and the current provider/publication/search code relevant to this task.
 5. Do not discard unrelated user changes. If unexpected local changes exist, stop and report them.
 
 ---
@@ -238,6 +263,7 @@ Add sensible indexes for future outbox processing, especially status/creation or
 - Do not introduce authentication/ownership FK models yet; `submitted_by_external_id` remains a placeholder.
 - Do not put H1-H9 business validation logic into model `save()` methods.
 - Do not rewrite the existing harmonized publication serializer in M7.1.
+- Keep all persistence choices compatible with standard PostgreSQL; do not rely on Neon-only behavior.
 
 ---
 
@@ -260,9 +286,9 @@ Requirements:
 
 ---
 
-# Step 4 — PostgreSQL / Neon-Ready Database Configuration
+# Step 4 — Portable PostgreSQL Database Configuration
 
-The current public production deployment must not break merely because Neon has not yet been provisioned.
+The current public production deployment must not break merely because a managed PostgreSQL host has not yet been connected.
 
 Implement environment-based database configuration with these semantics:
 
@@ -271,7 +297,7 @@ DATABASE_URL absent
     -> retain current SQLite fallback
 
 DATABASE_URL present
-    -> configure Django PostgreSQL from DATABASE_URL
+    -> configure Django standard PostgreSQL from DATABASE_URL
 ```
 
 Recommended dependencies:
@@ -281,7 +307,7 @@ psycopg[binary]
 dj-database-url
 ```
 
-Add them to the appropriate tracked requirements file used by both local and Vercel installs.
+Add them to the appropriate tracked requirements file used by both local and current deployment installs.
 
 Prefer a small testable helper module, for example:
 
@@ -291,15 +317,16 @@ backend/config/database.py
 
 rather than embedding difficult-to-test parsing logic directly in settings.
 
-Recommended behavior:
+Required portability behavior:
 
 - SQLite fallback remains `BASE_DIR / "db.sqlite3"`.
 - `DATABASE_URL` is parsed through `dj-database-url` or an equally standard minimal mechanism.
-- Do not hard-code Neon credentials or hostnames.
-- Do not invent a connection string.
-- Preserve query parameters supplied by the hosted PostgreSQL URL, including SSL mode when present.
-- Use serverless-safe connection behavior; do not add long-lived connection assumptions prematurely. A conservative `CONN_MAX_AGE=0` baseline is acceptable.
-- Do not make `DATABASE_URL` mandatory in `settings_production.py` during M7.1, because current Vercel production has not yet been connected to Neon and no production provider persistence route is being enabled.
+- Do not hard-code Neon credentials, Neon hostnames, AWS credentials, AWS hostnames, or Vercel-specific settings.
+- Do not import/use Neon SDKs or AWS SDKs for normal Django database access.
+- Preserve query parameters supplied by a hosted PostgreSQL URL, including SSL mode when present.
+- Use conservative connection behavior suitable for the current serverless pilot and portable to future AWS deployment. `CONN_MAX_AGE=0` is an acceptable baseline.
+- Do not make `DATABASE_URL` mandatory in `settings_production.py` during M7.1, because current Vercel production has not yet been connected to managed PostgreSQL and no production provider persistence route is being enabled.
+- The Django application should not need to know whether the standard PostgreSQL URL later comes from Neon, AWS-managed PostgreSQL, or another standards-compatible provider.
 
 Update `.env.example` (or the repository’s canonical environment example) to document `DATABASE_URL` without any real credential value.
 
@@ -337,9 +364,10 @@ Do not test ontology semantics in model tests; serializer/H1-H9 tests already ow
 ## Database configuration tests must cover at least
 
 - no `DATABASE_URL` -> SQLite configuration;
-- PostgreSQL `DATABASE_URL` -> PostgreSQL engine/configuration;
+- generic PostgreSQL `DATABASE_URL` -> PostgreSQL engine/configuration;
 - URL query parameters are preserved appropriately;
-- no credentials are printed/logged by helper code.
+- no credentials are printed/logged by helper code;
+- configuration does not require Neon-specific URL conventions.
 
 Make tests isolated from the developer’s real environment values.
 
@@ -426,19 +454,20 @@ Include:
 10. H1-H9 regression status;
 11. files changed;
 12. known limitations/non-goals;
-13. whether the code is ready for the Neon provisioning/connection gate;
-14. Git commit hash/message.
+13. confirmation that the implementation is cloud-provider-neutral and does not depend on Neon/Vercel-specific application code;
+14. whether the code is ready for a managed PostgreSQL provisioning/connection gate;
+15. Git commit hash/message.
 
 If all local gates pass, end with exactly:
 
 ```text
-READY_FOR_M71_NEON_CONNECTION_GATE
+READY_FOR_M71_MANAGED_POSTGRES_CONNECTION_GATE
 ```
 
 Otherwise end with:
 
 ```text
-NOT_READY_FOR_M71_NEON_CONNECTION_GATE
+NOT_READY_FOR_M71_MANAGED_POSTGRES_CONNECTION_GATE
 ```
 
 and state the blocker.
@@ -474,6 +503,7 @@ docs: report M7.1 persistence foundation verification
 Do NOT in this task:
 
 - provision Neon;
+- provision or configure AWS infrastructure;
 - change Vercel configuration;
 - deploy Preview or Production;
 - migrate current YAML providers into the database;
@@ -505,8 +535,9 @@ Return only:
 9. focused H1-H9 verification result/count
 10. canonical public API non-regression status
 11. provider-publication production-default status
-12. report path/status
-13. Git commit hash/message(s)
-14. `READY_FOR_M71_NEON_CONNECTION_GATE` or `NOT_READY_FOR_M71_NEON_CONNECTION_GATE`
+12. cloud-provider portability status
+13. report path/status
+14. Git commit hash/message(s)
+15. `READY_FOR_M71_MANAGED_POSTGRES_CONNECTION_GATE` or `NOT_READY_FOR_M71_MANAGED_POSTGRES_CONNECTION_GATE`
 
-Do not start the Neon connection gate or M7.2 automatically.
+Do not start the managed PostgreSQL connection gate or M7.2 automatically.
