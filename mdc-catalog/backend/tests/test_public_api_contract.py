@@ -1,6 +1,6 @@
 from unittest.mock import patch
 
-from django.test import SimpleTestCase
+from django.test import SimpleTestCase, override_settings
 from django.urls import resolve
 from rest_framework import status
 from rest_framework.test import APIClient
@@ -186,7 +186,8 @@ class PublicApiContractTests(SimpleTestCase):
             status.HTTP_404_NOT_FOUND,
         )
 
-    def test_legacy_routes_remain_available_only_under_api(self):
+    @override_settings(MDC_PROVIDER_PUBLICATION_ENABLED=False)
+    def test_additional_routes_remain_available_only_under_api(self):
         self.assertNotEqual(
             self.client.post("/api/catalog/search", data={}, format="json").status_code,
             status.HTTP_404_NOT_FOUND,

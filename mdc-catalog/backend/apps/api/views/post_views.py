@@ -14,6 +14,21 @@ from apps.api.public_contract import (
 )
 from apps.api.service_discovery_publication_serializers import (
     ServiceDiscoveryPublicationSerializer,
+    validate_lifecycle_offering,
+)
+from apps.api.provider_lifecycle_serializers import (
+    OfferingCreateSerializer,
+    OfferingPatchSerializer,
+    ProviderPatchSerializer,
+)
+from apps.providers.provider_lifecycle_write_service import (
+    LifecycleConflict,
+    LifecycleNotFound,
+    LifecycleWriteError,
+    add_provider_offering,
+    register_provider,
+    update_offering,
+    update_provider,
 )
 from apps.providers.service_discovery_publication import (
     normalize_service_discovery_publication,
@@ -38,6 +53,154 @@ def make_json_safe(value):
     if isinstance(value, (str, int, float, bool, type(None))):
         return value
     return str(value)
+
+
+def _write_disabled():
+    return Response(
+        build_public_error(
+            code="provider_publication_disabled",
+            message="Provider lifecycle writes are disabled for this environment.",
+        ),
+        status=status.HTTP_403_FORBIDDEN,
+    )
+
+
+def _contract_payload(request):
+    payload = deepcopy(request.data)
+    requested_contract_version = payload.pop("contract_version", None)
+    validate_contract_version(requested_contract_version)
+    return payload
+
+
+def _invalid(code, message, details):
+    return Response(
+        build_public_error(
+            code=code,
+            message=message,
+            details=make_json_safe(details),
+        ),
+        status=status.HTTP_400_BAD_REQUEST,
+    )
+
+
+def _write_exception_response(exc):
+    if isinstance(exc, LifecycleNotFound):
+        return Response(
+            build_public_error(
+                code=f"{exc.entity}_not_found",
+                message=f"The requested {exc.entity} was not found.",
+            ),
+            status=status.HTTP_404_NOT_FOUND,
+        )
+    if isinstance(exc, LifecycleConflict):
+        messages = {
+            "provider_already_exists": "The provider is already registered.",
+            "offering_already_exists": "The offering is already registered.",
+        }
+        return Response(
+            build_public_error(code=exc.code, message=messages[exc.code]),
+            status=status.HTTP_409_CONFLICT,
+        )
+    return Response(
+        build_public_error(
+            code="provider_lifecycle_write_unavailable",
+            message="The provider lifecycle write could not be completed.",
+        ),
+        status=status.HTTP_503_SERVICE_UNAVAILABLE,
+    )
+
+
+def _parse_contract_or_response(request):
+    try:
+        return _contract_payload(request), None
+    except ValueError as exc:
+        return None, Response(
+            build_public_error(code="unsupported_contract_version", message=str(exc)),
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+
+@api_view(["POST"])
+def provider_publication(request):
+    if not getattr(settings, "MDC_PROVIDER_PUBLICATION_ENABLED", False):
+        return _write_disabled()
+    payload, error_response = _parse_contract_or_response(request)
+    if error_response is not None:
+        return error_response
+    serializer = ServiceDiscoveryPublicationSerializer(data=payload)
+    try:
+        is_valid = serializer.is_valid()
+        validation_errors = getattr(serializer, "_errors", None)
+    except ValidationError as exc:
+        is_valid = False
+        validation_errors = exc.detail
+    if not is_valid:
+        return _invalid(
+            "invalid_provider_publication",
+            "The provider publication payload is invalid.",
+            validation_errors,
+        )
+    try:
+        result = register_provider(serializer.validated_data, payload)
+    except (LifecycleConflict, LifecycleNotFound, LifecycleWriteError) as exc:
+        return _write_exception_response(exc)
+    return Response(result, status=status.HTTP_201_CREATED)
+
+
+def provider_update(request, provider_id):
+    if not getattr(settings, "MDC_PROVIDER_PUBLICATION_ENABLED", False):
+        return _write_disabled()
+    payload, error_response = _parse_contract_or_response(request)
+    if error_response is not None:
+        return error_response
+    serializer = ProviderPatchSerializer(data=payload)
+    try:
+        serializer.is_valid(raise_exception=True)
+    except ValidationError as exc:
+        return _invalid("invalid_provider_update", "The provider update is invalid.", exc.detail)
+    try:
+        result = update_provider(provider_id, serializer.validated_data, payload)
+    except (LifecycleConflict, LifecycleNotFound, LifecycleWriteError) as exc:
+        return _write_exception_response(exc)
+    return Response(result, status=status.HTTP_200_OK)
+
+
+def provider_offering_create(request, provider_id):
+    if not getattr(settings, "MDC_PROVIDER_PUBLICATION_ENABLED", False):
+        return _write_disabled()
+    payload, error_response = _parse_contract_or_response(request)
+    if error_response is not None:
+        return error_response
+    serializer = OfferingCreateSerializer(data=payload)
+    try:
+        serializer.is_valid(raise_exception=True)
+        offering = validate_lifecycle_offering(serializer.validated_data)
+    except ValidationError as exc:
+        return _invalid("invalid_offering", "The offering payload is invalid.", exc.detail)
+    try:
+        result = add_provider_offering(provider_id, offering, payload)
+    except (LifecycleConflict, LifecycleNotFound, LifecycleWriteError) as exc:
+        return _write_exception_response(exc)
+    return Response(result, status=status.HTTP_201_CREATED)
+
+
+def offering_update(request, offering_id):
+    if not getattr(settings, "MDC_PROVIDER_PUBLICATION_ENABLED", False):
+        return _write_disabled()
+    payload, error_response = _parse_contract_or_response(request)
+    if error_response is not None:
+        return error_response
+    serializer = OfferingPatchSerializer(data=payload)
+    try:
+        serializer.is_valid(raise_exception=True)
+        result = update_offering(
+            offering_id, serializer.validated_data, payload
+        )
+    except ValidationError as exc:
+        return _invalid("invalid_offering_update", "The offering update is invalid.", exc.detail)
+    except (LifecycleConflict, LifecycleNotFound, LifecycleWriteError) as exc:
+        return _write_exception_response(exc)
+    return Response(result, status=status.HTTP_200_OK)
 
 
 @api_view(["POST"])

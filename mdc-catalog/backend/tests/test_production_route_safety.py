@@ -89,6 +89,27 @@ class ProductionRouteSafetyTests(SimpleTestCase):
             "provider_publication_disabled",
         )
 
+    def test_provider_update_routes_unavailable_by_default_in_production(self):
+        responses = [
+            self.client.patch(
+                "/api/providers/example", {"country": "Finland"},
+                format="json", secure=True,
+            ),
+            self.client.post(
+                "/api/providers/example/offerings", {}, format="json", secure=True,
+            ),
+            self.client.patch(
+                "/api/offerings/example", {"is_active": False},
+                format="json", secure=True,
+            ),
+        ]
+        for response in responses:
+            self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+            self.assertEqual(
+                response.json()["error"]["code"],
+                "provider_publication_disabled",
+            )
+
     def test_provider_validation_unavailable_by_default_in_production(self):
         response = self.client.post(
             "/api/provider-publication/validation",

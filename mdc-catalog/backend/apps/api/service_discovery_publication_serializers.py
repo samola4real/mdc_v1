@@ -1,3 +1,5 @@
+import json
+import math
 import re
 from typing import Any
 
@@ -67,6 +69,19 @@ ALLOWED_QUALITY_STANDARDS = {
     "ISO",
 }
 
+SENSITIVE_PAYLOAD_KEYS = {
+    "api_key",
+    "access_token",
+    "credential",
+    "credentials",
+    "database_url",
+    "password",
+    "private_key",
+    "refresh_token",
+    "secret",
+    "token",
+}
+
 
 def _raise(message: str) -> None:
     raise serializers.ValidationError(message)
@@ -115,6 +130,33 @@ def _reject_externally_owned_identifiers(data: Any) -> None:
                 "Field 'display_name' is not accepted in the harmonized "
                 "provider-publication contract; use 'provider_name'."
             )
+
+
+def _validate_json_safety(data: Any) -> None:
+    def walk(value):
+        if isinstance(value, dict):
+            if any(not isinstance(key, str) or "\x00" in key for key in value):
+                _raise("JSON object keys must be strings without NUL characters.")
+            if any(key.casefold() in SENSITIVE_PAYLOAD_KEYS for key in value):
+                _raise("Credential-bearing fields are not accepted in publication payloads.")
+            for item in value.values():
+                walk(item)
+        elif isinstance(value, list):
+            for item in value:
+                walk(item)
+        elif isinstance(value, str):
+            if "\x00" in value:
+                _raise("JSON strings must not contain NUL characters.")
+        elif isinstance(value, float) and not math.isfinite(value):
+            _raise("The provider-publication payload must contain finite JSON values.")
+        elif value is not None and not isinstance(value, (str, bool, int, float)):
+            _raise("The provider-publication payload must contain JSON values.")
+
+    walk(data)
+    try:
+        json.dumps(data, allow_nan=False)
+    except (TypeError, ValueError):
+        _raise("The provider-publication payload must contain finite JSON values.")
 
 
 def _validate_evidence_metadata(
@@ -236,10 +278,17 @@ class ServiceDiscoveryPublicationSerializer(serializers.Serializer):
         allow_empty=False,
     )
     publication_metadata = serializers.DictField(required=False, default=dict)
+    custom_provider_fields = serializers.DictField(required=False, default=dict)
 
     def to_internal_value(self, data):
+        if not isinstance(data, dict):
+            _raise("The provider-publication payload must be an object.")
+        unsupported = set(data) - set(self.fields)
+        if unsupported:
+            _raise(f"Unsupported provider-publication fields: {sorted(unsupported)}")
         _reject_forbidden_fields(data)
         _reject_externally_owned_identifiers(data)
+        _validate_json_safety(data)
         return super().to_internal_value(data)
 
     def validate_provider_id(self, value):
@@ -273,6 +322,7 @@ class ServiceDiscoveryPublicationSerializer(serializers.Serializer):
 
     def _validate_provider_certifications(self, certifications: list[dict[str, Any]]) -> None:
         allowed_certifications = get_vocabulary_values(CERTIFICATIONS)
+        codes = []
 
         for index, certification in enumerate(certifications):
             location = f"certifications[{index}]"
@@ -287,6 +337,10 @@ class ServiceDiscoveryPublicationSerializer(serializers.Serializer):
                 _raise(f"{location}.code has invalid value '{code}'.")
 
             _validate_evidence_metadata(certification, location=location)
+            codes.append(code)
+
+        if len(codes) != len(set(codes)):
+            _raise("certifications contains duplicate codes.")
 
     def _validate_offerings(self, offerings: list[dict[str, Any]]) -> None:
         registry_context = _get_registry_context()
@@ -338,6 +392,21 @@ class ServiceDiscoveryPublicationSerializer(serializers.Serializer):
         *,
         location: str,
     ) -> None:
+        allowed_fields = {
+            "service_category",
+            "offering_name",
+            "part_family",
+            "support_status",
+            "supported_part_types",
+            "family_capabilities",
+            "part_type_capabilities",
+            "generic_capabilities",
+            "custom_offering_fields",
+            "custom_capability_fields",
+        }
+        unsupported = set(offering) - allowed_fields
+        if unsupported:
+            _raise(f"{location} contains unsupported fields: {sorted(unsupported)}")
         required_fields = [
             "service_category",
             "offering_name",
@@ -356,6 +425,8 @@ class ServiceDiscoveryPublicationSerializer(serializers.Serializer):
         offering.setdefault("family_capabilities", {})
         offering.setdefault("part_type_capabilities", {})
         offering.setdefault("generic_capabilities", {})
+        offering.setdefault("custom_offering_fields", {})
+        offering.setdefault("custom_capability_fields", {})
 
         if not isinstance(offering["supported_part_types"], list):
             _raise(f"{location}.supported_part_types must be a list.")
@@ -365,6 +436,10 @@ class ServiceDiscoveryPublicationSerializer(serializers.Serializer):
             _raise(f"{location}.part_type_capabilities must be an object.")
         if not isinstance(offering["generic_capabilities"], dict):
             _raise(f"{location}.generic_capabilities must be an object.")
+        if not isinstance(offering["custom_offering_fields"], dict):
+            _raise(f"{location}.custom_offering_fields must be an object.")
+        if not isinstance(offering["custom_capability_fields"], dict):
+            _raise(f"{location}.custom_capability_fields must be an object.")
 
     def _validate_offering_taxonomy(
         self,
@@ -602,3 +677,23 @@ class ServiceDiscoveryPublicationSerializer(serializers.Serializer):
             _raise(f"{location}.standard has invalid value '{standard}'.")
 
         _validate_capability_record(quality, location=location)
+
+
+def validate_provider_certifications(certifications: list[dict[str, Any]]) -> None:
+    """Reuse the full publication contract for lifecycle certification changes."""
+    ServiceDiscoveryPublicationSerializer()._validate_provider_certifications(certifications)
+
+
+def validate_publication_metadata(metadata: dict[str, Any]) -> None:
+    ServiceDiscoveryPublicationSerializer()._validate_publication_metadata(metadata)
+
+
+def validate_lifecycle_offering(offering: dict[str, Any]) -> dict[str, Any]:
+    """Validate one complete offering with the authoritative harmonized rules."""
+    candidate = {"offerings": [offering]}
+    _reject_forbidden_fields(candidate)
+    _reject_externally_owned_identifiers(candidate)
+    _validate_json_safety(candidate)
+    validated = dict(offering)
+    ServiceDiscoveryPublicationSerializer()._validate_offerings([validated])
+    return validated

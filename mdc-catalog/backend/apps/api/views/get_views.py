@@ -35,16 +35,22 @@ def _not_found(entity):
     )
 
 
-@api_view(["GET"])
+@api_view(["GET", "PATCH"])
 def provider_detail(request, provider_id):
+    if request.method == "PATCH":
+        from apps.api.views.post_views import provider_update
+        return provider_update(request, provider_id)
     provider = get_provider_lifecycle(provider_id)
     if provider is None:
         return _not_found("provider")
     return Response({"contract_version": PUBLIC_CONTRACT_VERSION, **provider})
 
 
-@api_view(["GET"])
+@api_view(["GET", "POST"])
 def provider_offerings(request, provider_id):
+    if request.method == "POST":
+        from apps.api.views.post_views import provider_offering_create
+        return provider_offering_create(request, provider_id)
     offerings = list_provider_lifecycle_offerings(provider_id)
     if offerings is None:
         return _not_found("provider")
@@ -57,8 +63,11 @@ def provider_offerings(request, provider_id):
     )
 
 
-@api_view(["GET"])
+@api_view(["GET", "PATCH"])
 def offering_detail(request, offering_id):
+    if request.method == "PATCH":
+        from apps.api.views.post_views import offering_update
+        return offering_update(request, offering_id)
     offering = get_offering_lifecycle(offering_id)
     if offering is None:
         return _not_found("offering")

@@ -170,8 +170,8 @@ class ProviderPublicationValidationApiTests(TestCase):
         )
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
-    def test_update_methods_and_registration_routes_are_not_added(self):
-        self.assertEqual(self.client.patch("/api/providers/tasowheel", {}, format="json").status_code,
-                         status.HTTP_405_METHOD_NOT_ALLOWED)
-        self.assertEqual(self.client.post("/api/providers/tasowheel/offerings", {}, format="json").status_code,
-                         status.HTTP_405_METHOD_NOT_ALLOWED)
+    def test_validation_remains_non_mutating_after_write_routes_are_added(self):
+        before = self.identities()
+        response = self.post(make_valid_family_level_gears_payload())
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(self.identities(), before)

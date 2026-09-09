@@ -9,6 +9,7 @@ from apps.api.views.get_views import (
     provider_offerings,
 )
 from apps.api.views.post_views import (
+    provider_publication,
     provider_publication_validation,
     service_discovery_search,
 )
@@ -20,4 +21,3 @@ _legacy_views = module_from_spec(_legacy_spec)
 _legacy_spec.loader.exec_module(_legacy_views)
 
 catalog_search = _legacy_views.catalog_search
-provider_publication = _legacy_views.provider_publication
