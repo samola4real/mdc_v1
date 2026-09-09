@@ -14,6 +14,7 @@ from apps.api.public_contract import build_public_error
 
 ACTOR_HEADER = "X-MDC-Actor-Id"
 AUTHORIZATION_HEADER = "Authorization"
+PILOT_CONCURRENCY_HEADER = "X-MDC-If-Match"
 MAX_ACTOR_LENGTH = 255
 MAX_IF_MATCH_LENGTH = 160
 
@@ -101,18 +102,7 @@ def authenticate_lifecycle_request(request, *, write: bool = False):
     return LifecycleSecurityContext(actor_id=actor_id), None
 
 
-def get_if_match_or_error(request):
-    """Resolve If-Match according to the configured optimistic-concurrency mode."""
-    value = request.headers.get("If-Match")
-    if value is None or not value.strip():
-        if getattr(settings, "MDC_PROVIDER_CONCURRENCY_REQUIRED", False):
-            return None, _error(
-                "concurrency_precondition_required",
-                "If-Match is required for this lifecycle update.",
-                428,
-            )
-        return None, None
-
+def _validate_if_match_value(value: str):
     value = value.strip()
     invalid = (
         len(value) > MAX_IF_MATCH_LENGTH
@@ -128,6 +118,42 @@ def get_if_match_or_error(request):
             status.HTTP_400_BAD_REQUEST,
         )
     return value, None
+
+
+def get_if_match_or_error(request):
+    """Resolve the optimistic-concurrency token.
+
+    ``If-Match`` remains the canonical HTTP header. The temporary Vercel pilot
+    also accepts ``X-MDC-If-Match`` because an intermediary can apply standard
+    conditional-request semantics after the Django function has already
+    committed a PATCH, producing a false 412 at the client boundary. The custom
+    header is intentionally transport-only compatibility; the ETag value and
+    persistence semantics are unchanged.
+    """
+    standard = request.headers.get("If-Match")
+    pilot = request.headers.get(PILOT_CONCURRENCY_HEADER)
+
+    standard = standard.strip() if standard and standard.strip() else None
+    pilot = pilot.strip() if pilot and pilot.strip() else None
+
+    if standard and pilot and standard != pilot:
+        return None, _error(
+            "invalid_concurrency_precondition",
+            "Conflicting lifecycle concurrency preconditions were supplied.",
+            status.HTTP_400_BAD_REQUEST,
+        )
+
+    value = standard or pilot
+    if value is None:
+        if getattr(settings, "MDC_PROVIDER_CONCURRENCY_REQUIRED", False):
+            return None, _error(
+                "concurrency_precondition_required",
+                "If-Match is required for this lifecycle update.",
+                428,
+            )
+        return None, None
+
+    return _validate_if_match_value(value)
 
 
 def attach_etag(response: Response, etag: str | None) -> Response:
