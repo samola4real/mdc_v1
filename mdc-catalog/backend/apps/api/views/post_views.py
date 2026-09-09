@@ -6,6 +6,11 @@ from rest_framework.decorators import api_view
 from rest_framework.exceptions import ValidationError
 from rest_framework.response import Response
 
+from apps.api.lifecycle_security import (
+    attach_etag,
+    authenticate_lifecycle_request,
+    get_if_match_or_error,
+)
 from apps.api.public_contract import (
     PUBLIC_CONTRACT_VERSION,
     build_public_error,
@@ -24,6 +29,7 @@ from apps.api.provider_lifecycle_serializers import (
 from apps.providers.provider_lifecycle_write_service import (
     LifecycleConflict,
     LifecycleNotFound,
+    LifecyclePreconditionFailed,
     LifecycleWriteError,
     add_provider_offering,
     register_provider,
@@ -92,6 +98,17 @@ def _write_exception_response(exc):
             ),
             status=status.HTTP_404_NOT_FOUND,
         )
+    if isinstance(exc, LifecyclePreconditionFailed):
+        return Response(
+            build_public_error(
+                code=f"{exc.entity}_precondition_failed",
+                message=(
+                    f"The requested {exc.entity} changed after it was retrieved; "
+                    "fetch the current representation and retry."
+                ),
+            ),
+            status=status.HTTP_412_PRECONDITION_FAILED,
+        )
     if isinstance(exc, LifecycleConflict):
         messages = {
             "provider_already_exists": "The provider is already registered.",
@@ -120,8 +137,21 @@ def _parse_contract_or_response(request):
         )
 
 
+def _trusted_context_or_response(request, *, write=False):
+    return authenticate_lifecycle_request(request, write=write)
+
+
+def _write_response(result, http_status):
+    result = dict(result)
+    etag = result.pop("_etag", None)
+    return attach_etag(Response(result, status=http_status), etag)
+
+
 @api_view(["POST"])
 def provider_publication(request):
+    security, security_error = _trusted_context_or_response(request, write=True)
+    if security_error is not None:
+        return security_error
     if not getattr(settings, "MDC_PROVIDER_PUBLICATION_ENABLED", False):
         return _write_disabled()
     payload, error_response = _parse_contract_or_response(request)
@@ -141,15 +171,25 @@ def provider_publication(request):
             validation_errors,
         )
     try:
-        result = register_provider(serializer.validated_data, payload)
-    except (LifecycleConflict, LifecycleNotFound, LifecycleWriteError) as exc:
+        result = register_provider(
+            serializer.validated_data,
+            payload,
+            actor_id=security.actor_id,
+        )
+    except (LifecycleConflict, LifecycleNotFound, LifecyclePreconditionFailed, LifecycleWriteError) as exc:
         return _write_exception_response(exc)
-    return Response(result, status=status.HTTP_201_CREATED)
+    return _write_response(result, status.HTTP_201_CREATED)
 
 
 def provider_update(request, provider_id):
+    security, security_error = _trusted_context_or_response(request, write=True)
+    if security_error is not None:
+        return security_error
     if not getattr(settings, "MDC_PROVIDER_PUBLICATION_ENABLED", False):
         return _write_disabled()
+    expected_etag, precondition_error = get_if_match_or_error(request)
+    if precondition_error is not None:
+        return precondition_error
     payload, error_response = _parse_contract_or_response(request)
     if error_response is not None:
         return error_response
@@ -159,13 +199,22 @@ def provider_update(request, provider_id):
     except ValidationError as exc:
         return _invalid("invalid_provider_update", "The provider update is invalid.", exc.detail)
     try:
-        result = update_provider(provider_id, serializer.validated_data, payload)
-    except (LifecycleConflict, LifecycleNotFound, LifecycleWriteError) as exc:
+        result = update_provider(
+            provider_id,
+            serializer.validated_data,
+            payload,
+            actor_id=security.actor_id,
+            expected_etag=expected_etag,
+        )
+    except (LifecycleConflict, LifecycleNotFound, LifecyclePreconditionFailed, LifecycleWriteError) as exc:
         return _write_exception_response(exc)
-    return Response(result, status=status.HTTP_200_OK)
+    return _write_response(result, status.HTTP_200_OK)
 
 
 def provider_offering_create(request, provider_id):
+    security, security_error = _trusted_context_or_response(request, write=True)
+    if security_error is not None:
+        return security_error
     if not getattr(settings, "MDC_PROVIDER_PUBLICATION_ENABLED", False):
         return _write_disabled()
     payload, error_response = _parse_contract_or_response(request)
@@ -178,15 +227,26 @@ def provider_offering_create(request, provider_id):
     except ValidationError as exc:
         return _invalid("invalid_offering", "The offering payload is invalid.", exc.detail)
     try:
-        result = add_provider_offering(provider_id, offering, payload)
-    except (LifecycleConflict, LifecycleNotFound, LifecycleWriteError) as exc:
+        result = add_provider_offering(
+            provider_id,
+            offering,
+            payload,
+            actor_id=security.actor_id,
+        )
+    except (LifecycleConflict, LifecycleNotFound, LifecyclePreconditionFailed, LifecycleWriteError) as exc:
         return _write_exception_response(exc)
-    return Response(result, status=status.HTTP_201_CREATED)
+    return _write_response(result, status.HTTP_201_CREATED)
 
 
 def offering_update(request, offering_id):
+    security, security_error = _trusted_context_or_response(request, write=True)
+    if security_error is not None:
+        return security_error
     if not getattr(settings, "MDC_PROVIDER_PUBLICATION_ENABLED", False):
         return _write_disabled()
+    expected_etag, precondition_error = get_if_match_or_error(request)
+    if precondition_error is not None:
+        return precondition_error
     payload, error_response = _parse_contract_or_response(request)
     if error_response is not None:
         return error_response
@@ -194,18 +254,25 @@ def offering_update(request, offering_id):
     try:
         serializer.is_valid(raise_exception=True)
         result = update_offering(
-            offering_id, serializer.validated_data, payload
+            offering_id,
+            serializer.validated_data,
+            payload,
+            actor_id=security.actor_id,
+            expected_etag=expected_etag,
         )
     except ValidationError as exc:
         return _invalid("invalid_offering_update", "The offering update is invalid.", exc.detail)
-    except (LifecycleConflict, LifecycleNotFound, LifecycleWriteError) as exc:
+    except (LifecycleConflict, LifecycleNotFound, LifecyclePreconditionFailed, LifecycleWriteError) as exc:
         return _write_exception_response(exc)
-    return Response(result, status=status.HTTP_200_OK)
+    return _write_response(result, status.HTTP_200_OK)
 
 
 @api_view(["POST"])
 def provider_publication_validation(request):
     """Validate and normalize a provider payload without mutating any state."""
+    _security, security_error = _trusted_context_or_response(request, write=False)
+    if security_error is not None:
+        return security_error
     if not getattr(settings, "MDC_PROVIDER_VALIDATION_ENABLED", False):
         return Response(
             build_public_error(
