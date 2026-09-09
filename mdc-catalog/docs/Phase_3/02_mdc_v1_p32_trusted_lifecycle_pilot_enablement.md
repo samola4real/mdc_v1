@@ -1,5 +1,15 @@
 # MDC v1 P3.2 — Trusted Lifecycle Pilot Enablement
 
+## Status
+
+**COMPLETE / ACCEPTED.**
+
+Official marker:
+
+```text
+READY_FOR_P33_REAL_FUSEKI_SYNCHRONIZATION_VALIDATION
+```
+
 ## Goal
 
 Enable the trusted provider-lifecycle surface on the temporary pilot deployment in controlled stages, without changing the public discovery contract and without enabling real Fuseki writes.
@@ -18,25 +28,25 @@ GET  /api/catalog/filters
 POST /api/service-discovery/search
 ```
 
-The trusted lifecycle boundary continues to require the service bearer token. Write requests also require actor attribution, and PATCH requests require `If-Match` when concurrency protection is enabled.
+The trusted lifecycle boundary requires the service bearer token. Write requests require actor attribution. PATCH requests use optimistic concurrency with strong opaque lifecycle ETags.
 
 ## Why staged enablement
 
-P3.2 does not reduce the intended functionality. It enables it in a short sequence so that each risk boundary is verified before the next one is opened:
+P3.2 did not reduce the intended functionality. It enabled the trusted lifecycle in a short sequence so each risk boundary could be verified before the next one was opened:
 
-1. enable validation only — no database mutation;
-2. verify authentication + validation + non-mutation;
-3. enable provider publication/write lifecycle;
-4. register one controlled pilot provider and verify provider/offering read-update concurrency behavior;
-5. keep catalogue synchronization disabled until the later real-Fuseki gate.
+1. validation only — no database mutation;
+2. authentication + validation + non-mutation verification;
+3. provider publication/write lifecycle enablement;
+4. controlled provider/offering registration and update verification;
+5. catalogue synchronization kept disabled for the later real-Fuseki gate.
 
-This keeps rollback simple while still completing the full trusted lifecycle pilot.
+This kept rollback simple while completing the full trusted lifecycle pilot.
 
 ## Stage A — validation-only enablement
 
 **STATUS: PASS**
 
-Production configuration:
+Production configuration during Stage A:
 
 ```text
 MDC_PROVIDER_VALIDATION_ENABLED=True
@@ -84,7 +94,7 @@ Therefore the deployed validation flow is confirmed non-mutating.
 
 ## Stage B — controlled write enablement
 
-**STATUS: READY TO RUN**
+**STATUS: PASS**
 
 Production configuration:
 
@@ -92,52 +102,120 @@ Production configuration:
 MDC_PROVIDER_VALIDATION_ENABLED=True
 MDC_PROVIDER_PUBLICATION_ENABLED=True
 MDC_CATALOG_SYNC_ENABLED=False
+
+MDC_PROVIDER_LIFECYCLE_AUTH_REQUIRED=True
+MDC_PROVIDER_LIFECYCLE_ACTOR_REQUIRED=True
+MDC_PROVIDER_CONCURRENCY_REQUIRED=True
 ```
 
-The controlled write smoke uses the dedicated provider ID:
+The controlled write smoke used the dedicated provider ID:
 
 ```text
 p32_pilot_provider
 ```
 
-Existing Tasowheel, Precipart, and seeded provider records are not edited.
+Existing Tasowheel, Precipart, and seeded provider records were not edited.
 
-The Stage B smoke verifies:
+### Temporary Vercel concurrency transport compatibility
 
-- anonymous provider registration remains rejected;
-- authenticated provider registration succeeds (or safely reuses the same fixed pilot identity on rerun);
-- provider GET returns an opaque ETag;
-- provider PATCH with current `If-Match` succeeds;
-- stale provider `If-Match` returns 412;
-- a second controlled offering can be created;
-- offering GET returns an opaque ETag;
-- offering PATCH with current `If-Match` succeeds;
-- stale offering `If-Match` returns 412;
-- accepted writes remain `sync_pending` because catalogue synchronization is disabled;
-- public catalogue filters remain available;
-- no real Fuseki write occurs.
+The first Stage B run exposed a deployment-boundary issue: the standard `If-Match` request reached the API and the provider update was committed, but the temporary Vercel path returned 412 to the client. PostgreSQL evidence confirmed the update, publication, and outbox event had already been persisted.
 
-After the smoke run, PostgreSQL evidence must confirm:
+The lifecycle API therefore retains canonical `If-Match` support and additionally accepts this temporary compatibility header:
 
-- the pilot provider and offerings exist;
-- `ProviderPublication.submitted_by_external_id` records `p32:trusted-write-smoke`;
-- publication history exists for accepted writes;
-- corresponding sync events remain pending;
-- no event was processed remotely while `MDC_CATALOG_SYNC_ENABLED=False`.
+```text
+X-MDC-If-Match
+```
 
-## P3.2 acceptance
+It carries exactly the same strong opaque ETag value and feeds the same optimistic-concurrency comparison. The compatibility header does not change the provider model, persistence semantics, ETag algorithm, actor attribution, public API contract, or future AWS architecture. Conflicting canonical and compatibility revision headers are rejected.
 
-P3.2 is complete when:
+Focused verification after the compatibility change:
 
-- validation-only trusted flow passes and is proved non-mutating;
-- controlled provider registration/update and offering create/update pass;
-- authentication, actor attribution, and ETag/If-Match are verified on the deployed pilot;
-- public discovery remains unchanged;
-- `/api/v1/...` remains absent;
-- real semantic synchronization is still disabled;
-- no secrets are committed or written to reports.
+```text
+Found 16 test(s).
+................
+Ran 16 tests in 45.928s
+OK
+```
 
-Target marker:
+Django then failed only while attempting to delete the temporary `test_neondb` database because one external session still held that test database. This teardown issue occurred after all 16 tests passed and did not affect the deployed pilot database or Stage B API smoke.
+
+### Stage B deployed smoke results
+
+```text
+PASS public health unchanged: 200
+PASS anonymous provider registration rejected: 401
+PASS authenticated provider registration: existing pilot provider reused (409)
+PASS trusted provider read: 200
+PASS provider update with current revision: 200
+PASS stale provider revision rejected: 412
+PASS authenticated offering creation: 201
+PASS trusted offering read: 200
+PASS offering update with current revision: 200
+PASS stale offering revision rejected: 412
+PASS public filters unchanged: 200
+P3.2 Stage B trusted write smoke PASS
+```
+
+The 409 on registration is expected: the first Stage B attempt had already created the fixed pilot provider before the concurrency transport issue was discovered. Reusing the same fixed pilot identity avoided duplicate pilot data.
+
+## PostgreSQL evidence after Stage B
+
+Final managed PostgreSQL counts:
+
+```text
+providers=4
+offerings=6
+certifications=5
+publications=5
+sync_events=6
+```
+
+All five publications for `p32_pilot_provider` are persisted with:
+
+```text
+submitted_by_external_id = p32:trusted-write-smoke
+status = sync_pending
+```
+
+The history consists of one create publication and four update publications. The extra early update is retained as valid audit evidence from the first Stage B attempt, where the database commit succeeded even though the temporary Vercel boundary returned 412.
+
+All six corresponding catalogue sync events remain:
+
+```text
+status = pending
+attempt_count = 0
+last_error = ""
+```
+
+The pending event set covers provider and offering upserts for:
+
+```text
+p32_pilot_provider
+p32_pilot_provider_precision_metal_parts
+p32_pilot_provider_precision_gears
+```
+
+Therefore no semantic event was processed remotely while `MDC_CATALOG_SYNC_ENABLED=False`, and no real Fuseki write occurred during P3.2.
+
+## Acceptance
+
+P3.2 acceptance is satisfied:
+
+- validation-only trusted flow passed and was proved non-mutating;
+- controlled provider registration/update passed;
+- controlled offering creation/update passed;
+- anonymous lifecycle access remained rejected;
+- actor attribution was persisted for all accepted writes;
+- current revision updates succeeded;
+- stale revisions returned 412 and did not overwrite newer state;
+- public discovery remained available;
+- `/api/v1/...` remained outside the canonical API strategy;
+- all accepted lifecycle writes remained durable in PostgreSQL with pending outbox evidence;
+- real semantic synchronization remained disabled;
+- no secret or bearer credential was committed or written into this report;
+- the implementation remains PostgreSQL/Django based and cloud-provider neutral apart from the explicitly temporary Vercel transport compatibility header.
+
+Official marker:
 
 ```text
 READY_FOR_P33_REAL_FUSEKI_SYNCHRONIZATION_VALIDATION
