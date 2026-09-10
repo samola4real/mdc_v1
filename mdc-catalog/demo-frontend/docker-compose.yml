@@ -1,0 +1,53 @@
+# =============================================================================
+# Local stack for the MaaSAI Frontend.
+#
+# Usage:
+#   docker compose up --build           # build + start
+#   docker compose up -d                # detached
+#   docker compose logs -f frontend
+#   docker compose down
+#
+# Mount your environment's config.js to override Keycloak / API URLs without
+# rebuilding the image:
+#   echo 'window.MAASAI_CONFIG = { keycloak: { ... } };' > ./public/config.js
+# =============================================================================
+
+services:
+  frontend:
+    image: maasai/frontend:${TAG:-local}
+    container_name: maasai-frontend
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        NODE_VERSION: "20.18.0"
+    ports:
+      - "${FRONTEND_PORT:-3000}:3000"
+    environment:
+      NODE_ENV: production
+      # Optional: override the bundled defaults from runtimeConfig.js
+      # by mounting /app/public/config.js below.
+    volumes:
+      # Override runtime config without rebuilding. Comment out if you want
+      # to use the version baked into the image.
+      - ./public/config.js:/app/public/config.js:ro
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--spider", "--tries=1", "http://127.0.0.1:3000/"]
+      interval: 30s
+      timeout: 4s
+      retries: 3
+      start_period: 15s
+    # Hardening — drop all caps, only ports needed.
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    read_only: false  # Next.js writes to .next/cache; set true only with tmpfs.
+    tmpfs:
+      - /tmp:rw,nosuid,nodev,size=64m
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"

@@ -1,0 +1,64 @@
+/* General */
+$borderRadius:12px;             /* border radius of layout element e.g. card, sidebar */ 
+$transitionDuration:.2s;        /* transition duration of layout elements e.g. sidebar, overlay menus */
+
+/* Primary Colors */
+$BlueMain:#4472C4;              /* primary color of layout */
+$BlueSecond:#B4C7E7;                  /* 2nd primary color of layout */
+
+/* Secondary Colors */
+$OrangeColor:#C55A11;           /* accent color of layout */
+$GreyMain:#595959;            /* 2nd accent color of layout */
+$GreySecond:#A6A6A6;          /* 3rd accent color of layout */
+$Green:#9BBB59;          /* 4th accent color of layout */
+
+/*Neutral Colors */
+$GraniteGray:#646464;           /* neutral color of layout */
+
+/* General */
+$fontSize:14px;
+$bodyBgColor:#C9F1FA;
+$textColor:#333333;
+$textSecondaryColor:#646464;
+$borderRadius:12px;
+$dividerColor: #f2faff;
+$transitionDuration:.2s;
+$maskBgColor:#424242;
+
+/* Menu Common */
+$menuitemBadgeBgColorPrimary: #4472C4;
+$menuitemBadgeBgColorSecond: #9BBB59;
+$menuitemBadgeColor:#ffffff;
+$submenuFontSize:13px;
+$menuitemActiveRouteColor: #B4C7E7;
+
+/* Menu Light */
+$menuBgColorFirst: #f5fcff;
+$menuBgColorLast:#C9F1FA;
+$menuitemColor:#232428;
+$menuitemHoverColor: #b7ddf5;
+$menuitemActiveColor:#B4C7E7;
+$menuitemActiveBgColor:#ffffff;
+$menuitemBorderColor:rgba(207, 211, 224, 0.6);
+
+/* Menu Dark */
+$menuDarkBgColorFirst:#4d505b;
+$menuDarkBgColorLast:#3b3e47;
+$menuitemDarkColor:#ffffff;
+$menuitemDarkHoverColor:#2B5DB7;
+$menuitemDarkActiveColor:#B4C7E7;
+$menuitemDarkActiveBgColor:#2e3035;
+$menuitemDarkBorderColor:rgba(52, 56, 65, 0.6);
+
+/* Topbar */
+$topbarLeftBgColor:#B4C7E7;
+$topbarRightBgColor: #B4C7E7;
+$topbarItemBadgeBgColor: #c7dbf6;
+$topbarItemBadgeColor:#ffffff;
+$topbarItemColor:#ffffff;
+$topbarItemHoverColor: #4472C4;
+$topbarSearchInputBorderBottomColor:#ffffff;
+$topbarSearchInputColor:#ffffff;
+
+/* Footer */
+$footerBgColor:#ffffff;
