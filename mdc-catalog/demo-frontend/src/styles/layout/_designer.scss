@@ -1,0 +1,309 @@
+/* ============================================================
+   Designer Canvas — page + palette + inspector + reactflow theme
+   ============================================================ */
+
+.designer-page {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding: 18px;
+    /* Provide an explicit working height so the inner grid (and reactflow)
+       can stretch. The container layout may impose its own scroll above us;
+       using min-height keeps reactflow visible even when the outer chrome
+       compresses or expands. */
+    min-height: calc(100vh - 200px);
+}
+
+.designer-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+
+    h1 { margin: 4px 0 6px; font-size: 22px; font-weight: 700; color: var(--text-dark); }
+    p  { margin: 0; color: var(--text-medium); font-size: 13.5px; max-width: 60ch; }
+}
+
+.designer-header__tag {
+    display: inline-block;
+    padding: 3px 10px;
+    background: rgba(34, 63, 97, 0.12);
+    color: #1B324E;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.designer-header__actions {
+    display: flex;
+    gap: 8px;
+}
+
+/* ---------------- Three-column shell ---------------- */
+
+.designer-shell {
+    display: grid;
+    grid-template-columns: 240px minmax(0, 1fr) 280px;
+    gap: 12px;
+    flex: 1;
+    min-height: 600px;
+}
+
+/* ---------------- Palette ---------------- */
+
+.designer-palette {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    padding: 14px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    overflow-y: auto;
+
+    > header {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        padding-bottom: 6px;
+        border-bottom: 1px solid var(--border);
+
+        strong { color: var(--text-dark); font-size: 14px; }
+        span   { color: var(--text-medium); font-size: 11px; }
+    }
+
+    section {
+        h3 {
+            margin: 0 0 6px;
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--text-light);
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+        }
+        ul {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            margin: 0;
+            padding: 0;
+            list-style: none;
+        }
+    }
+}
+
+.designer-palette__item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 10px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    cursor: grab;
+    text-align: left;
+    transition: transform 120ms ease, border-color 160ms ease, background 160ms ease;
+
+    strong { display: block; font-size: 13px; font-weight: 700; color: var(--text-dark); }
+    span   { display: block; font-size: 11px; color: var(--text-medium); }
+
+    &:hover {
+        transform: translateX(2px);
+        background: var(--bg-card);
+        border-color: rgba(231, 140, 58, 0.4);
+    }
+
+    &:active {
+        cursor: grabbing;
+    }
+}
+
+.designer-palette__icon {
+    width: 32px;
+    height: 32px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    flex-shrink: 0;
+    background: rgba(34, 63, 97, 0.10);
+    color: #223F61;
+    font-size: 14px;
+
+    .designer-palette__item--orange & { background: rgba(231, 140, 58, 0.16); color: #C97119; }
+    .designer-palette__item--sand   & { background: rgba(216, 209, 190, 0.55); color: #6E6346; }
+    .designer-palette__item--ok     & { background: rgba(43, 168, 111, 0.18); color: #1F7E50; }
+}
+
+/* ---------------- Canvas ---------------- */
+
+.designer-canvas {
+    position: relative;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    overflow: hidden;
+    min-height: 480px;
+    height: 100%;
+    width: 100%;
+}
+
+.designer-canvas--loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-medium);
+    font-size: 13px;
+    font-weight: 600;
+}
+
+/* The inner div that wraps <ReactFlow /> must fill the parent so reactflow
+   has a known viewport. Without this the library renders zero-height and
+   nothing is visible. */
+.designer-canvas-inner {
+    width: 100%;
+    height: 100%;
+    min-height: 480px;
+}
+
+.designer-canvas-inner .react-flow {
+    width: 100%;
+    height: 100%;
+}
+
+/* React Flow nodes — themed for MaaSAI brand */
+.rf-node {
+    padding: 8px 12px !important;
+    border: 1px solid var(--border) !important;
+    border-radius: 10px !important;
+    background: #FFFFFF !important;
+    font-size: 13px !important;
+    font-weight: 600 !important;
+    color: #223F61 !important;
+    box-shadow: 0 2px 6px rgba(15, 23, 42, 0.06) !important;
+}
+
+.rf-node--asset   { border-left: 4px solid #223F61 !important; }
+.rf-node--sensor  { border-left: 4px solid #E78C3A !important; }
+.rf-node--process { border-left: 4px solid #D8D1BE !important; color: #6E6346 !important; }
+.rf-node--storage { border-left: 4px solid #2BA86F !important; }
+
+.react-flow__edge-path {
+    stroke: #223F61;
+    stroke-width: 1.6;
+}
+
+.react-flow__handle {
+    width: 8px !important;
+    height: 8px !important;
+    background: #E78C3A !important;
+    border: 2px solid #FFFFFF !important;
+}
+
+.react-flow__controls {
+    border-radius: 10px !important;
+    overflow: hidden !important;
+    box-shadow: 0 6px 18px rgba(15, 23, 42, 0.12) !important;
+}
+
+.react-flow__minimap {
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+/* ---------------- Inspector ---------------- */
+
+.designer-inspector {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    padding: 16px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    overflow-y: auto;
+
+    > header {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+
+        strong { color: var(--text-dark); font-size: 16px; }
+    }
+}
+
+.designer-inspector--empty {
+    align-items: center;
+    justify-content: center;
+
+    p {
+        color: var(--text-light);
+        font-size: 13px;
+        text-align: center;
+        max-width: 22ch;
+    }
+}
+
+.designer-inspector__kind {
+    display: inline-block;
+    width: max-content;
+    padding: 2px 8px;
+    background: rgba(231, 140, 58, 0.14);
+    color: #C97119;
+    border-radius: 999px;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+
+.designer-inspector__fields {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+
+    label {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+
+        > span {
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--text-medium);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .p-inputtext,
+        .p-dropdown,
+        .p-inputnumber-input {
+            width: 100%;
+        }
+    }
+}
+
+.designer-inspector footer {
+    margin-top: auto;
+}
+
+/* ---------------- Responsive ---------------- */
+
+@media (max-width: 1100px) {
+    .designer-shell {
+        grid-template-columns: 200px minmax(0, 1fr) 260px;
+    }
+}
+
+@media (max-width: 860px) {
+    .designer-shell {
+        grid-template-columns: 1fr;
+    }
+    .designer-canvas {
+        min-height: 420px;
+    }
+}

@@ -41,6 +41,16 @@ mdc-catalog/data/demo/provider_demo_state*.json
 Thumbs.db
 ~$*.xlsx
 
+# Imported MDC demo frontend generated and local state
+mdc-catalog/demo-frontend/node_modules/
+mdc-catalog/demo-frontend/.next/
+mdc-catalog/demo-frontend/out/
+mdc-catalog/demo-frontend/dist/
+mdc-catalog/demo-frontend/build/
+mdc-catalog/demo-frontend/coverage/
+mdc-catalog/demo-frontend/.cache/
+mdc-catalog/demo-frontend/.idea/
+
 # Duplicate local data archives
 mdc-catalog/data/curated/*.zip
 mdc-catalog/env.example

@@ -1,0 +1,109 @@
+* {
+    box-sizing: border-box;
+}
+
+:root,
+[data-theme='light'] {
+    --orange: #E8903E;
+    --orange-light: #F5A623;
+    --blue: #4A8FD9;
+    --green: #6B9E3A;
+    --red-orange: #E06040;
+    --purple: #8B5DAA;
+    --bg: #F0F0F0;
+    --bg-card: #FFFFFF;
+    --sidebar-bg: #FFFFFF;
+    --topbar-bg: #FFFFFF;
+    --border: #E5E5E5;
+    --text-dark: #333333;
+    --text-medium: #666666;
+    --text-light: #999999;
+    --status-ok: #6B9E3A;
+    --status-warn: #E8903E;
+    --status-error: #E06040;
+    --sidebar-width: 230px;
+    --topbar-height: 56px;
+    --font-family: 'Source Sans 3', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+/* -----------------------------------------------------------------
+   DARK — comfortable for low-light offices and night shifts.
+   ----------------------------------------------------------------- */
+[data-theme='dark'] {
+    --orange: #F5A35A;
+    --orange-light: #F7B978;
+    --blue: #6FB0EE;
+    --green: #92C36A;
+    --red-orange: #EE7A5E;
+    --purple: #B084CC;
+    --bg: #14181F;
+    --bg-card: #1C212B;
+    --sidebar-bg: #1A1F28;
+    --topbar-bg: #1A1F28;
+    --border: #2A303C;
+    --text-dark: #ECEFF4;
+    --text-medium: #B6BEC9;
+    --text-light: #7E8794;
+    --status-ok: #6FD86F;
+    --status-warn: #FFB347;
+    --status-error: #FF6B6B;
+}
+
+/* -----------------------------------------------------------------
+   HMI — factory floor / shop CNC. Black background, amber accents,
+   thick borders and saturated status colors for legibility under
+   fluorescent or sunlight glare.
+   ----------------------------------------------------------------- */
+[data-theme='hmi'] {
+    --orange: #FF8C00;
+    --orange-light: #FFB347;
+    --blue: #00B0FF;
+    --green: #00E676;
+    --red-orange: #FF3030;
+    --purple: #FFA600;
+    --bg: #000000;
+    --bg-card: #0F0F0F;
+    --sidebar-bg: #0A0A0A;
+    --topbar-bg: #0A0A0A;
+    --border: #2A2A2A;
+    --text-dark: #FFFFFF;
+    --text-medium: #E0E0E0;
+    --text-light: #9E9E9E;
+    --status-ok: #00E676;
+    --status-warn: #FFB300;
+    --status-error: #FF3030;
+}
+
+html {
+    height: 100%;
+    font-size: $fontSize;
+}
+
+body {
+    margin: 0;
+    padding: 0;
+    min-height: 100%;
+    font-family: var(--font-family);
+    color: var(--text-dark);
+    background-color: var(--bg);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+a {
+    color: inherit;
+    text-decoration: none;
+}
+
+.layout-wrapper {
+    min-height: 100vh;
+    background: var(--bg);
+}
+
+.layout-mask {
+    background: rgba(0, 0, 0, 0.3);
+}
+
+.p-component {
+    font-family: var(--font-family);
+}

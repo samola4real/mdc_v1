@@ -1,0 +1,371 @@
+/* ============================================================
+   Brand reference page — /home/Brand
+   Uses the Outfit typeface (Google Fonts) to showcase the
+   official MaaSAI identity. All chrome respects the active
+   theme via the global CSS variables.
+   ============================================================ */
+
+.brand-page {
+    display: flex;
+    flex-direction: column;
+    gap: 32px;
+    padding: 24px;
+    font-family: 'Outfit', var(--font-family);
+    color: var(--text-dark);
+
+    h1, h2, strong {
+        font-family: 'Outfit', var(--font-family);
+        letter-spacing: -0.01em;
+    }
+}
+
+/* ---------------- Hero ---------------- */
+
+.brand-hero {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+    padding: 32px;
+    background: linear-gradient(135deg, #223F61 0%, #2F557E 100%);
+    color: #FFFFFF;
+    border-radius: 18px;
+    box-shadow: 0 18px 38px rgba(34, 63, 97, 0.18);
+}
+
+.brand-hero__eyebrow {
+    display: inline-block;
+    margin-bottom: 12px;
+    padding: 4px 10px;
+    background: rgba(231, 140, 58, 0.18);
+    color: #FFD09A;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.brand-hero__copy {
+    max-width: 560px;
+
+    h1 {
+        margin: 0 0 12px;
+        color: #FFFFFF;
+        font-size: 34px;
+        font-weight: 700;
+        line-height: 1.15;
+    }
+
+    p {
+        margin: 0;
+        font-size: 16px;
+        line-height: 1.55;
+        color: rgba(255, 255, 255, 0.85);
+    }
+}
+
+.brand-hero__chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 6px;
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: 999px;
+
+    span {
+        display: block;
+        width: 32px;
+        height: 32px;
+        border-radius: 999px;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.18);
+    }
+}
+
+/* ---------------- Section heads ---------------- */
+
+.brand-section {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+}
+
+.brand-section__head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+
+    h2 {
+        margin: 0;
+        font-size: 22px;
+        font-weight: 700;
+        color: var(--text-dark);
+    }
+}
+
+.brand-section__hint {
+    font-size: 13px;
+    color: var(--text-medium);
+}
+
+/* ---------------- Colour grid ---------------- */
+
+.brand-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 14px;
+}
+
+.brand-swatch {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 24px;
+    min-height: 200px;
+    padding: 20px;
+    border: none;
+    border-radius: 16px;
+    cursor: pointer;
+    text-align: left;
+    font-family: inherit;
+    transition: transform 160ms ease, box-shadow 160ms ease;
+    box-shadow: 0 6px 14px rgba(15, 23, 42, 0.10);
+
+    /* Defeat PrimeReact's lara theme defaults that would otherwise force
+       `strong`, `h1`, etc. to its own grey. We want every text node inside
+       the swatch to inherit the contrast colour computed from the hex. */
+    strong,
+    span {
+        color: inherit;
+    }
+
+    &:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 14px 28px rgba(15, 23, 42, 0.16);
+    }
+
+    &:focus-visible {
+        outline: 3px solid #E78C3A;
+        outline-offset: 3px;
+    }
+
+    &:active {
+        transform: translateY(0);
+    }
+}
+
+.brand-swatch__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.brand-swatch__hex {
+    font-family: 'JetBrains Mono', 'Source Code Pro', ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 18px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+}
+
+.brand-swatch__copy {
+    display: inline-flex;
+    opacity: 0.85;
+}
+
+.brand-swatch__body {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-top: auto;
+
+    strong {
+        font-size: 17px;
+        font-weight: 700;
+    }
+}
+
+.brand-swatch__role {
+    font-size: 13px;
+    font-weight: 500;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+}
+
+.brand-swatch__usage {
+    font-size: 13px;
+    line-height: 1.45;
+}
+
+/* ---------------- Typography ---------------- */
+
+.brand-type {
+    display: grid;
+    grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+    gap: 18px;
+    padding: 24px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 18px;
+}
+
+.brand-type__sample {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.brand-type__meta {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-light);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+}
+
+.brand-type__display {
+    font-family: 'Outfit', var(--font-family);
+    font-size: clamp(36px, 6vw, 64px);
+    font-weight: 700;
+    line-height: 1.05;
+    letter-spacing: -0.02em;
+    color: var(--text-dark);
+}
+
+.brand-type__body {
+    margin: 0;
+    font-size: 18px;
+    line-height: 1.55;
+    color: var(--text-medium);
+}
+
+.brand-type__weights {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 18px;
+    background: var(--bg);
+    border-radius: 12px;
+}
+
+.brand-type__row {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 8px 12px;
+    background: var(--bg-card);
+    border-radius: 8px;
+    font-family: 'Outfit', var(--font-family);
+    color: var(--text-dark);
+}
+
+.brand-type__row-label {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-light);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+
+.brand-type__row-sample {
+    font-size: 16px;
+}
+
+/* ---------------- Code snippets ---------------- */
+
+.brand-snippets {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 14px;
+}
+
+.brand-code {
+    display: flex;
+    flex-direction: column;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    background: var(--bg-card);
+    overflow: hidden;
+}
+
+.brand-code__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 14px;
+    background: var(--bg);
+    border-bottom: 1px solid var(--border);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-medium);
+}
+
+.brand-code__copy {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    color: var(--text-medium);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 160ms ease, color 160ms ease, border-color 160ms ease;
+
+    &:hover {
+        color: #E78C3A;
+        border-color: rgba(231, 140, 58, 0.4);
+        background: rgba(231, 140, 58, 0.08);
+    }
+}
+
+.brand-code pre {
+    margin: 0;
+    padding: 16px;
+    font-family: 'JetBrains Mono', 'Source Code Pro', ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 12.5px;
+    line-height: 1.55;
+    color: var(--text-dark);
+    white-space: pre;
+    overflow-x: auto;
+}
+
+/* ---------------- Footnote ---------------- */
+
+.brand-footnote {
+    padding: 16px 20px;
+    background: var(--bg-card);
+    border: 1px dashed var(--border);
+    border-radius: 12px;
+    color: var(--text-medium);
+    font-size: 13.5px;
+    line-height: 1.55;
+
+    code {
+        margin: 0 2px;
+        padding: 2px 6px;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 12.5px;
+        color: var(--text-dark);
+        background: var(--bg);
+        border-radius: 6px;
+    }
+}
+
+/* ---------------- Responsive ---------------- */
+
+@media (max-width: 768px) {
+    .brand-type {
+        grid-template-columns: 1fr;
+    }
+    .brand-hero {
+        padding: 22px;
+    }
+}
