@@ -2,9 +2,9 @@
 
 ## Comprehensive Implementation Report and User Manual
 
-**Document status:** Current accepted frontend implementation baseline and operating manual
+**Document status:** Final accepted frontend implementation baseline and operating manual after final-alignment validation
 
-**Frontend baseline:** `b207022363163a026a1d77e6485fd151e81aa750` (`fix: align MDC demo frontend with current API contract`)
+**Frontend baseline:** `06df31c4b18685a174d9c3471f707d6468acc657` (`fix: finalize MDC demo frontend alignment`)
 
 **Public MDC contract:** `1.0`
 
@@ -56,7 +56,7 @@ The MaaSAI MaaS Dynamic Catalogue (MDC) demo frontend is a Next.js browser appli
 
 The application was created while the real CMM user interface and integration boundaries were unavailable. It is therefore a Marketplace-like illustration around the real MDC API, not CMM itself. It does not own Marketplace registration, production identity, provider authorization, quotation, orchestration, or commercial workflows.
 
-The accepted frontend state is the sanitized snapshot plus the API/configuration cleanup at commit `b207022363163a026a1d77e6485fd151e81aa750`. Consumer search uses the current unversioned public endpoints and contract `1.0`. Provider and administrator demonstrations use explicitly separate `/api/demo/...` endpoints. The browser intentionally does not call trusted provider lifecycle APIs because their service identity, actor attribution, and concurrency credentials belong behind a server-side Marketplace or backend-for-frontend (BFF) boundary.
+The accepted frontend state is the sanitized snapshot, the API/configuration cleanup at commit `b207022363163a026a1d77e6485fd151e81aa750`, and the final-alignment application baseline at commit `06df31c4b18685a174d9c3471f707d6468acc657`. Consumer search uses the current unversioned public endpoints and contract `1.0`. Provider and administrator demonstrations use explicitly separate `/api/demo/...` endpoints. The browser intentionally does not call trusted provider lifecycle APIs because their service identity, actor attribution, and concurrency credentials belong behind a server-side Marketplace or backend-for-frontend (BFF) boundary.
 
 The MDC backend remains authoritative for catalogue data, public contract validation, matching, persistence, RDF/Fuseki integration, and trusted lifecycle security. This frontend is authoritative only for the current browser experience and browser-to-API mapping.
 
@@ -111,10 +111,11 @@ The implementation history under `docs/Demo_Frontend/Implementation_History/` re
 | Preservation | Four approved tracked modifications plus untracked MDC work were captured | Preserved the exact dirty working-tree result without modifying the original repository |
 | Sanitized import | `e411e7300cfbe2f9f3f9fe245027f2c0c341cd38` | Imported a content snapshot, not GitLab history |
 | API/config cleanup | `b207022363163a026a1d77e6485fd151e81aa750` | Aligned endpoints, filters, response adapters, configuration, routes, and documentation with current MDC |
+| Final alignment | `06df31c4b18685a174d9c3471f707d6468acc657` | Aligned fallback/provider vocabularies, explicit provider mapping, result semantics, demo-status wording, and README lockfile evidence |
 
 Earlier reports may mention static filters, older nested/internal search results, stale lifecycle browser helpers, or experimental route assumptions. The current code supersedes them. In particular, current code does not use `/api/v1/...`, does not expose `material_grades` as a search criterion, and does not call trusted lifecycle writes from the browser.
 
-The sanitized import preserved inherited source formatting. The subsequent cleanup used a one-time, explicitly scoped exception to normalize nine inherited whitespace files so `git diff --check` could become a reliable gate. That exception is historical, not permission for broad formatting rewrites.
+The initial sanitized import was accepted through a one-time, explicitly scoped exception for nine inherited whitespace warnings; the imported bytes were not edited during that snapshot commit. The later API/config cleanup intentionally normalized those nine inherited files, after which `git diff --check` passed normally. The import exception is historical and is not permission for broad formatting rewrites.
 
 ## 5. Repository strategy and security-preserving import
 
@@ -168,7 +169,7 @@ Pages compose screen-level content. `_app.js` wraps all pages with theme, authen
 
 `AuthContext` loads `/config.js`, initializes one Keycloak instance with PKCE S256, exposes login/logout/user/role state, and refreshes expiring tokens. Demo-role utilities normalize identity roles and store the user's active demonstration role in session storage.
 
-MDC components build forms, payload previews, result panels, and status dashboards. Service wrappers isolate URL construction and HTTP behavior. `mockData.js` is a visible fallback only when canonical filters cannot be loaded. `searchResultFormatters.js` adapts the current flattened public response while retaining compatibility with historical/demo shapes.
+MDC components build forms, payload previews, result panels, and status dashboards. Service wrappers isolate URL construction and HTTP behavior. `mockData.js` contains current controlled fallback choices used when canonical consumer filters cannot be loaded, the three controlled provider update-template choices, and illustrative demo workflow presentation text. The controlled arrays mirror current backend source, while workflow text remains non-authoritative demonstration content. `searchResultFormatters.js` adapts the current flattened public response while retaining compatibility with historical/demo shapes.
 
 ## 8. Repository and file structure
 
@@ -287,15 +288,15 @@ These routes are unversioned. Contract versioning is represented in JSON as `con
 | Method and path | Current use |
 |---|---|
 | `GET /api/demo/health` | Dashboard/admin demo availability |
-| `GET /api/demo/service-discovery/backend-status` | Runtime labels/status |
-| `GET /api/demo/service-discovery/fuseki-smoke-test` | Admin read-only smoke action |
-| `POST /api/demo/service-discovery/regenerate-rdf` | Confirmed admin action; current backend returns `501`, `mutates_state: false` |
-| `POST /api/demo/service-discovery/reload-fuseki` | Confirmed admin action; current backend returns `501`, `mutates_state: false` |
+| `GET /api/demo/service-discovery/backend-status` | Static/demo-reported direction and dataset labels; not live runtime verification |
+| `GET /api/demo/service-discovery/fuseki-smoke-test` | Reserved action; currently HTTP 200 with `status: "not_implemented"` and `mutates_state: false` |
+| `POST /api/demo/service-discovery/regenerate-rdf` | Reserved action; currently HTTP 501 with `status: "not_implemented"` and `mutates_state: false` |
+| `POST /api/demo/service-discovery/reload-fuseki` | Reserved action; currently HTTP 501 with `status: "not_implemented"` and `mutates_state: false` |
 | `GET /api/demo/provider-publication/state` | Provider list, admin summary, optional consumer overlay |
 | `POST /api/demo/provider-publication/preview` | Non-mutating provider payload validation/normalization preview |
 | `POST /api/demo/provider-publication/simulate-update` | Saves registration/update into demo JSON state |
 
-The backend guards the entire demo namespace. Production settings default `MDC_DEMO_API_ENABLED` to false, so these routes normally return 404 unless a demo environment deliberately enables them. Status panels, provider state, and overlay loading show warnings or fallbacks. Provider preview/save and admin actions show normalized error states.
+The backend guards the entire demo namespace. `demo_api_required` allows a demo route when `MDC_DEMO_API_ENABLED` is true **or** Django `DEBUG` is true. Production settings force `DEBUG` false and default the demo flag false, so unenabled production demo routes return 404. Status panels, provider state, and overlay loading show warnings or fallbacks. Provider preview/save and admin actions show normalized error states; a fulfilled `not_implemented` smoke response is deliberately not shown as success.
 
 The browser intentionally has no helpers for trusted provider validation, publication, provider/offering reads, POST offering creation, or PATCH updates. Those endpoints require a trusted server-side boundary described in Section 21.
 
@@ -312,7 +313,7 @@ The current backend error envelope is:
   "contract_version": "1.0",
   "error": {
     "code": "invalid_service_discovery_request",
-    "message": "The service-discovery request is invalid.",
+    "message": "Invalid service-discovery search request.",
     "details": {}
   }
 }
@@ -459,7 +460,7 @@ The canonical public response provides top-level request context and flattened r
 
 The adapter maps those capability arrays to the established presentation names while preserving fields, requested/provided values, reasons, and implied status. Response-level `part_type` is passed into result presentation. It also accepts older nested/internal and demo-overlay shapes solely for compatibility.
 
-Provider accordions show provider/offering identity, requested part type, suitability, support status, materials, processes, certifications, capability ranges, unknown reasons, and optional advanced/debug data. `match.score` remains available in advanced details; the main UI emphasizes evidence and does not present the score as provider quality, commercial ranking, or probability.
+The result list is headed **Provider candidates found**, not “suitable providers.” Provider accordions show provider/offering identity with **Requested part type**, result state, safely derived part-type support, materials, processes, certifications, capability ranges, unknown reasons, and optional advanced/debug data. Without an explicit historical/demo part-type attribute, `full_match` and `partial_match` mean part-type support is confirmed under current matcher semantics; `unknown_match` is shown as not confirmed/evidence incomplete. Explicit historical/demo support evidence remains compatible. Unmatched controlled rows show supplied evidence when present and otherwise say not matched rather than “Supported” or “Available.” `match.score` remains available in advanced details; the main UI does not present it as provider quality, commercial ranking, or probability.
 
 Demo overlay results carry a visible label and summary/custom-field tables. They do not claim backend-canonical evidence. Quote, contact/provider, save, or similar result actions are illustrative toast actions for a future Marketplace workflow, not completed transactions.
 
@@ -471,7 +472,7 @@ The provider page has two modes.
 
 **Register New Provider** collects provider ID/name/country/description and one offering. Registration intentionally uses flexible staging: offering name/ID, arbitrary custom offering name/value pairs, and arbitrary custom capability name/value/unit/notes rows. Preview calls the demo preview endpoint; demo save calls `simulate-update` with action `register_provider` and then refreshes saved demo state.
 
-**Update Existing Provider** starts with static Tasowheel example rows and merges saved demo providers from the state endpoint by stable provider/offering identity. The table is sortable and paginated. Selecting a row fills provider/offering and controlled capability fields. Update payloads include publication metadata, certifications, service category, family, template, supported types, support status, and template-specific capabilities.
+**Update Existing Provider** starts with static Tasowheel gear and shaft example rows and merges saved demo providers from the state endpoint by stable provider/offering identity. The table is sortable and paginated. A saved offering is recognized as controlled only when its category/family pair is one of the current registry pairs and any stored template agrees. Flexible registrations without that mapping appear as `mapping-required`, with blank controlled category/family fields. The user must explicitly select a controlled template before Preview or Save becomes available. Template selection couples the category, family, and sensible supported-type defaults; service category is read-only so it cannot drift from the template.
 
 Templates are:
 
@@ -480,7 +481,8 @@ Templates are:
 | Gear manufacturing | module, outside diameter, quality |
 | Shaft manufacturing | length, outer diameter, spline module |
 | Metal-part manufacturing | maximum dimensions, tolerance, surface finish |
-| General precision manufacturing | description, keyword list, maximum-size description |
+
+The three template/category/family pairs are respectively `precision_gears`/`gear`, `precision_shafts`/`shaft`, and `precision_metal_parts`/`metal_part`. All current backend part-type choices are available. Material-family choices are separate from provider grade evidence. The gear payload uses the current `gear_quality` field name. `general_precision_manufacturing`, `precision_manufacturing`, and `general_precision` are not presented as current-v1 controlled update mappings.
 
 Common update capabilities include materials, available grades, processes, certifications, batch size, lead time, maximum weight, and notes. Template selection applies defaults. Payload panels expose the exact JSON for review.
 
@@ -495,13 +497,13 @@ Provider business descriptions often arrive as spreadsheets or free text. MDC di
 - arbitrary text is not silently promoted into searchable controlled properties;
 - custom fields retain facts until a person or future governed mapping process can classify them.
 
-Registration mode therefore demonstrates broad custom input. Update mode demonstrates richer controlled structures. The current code does not implement automatic semantic mapping, approval, or authoritative publication of custom fields. A future workflow must validate mappings explicitly.
+Registration mode therefore demonstrates broad custom input. Update mode demonstrates richer controlled structures for gear, shaft, and metal part only. A saved flexible offering without valid controlled category/family values is not assigned an invented fallback; it requires an explicit template choice, and Preview/Save remain blocked until the coupled mapping is valid. This is user selection, not automatic semantic promotion. The current code does not implement automatic semantic mapping, approval, or authoritative publication of custom fields. A future workflow must validate mappings explicitly.
 
 ## 19. Admin and audit demonstration
 
-The admin page loads shared health, demo health, backend status, demo provider state, and canonical catalogue filters in parallel. Status cards summarize API availability, demo enablement, active/fallback discovery labels, Fuseki dataset label, provider/update counts, last update, and filter counts. Raw responses are available in collapsed advanced panels.
+The admin page loads shared health, demo health, backend-status metadata, demo provider state, and canonical catalogue filters in parallel. Health endpoints show whether those HTTP services responded. The backend-direction, fallback, and Fuseki dataset values from `backend-status` are hard-coded demo-reported metadata: they illustrate intended/configured direction and do not verify which discovery backend or remote Fuseki is live. Provider/update and filter counts come from their respective responses. Raw responses are available in collapsed advanced panels.
 
-Read-only calls are health, backend status, provider state, catalogue filters, and Fuseki smoke test. Provider preview is also non-mutating but belongs to the provider page. `simulate-update` mutates demo JSON state. Admin RDF regeneration and Fuseki reload require browser confirmation; current backend implementations return HTTP 501 and explicitly report `mutates_state: false`. They are reserved interfaces, not working production operations.
+Read-only calls are health, backend status, provider state, catalogue filters, and Fuseki smoke test. The smoke-test endpoint currently returns HTTP 200 but says `status: "not_implemented"` and `mutates_state: false`; the UI renders that as a warning, never a successful smoke execution. Provider preview is also non-mutating but belongs to the provider page. `simulate-update` mutates demo JSON state. Admin RDF regeneration and Fuseki reload retain future-safe confirmation prompts, but their current backend handlers return HTTP 501, `status: "not_implemented"`, and `mutates_state: false`. They are reserved interfaces, not working production operations.
 
 Missing/disabled demo endpoints appear as unavailable/warning states. A 404 is explained as likely demo API disablement. Partial success remains visible rather than collapsing every card into one failure.
 
@@ -579,14 +581,26 @@ Use one of the payloads in Section 15 with `POST /api/service-discovery/search` 
   "contract_version": "1.0",
   "error": {
     "code": "unsupported_contract_version",
-    "message": "The requested contract version is not supported."
+    "message": "Unsupported contract_version '2.0'. Supported versions: ['1.0']"
   }
 }
 ```
 
+This unsupported-version example is exact for a submitted value of `2.0`; the backend interpolates the rejected value into the message.
+
 ## 21. Trusted provider lifecycle boundary
 
 The current backend separately exposes trusted provider validation, registration, reads, offering creation, and PATCH updates. These are not consumer/public browser APIs.
+
+| Method | Trusted server-side route | Purpose |
+|---|---|---|
+| POST | `/api/provider-publication/validation` | Validate a publication without persistence |
+| POST | `/api/provider-publication` | Register/publish a provider |
+| GET, PATCH | `/api/providers/<provider_id>` | Read or update one provider |
+| GET, POST | `/api/providers/<provider_id>/offerings` | List or add that provider's offerings |
+| GET, PATCH | `/api/offerings/<offering_id>` | Read or update one offering |
+
+There is no collection `GET /api/providers` route. None of the routes in this table is called by the current browser.
 
 ```text
 Browser / Marketplace UI
@@ -626,7 +640,7 @@ From a clean checkout:
 
 6. Open `http://localhost:3000/demo`.
 
-The local API assumption is a Django MDC server on port 8000 with CORS permitting the frontend origin. Demo provider/admin functionality also requires the backend demo API to be enabled.
+The local API assumption is a Django MDC server on port 8000 with CORS permitting the frontend origin. The demo-route decorator permits demo provider/admin functionality when `MDC_DEMO_API_ENABLED` is true **or** local Django `DEBUG` is true. Production settings use `DEBUG=False` and default the demo flag off; deployed demonstrations should enable the flag deliberately rather than relying on debug mode.
 
 Validation and production-style execution:
 
@@ -640,18 +654,19 @@ npm run start
 
 ## 23. Validation and accepted evidence
 
-The accepted API/config cleanup milestone recorded the following evidence. These are results of that run, not perpetual guarantees about future commits or registries.
+The final-alignment run on 2026-09-11 revalidated the application baseline in this document. These are point-in-time results, not perpetual guarantees about future commits or registries.
 
 | Gate | Accepted evidence |
 |---|---|
-| Snapshot/current-tree secret-risk scans | Passed; no credential values were published |
-| `git diff --check` | Passed after the approved inherited-whitespace cleanup |
+| Changed/staged-file secret-risk scans | Passed; no private-key, bearer-token, JWT, or credential-URL patterns found |
+| `git diff --check` | Passed normally |
 | `npm ci` | Passed; 358 packages installed |
 | Audit output from that install | 0 vulnerabilities reported |
 | `npm run lint` | Exit 0 with five pre-existing warnings: one `AppMenuitem` hook warning, three layout hook warnings, one `_document.js` CSS warning |
-| `npm run build` | Passed; an initial sandbox `EPERM` was environmental and the authorized rerun succeeded |
+| `npm run build` | Passed; an initial sandbox worker `EPERM` was environmental and the authorized rerun succeeded |
 | Route sanity | Expected `/`, `/404`, `/demo`, three demo children, home/workspace routes built; accidental component routes absent |
-| Public deployed backend smoke | Health, filters, and search returned HTTP 200 and contract `1.0`; filters had expected groups; search had flattened result/capability arrays |
+| Public deployed backend smoke | Health, filters, and one non-mutating search returned HTTP 200 and contract `1.0`; filters reported 3 categories/3 families; search returned 2 flattened results with capability arrays |
+| Frontend/backend vocabulary comparison | Exact set match: 6 materials, 15 processes, 6 certifications, 16 part types |
 | Dependency artifacts | `package.json` and lockfile unchanged; generated build/dependency files untracked/ignored |
 
 No frontend test suite or compatible GitHub Actions workflow was added. The public backend smoke target proves API compatibility at a point in time, not that this frontend is deployed there.
@@ -662,11 +677,11 @@ No frontend test suite or compatible GitHub Actions workflow was added. The publ
 
 **Unauthenticated:** open `/` and `/demo`; confirm public rendering, login prompt, and redirection from authenticated child routes.
 
-**Provider:** log in with a recognized provider alias, select Provider, verify only appropriate MDC navigation, preview a valid registration, and—only in a disposable demo environment—save and confirm it appears in Update Existing Provider.
+**Provider:** log in with a recognized provider alias, select Provider, verify only appropriate MDC navigation, preview a valid registration, and—only in a disposable demo environment—save and confirm it appears in Update Existing Provider. For a flexible saved offering, verify `mapping-required`, select one of the three controlled templates explicitly, confirm the read-only category/family coupling, and verify Preview/Save are blocked before mapping.
 
-**Consumer:** select Consumer, verify canonical filter values, family-dependent types, gear/shaft/each metal-part field group, payload preview, loading, success, no-result, capability arrays, and clearly labelled overlay entries.
+**Consumer:** select Consumer, verify canonical filter values, family-dependent types, gear/shaft/each metal-part field group, payload preview, loading, candidate results, no-result, capability arrays, `unknown_match` not-confirmed wording, unmatched evidence, and clearly labelled overlay entries.
 
-**Admin:** select Admin, verify role switching, status cards, partial errors, advanced responses, provider state, filter counts, smoke test, and confirmation prompts. Expect current regenerate/reload endpoints to return not implemented.
+**Admin:** select Admin, verify role switching, status cards, partial errors, advanced responses, provider state, and filter counts. Confirm backend-direction/Fuseki labels say demo metadata rather than live verification. Expect smoke test to return HTTP 200/not implemented and render a warning; expect regenerate/reload to return HTTP 501/not implemented without claiming mutation.
 
 **Filter outage:** make only the filters call unavailable; verify a visible fallback warning and usable static choices.
 
@@ -701,7 +716,7 @@ A safe deployment needs:
 7. separate backend secret management for Django, database, lifecycle, and semantic services;
 8. lint/build/manual smoke validation against the intended environment.
 
-Production MDC settings default demo, provider publication, validation, and catalogue synchronization flags off, while trusted lifecycle authentication/actor/concurrency requirements default on. A demonstration environment may deliberately differ, but it must not be mistaken for the production policy.
+Code defaults and deployed policy are distinct. `config/settings_production.py` defaults demo, provider publication, validation, and catalogue synchronization flags off, while trusted lifecycle authentication, actor attribution, and concurrency requirements default on. The accepted Phase-3 Vercel policy snapshot intentionally overrode two feature defaults: provider validation and provider publication were enabled; lifecycle auth, actor, and concurrency were required; catalogue sync and demo API remained disabled on Vercel. Runtime configuration can change through controlled deployment operations, so verify the current platform state rather than inferring it from code defaults or this historical snapshot.
 
 The repository proves the app can be built and packaged; it does not by itself prove an active production deployment of this frontend. Deployment ownership for the frontend host, Keycloak, backend origin, and demo enablement must be assigned before release.
 
@@ -794,6 +809,7 @@ This is a target architecture, not current functionality.
 - Demo persistence is a JSON file and demo overlay entries are not authoritative catalogue data.
 - Production MDC commonly disables demo APIs, so provider/admin demonstrations need a dedicated environment.
 - RDF regeneration and Fuseki reload demo actions are reserved and currently return 501.
+- The Fuseki smoke-test demo action is reserved and currently reports not implemented despite HTTP 200.
 - Result buttons do not implement quotation, contact, saving, or transactions.
 - Strong automated frontend unit/integration/browser/accessibility tests are absent.
 - Scoped frontend CI is absent.
@@ -818,6 +834,7 @@ This is a target architecture, not current functionality.
 | Search returns no providers | No compatible active offering or restrictive requirements | Try fewer optional requirements and verify current catalogue/semantic runtime |
 | Canonical results work but overlay warning appears | Demo state endpoint disabled/unavailable | Ignore for canonical truth or use a demo-enabled backend |
 | Admin regenerate/reload reports failure | Current handlers are reserved | HTTP 501 is expected; do not claim the operation ran |
+| Admin smoke test returns HTTP 200 but warns | The endpoint body says `not_implemented` | This is expected current behavior; HTTP success does not prove a Fuseki test ran |
 | Lint shows five known warnings | Accepted baseline warnings | Confirm count/files have not changed; new warnings still require review |
 | Build fails after install | Wrong Node/npm, stale output, or environment restriction | Use compatible Node 20, clean ignored build output safely, run `npm ci`, then rebuild |
 | Deployed browser calls localhost | Runtime config was not overridden | Deploy a public `config.js` with the intended HTTPS backend origin |
@@ -860,14 +877,18 @@ Troubleshooting must not print authorization headers, full environments, databas
 | Public | GET | `/api/catalog/filters` | Search controls |
 | Public | POST | `/api/service-discovery/search` | Consumer discovery |
 | Demo | GET | `/api/demo/health` | Demo availability |
-| Demo | GET | `/api/demo/service-discovery/backend-status` | Status |
-| Demo | GET | `/api/demo/service-discovery/fuseki-smoke-test` | Admin smoke |
-| Demo | POST | `/api/demo/service-discovery/regenerate-rdf` | Reserved; current 501 |
-| Demo | POST | `/api/demo/service-discovery/reload-fuseki` | Reserved; current 501 |
+| Demo | GET | `/api/demo/service-discovery/backend-status` | Static/demo-reported metadata; not live verification |
+| Demo | GET | `/api/demo/service-discovery/fuseki-smoke-test` | Reserved; current 200/not implemented/non-mutating |
+| Demo | POST | `/api/demo/service-discovery/regenerate-rdf` | Reserved; current 501/not implemented/non-mutating |
+| Demo | POST | `/api/demo/service-discovery/reload-fuseki` | Reserved; current 501/not implemented/non-mutating |
 | Demo | GET | `/api/demo/provider-publication/state` | Demo state/overlay |
 | Demo | POST | `/api/demo/provider-publication/preview` | Provider preview |
 | Demo | POST | `/api/demo/provider-publication/simulate-update` | Demo state save |
-| Trusted | Multiple | `/api/provider-publication...`, `/api/providers/...`, `/api/offerings/...` | Intentionally not called by browser |
+| Trusted | POST | `/api/provider-publication/validation` | Intentionally not called by browser |
+| Trusted | POST | `/api/provider-publication` | Intentionally not called by browser |
+| Trusted | GET, PATCH | `/api/providers/<provider_id>` | Intentionally not called by browser |
+| Trusted | GET, POST | `/api/providers/<provider_id>/offerings` | Intentionally not called by browser |
+| Trusted | GET, PATCH | `/api/offerings/<offering_id>` | Intentionally not called by browser |
 
 ### Appendix B — Route/role quick reference
 
@@ -878,7 +899,7 @@ Troubleshooting must not print authorization headers, full environments, databas
 | Consumer | Yes | No | Yes | No |
 | Admin selecting Provider | Yes | Yes | No | No |
 | Admin selecting Consumer | Yes | No | Yes | No |
-| Admin selecting Admin | Yes | No | No | Yes |
+| Admin selecting Admin | Yes | Yes | Yes | Yes |
 
 ### Appendix C — Important file map
 
@@ -904,6 +925,7 @@ Troubleshooting must not print authorization headers, full environments, databas
 | Preservation/sanitized staging | 2026-09-09; 134 app files and 30 reports |
 | Sanitized GitHub import | `e411e7300cfbe2f9f3f9fe245027f2c0c341cd38` |
 | Current API/config cleanup baseline | `b207022363163a026a1d77e6485fd151e81aa750` |
+| Final aligned application baseline | `06df31c4b18685a174d9c3471f707d6468acc657` |
 
 ### Appendix E — Safe deployment checklist
 
