@@ -1,9 +1,7 @@
 import React from 'react';
 import { Card } from 'primereact/card';
 import StatusTag from './StatusTag';
-import { demoBackends } from './mockData';
-
-const DemoStatusCards = ({ cards = demoBackends }) => {
+const DemoStatusCards = ({ cards = [] }) => {
     return (
         <div className="grid">
             {cards.map((item) => (

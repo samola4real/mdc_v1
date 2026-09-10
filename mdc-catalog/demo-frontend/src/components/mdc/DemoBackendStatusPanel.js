@@ -121,12 +121,12 @@ const DemoBackendStatusPanel = () => {
                     : getErrorMessage('demoHealth', status.demoHealth.error)
             },
             {
-                label: 'Active backend',
+                label: 'Demo-reported backend direction',
                 value: displayValue(backendStatus.active_backend),
-                status: backendStatusOk ? 'online' : 'warning',
-                statusLabel: backendStatusOk ? 'Online' : 'Fallback',
+                status: backendStatusOk ? 'info' : 'warning',
+                statusLabel: backendStatusOk ? 'Demo metadata' : 'Fallback',
                 description: backendStatusOk
-                    ? 'Reported by the demo backend-status endpoint.'
+                    ? 'Illustrative metadata; this does not verify the live discovery runtime.'
                     : 'Fallback label shown until demo backend status is available.'
             },
             {
@@ -135,7 +135,7 @@ const DemoBackendStatusPanel = () => {
                 status: backendStatusOk ? 'info' : 'warning',
                 statusLabel: backendStatusOk ? 'Reported' : 'Fallback',
                 description: backendStatusOk
-                    ? 'Reported fallback runtime directions.'
+                    ? 'Illustrative fallback directions reported by the demo endpoint.'
                     : 'Static fallback directions from the F1 shell are shown.'
             },
             {
@@ -143,7 +143,7 @@ const DemoBackendStatusPanel = () => {
                 value: displayValue(backendStatus.fuseki_dataset),
                 status: backendStatusOk ? 'info' : 'warning',
                 statusLabel: backendStatusOk ? 'Reported' : 'Fallback',
-                description: 'Frontend talks to Django only; Fuseki is not exposed directly.'
+                description: 'Demo-reported label only; the frontend does not directly verify or access Fuseki.'
             },
             {
                 label: 'Marketplace/shared API unchanged',
@@ -178,11 +178,11 @@ const DemoBackendStatusPanel = () => {
     ].filter(Boolean);
 
     return (
-        <Panel header="Runtime backend status">
+        <Panel header="Backend health and demo-reported metadata">
             <div className="flex flex-column md:flex-row md:align-items-center md:justify-content-between gap-3 mb-3">
                 <div>
                     <p className="text-600 line-height-3 my-0">
-                        Read-only status from the shared backend health, demo health, and demo backend-status endpoints.
+                        Read-only health responses plus illustrative labels from demo backend-status. The labels are not live Fuseki/runtime verification.
                     </p>
                     {lastUpdated ? (
                         <div className="text-sm text-600 mt-2">

@@ -41,7 +41,7 @@ const SearchResultsList = ({ response, demoProviderWarning }) => {
                     className="w-full justify-content-start"
                 />
             ) : null}
-            <h2 className="m-0 text-900">Suitable providers found</h2>
+            <h2 className="m-0 text-900">Provider candidates found</h2>
             <ProviderResultAccordion results={results} />
         </div>
     );

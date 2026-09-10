@@ -13,7 +13,7 @@ The browser does not call trusted provider lifecycle write APIs. Those APIs requ
 
 ## Local development
 
-The Docker build uses Node.js 20.18.0. Use Node.js 20.18 or another compatible Node 20 release and an npm version that supports the committed lockfile v3.
+The Docker build uses Node.js 20.18.0. Use Node.js 20.18 or another compatible Node 20 release and an npm version that supports the committed lockfile version 2.
 
 ```bash
 npm ci

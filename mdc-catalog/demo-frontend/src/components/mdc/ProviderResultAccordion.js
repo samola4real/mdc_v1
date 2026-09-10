@@ -57,13 +57,19 @@ const getPartTypeLabel = (result) => {
 
 const getSuitability = (result) => formatSuitability(getMatch(result).status || result.status);
 
-const getSupportStatus = (result) => (
-    formatSupportStatus(
-        getPartTypeMatch(result)?.status
-        || getPartTypeMatch(result)?.provided?.support_status
-        || getMatch(result).status
-    )
-);
+const getSupportStatus = (result) => {
+    const explicitPartType = getPartTypeMatch(result);
+    if (explicitPartType?.status || explicitPartType?.provided?.support_status) {
+        return formatSupportStatus(
+            explicitPartType.status || explicitPartType.provided.support_status
+        );
+    }
+
+    const matchStatus = getMatch(result).status || result.status;
+    if (['full_match', 'partial_match', 'matched'].includes(matchStatus)) return 'Confirmed';
+    if (matchStatus === 'unmatched') return 'Not matched';
+    return 'Not confirmed';
+};
 
 const getSeverity = (status) => {
     if (status === 'Suitable' || status === 'Confirmed' || status === 'Matched') return 'success';
@@ -82,19 +88,12 @@ const formatCapability = (attribute) => {
     const provided = attribute.provided;
 
     if (attribute.field === 'part_type') {
-        return provided?.support_status ? formatSupportStatus(provided.support_status) : 'Supported';
+        if (provided?.support_status) return formatSupportStatus(provided.support_status);
     }
-    if (attribute.field === 'materials') {
-        return 'Supported';
-    }
-    if (attribute.field === 'processes') {
-        return 'Available';
-    }
-    if (attribute.field === 'certifications') {
-        return 'Available';
-    }
-
-    return formatEvidenceValue(provided);
+    if (provided !== undefined && provided !== null) return formatEvidenceValue(provided);
+    if (attribute.status === 'matched') return 'Confirmed by matching evidence';
+    if (attribute.status === 'unmatched') return 'Not matched';
+    return 'Not confirmed';
 };
 
 const makeSuitabilityRows = (result) => (
@@ -220,7 +219,7 @@ const Header = ({ result }) => {
             <div>
                 <div className="font-semibold text-900">{getProviderName(result)}</div>
                 <div className="text-sm text-600">
-                    {getOfferingName(result)} | {getPartTypeLabel(result)} supported
+                    {getOfferingName(result)} | Requested part type: {getPartTypeLabel(result)}
                 </div>
             </div>
             <div className="flex flex-wrap gap-2">
@@ -316,7 +315,7 @@ const ProviderResultPanel = ({ result }) => {
                 </>
             ) : null}
 
-            <Card title="Why this provider is suitable">
+            <Card title="Capability comparison">
                 <DataTable value={suitabilityRows} dataKey="id" responsiveLayout="scroll" stripedRows>
                     <Column field="requirement" header="Your requirement" />
                     <Column field="capability" header="Provider capability" />

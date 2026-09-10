@@ -255,24 +255,24 @@ const AdminAuditPanel = () => {
                     : getErrorMessage(requests.demoHealth.error, 'Demo API health could not be loaded.')
             },
             {
-                title: 'Service discovery backend',
+                title: 'Demo-reported backend direction',
                 value: backendStatusAvailable ? displayValue(backendStatus.active_backend) : 'Unavailable',
-                status: backendStatusAvailable ? 'online' : 'unavailable',
-                statusLabel: backendStatusAvailable ? 'Reported' : 'Unavailable',
+                status: backendStatusAvailable ? 'info' : 'unavailable',
+                statusLabel: backendStatusAvailable ? 'Demo metadata' : 'Unavailable',
                 description: backendStatusAvailable
-                    ? 'Reported by the demo backend-status endpoint.'
+                    ? 'Illustrative metadata returned by the demo endpoint; it does not verify the live discovery runtime.'
                     : getErrorMessage(requests.backendStatus.error, 'Backend status endpoint did not respond.')
             },
             {
-                title: 'Fuseki dataset/status',
+                title: 'Demo-reported Fuseki label',
                 value: backendStatusAvailable
                     ? displayValue(firstValue(backendStatus.fuseki_dataset, backendStatus.fuseki_status))
                     : 'Unavailable',
                 status: backendStatusAvailable ? 'info' : 'unavailable',
                 statusLabel: backendStatusAvailable ? 'Reported' : 'Unavailable',
                 description: backendStatusAvailable
-                    ? 'Dataset/status reported by the demo backend, when available.'
-                    : 'No static Fuseki dataset is shown without a backend response.'
+                    ? 'Static demo-reported dataset/status metadata, not a live Fuseki health check.'
+                    : 'No demo-reported Fuseki label is shown without a backend response.'
             },
             {
                 title: 'Fallback backend',
@@ -280,7 +280,7 @@ const AdminAuditPanel = () => {
                 status: backendStatusAvailable ? 'info' : 'unavailable',
                 statusLabel: backendStatusAvailable ? 'Reported' : 'Unavailable',
                 description: backendStatusAvailable
-                    ? 'Fallback directions reported by the backend-status endpoint.'
+                    ? 'Illustrative fallback directions reported by the demo metadata endpoint.'
                     : 'No fallback backend is shown as live when the endpoint is unavailable.'
             },
             {
@@ -373,7 +373,7 @@ const AdminAuditPanel = () => {
         try {
             const result = await action();
             setActionState({ name, loading: false, result, error: null });
-            if (name !== 'Run Fuseki Smoke Test') {
+            if (name !== 'Run Fuseki Smoke Test' && result?.status !== 'not_implemented') {
                 loadAdminState();
             }
         } catch (error) {
@@ -394,7 +394,7 @@ const AdminAuditPanel = () => {
             <Panel header="System status">
                 <div className="flex flex-column md:flex-row md:align-items-center md:justify-content-between gap-3 mb-3">
                     <p className="text-600 line-height-3 my-0">
-                        Live status from backend health, demo health, and service-discovery backend-status endpoints.
+                        Health responses plus illustrative metadata from the demo backend-status endpoint. Backend-direction and Fuseki labels are not live runtime verification.
                     </p>
                     <div className="flex align-items-center gap-3">
                         {lastUpdated ? <span className="text-sm text-600">Last refreshed: {lastUpdated.toLocaleTimeString()}</span> : null}
@@ -462,8 +462,8 @@ const AdminAuditPanel = () => {
 
             <Panel header="Technical actions">
                 <Message
-                    severity="warn"
-                    text="Demo-only technical action area. RDF regeneration and Fuseki reload can change demo runtime state and require confirmation."
+                    severity="info"
+                    text="These technical interfaces are reserved. The current smoke test is not implemented, and current RDF regeneration/reload handlers return 501 with mutates_state false. Confirmation prompts are retained for future-safe behavior."
                     className="w-full justify-content-start mb-3"
                 />
                 <div className="flex flex-wrap gap-2">
@@ -480,7 +480,7 @@ const AdminAuditPanel = () => {
                         onClick={() => runAction({
                             name: 'Regenerate RDF',
                             action: regenerateRdf,
-                            confirmMessage: 'Regenerate demo RDF now? This is a demo-only technical action.'
+                            confirmMessage: 'Call the reserved demo RDF regeneration interface? The current handler returns 501 and does not mutate state.'
                         })}
                         loading={actionLoading('Regenerate RDF')}
                     />
@@ -491,7 +491,7 @@ const AdminAuditPanel = () => {
                         onClick={() => runAction({
                             name: 'Reload Fuseki',
                             action: reloadFuseki,
-                            confirmMessage: 'Reload the demo Fuseki dataset now? This is a demo-only technical action.'
+                            confirmMessage: 'Call the reserved demo Fuseki reload interface? The current handler returns 501 and does not mutate state.'
                         })}
                         loading={actionLoading('Reload Fuseki')}
                     />
@@ -499,15 +499,19 @@ const AdminAuditPanel = () => {
 
                 {actionState.error ? (
                     <Message
-                        severity="error"
-                        text={`${actionState.name} failed: ${getErrorMessage(actionState.error, 'Action failed.')}`}
+                        severity={actionState.error?.status === 501 ? 'warn' : 'error'}
+                        text={actionState.error?.status === 501
+                            ? `${actionState.name} is reserved and not implemented. The current handler did not mutate state.`
+                            : `${actionState.name} failed: ${getErrorMessage(actionState.error, 'Action failed.')}`}
                         className="w-full justify-content-start mt-3"
                     />
                 ) : null}
                 {actionState.result ? (
                     <Message
-                        severity="success"
-                        text={`${actionState.name} completed successfully.`}
+                        severity={actionState.result?.status === 'not_implemented' ? 'warn' : 'success'}
+                        text={actionState.result?.status === 'not_implemented'
+                            ? `${actionState.name} is reserved and not implemented. No state was changed.`
+                            : `${actionState.name} completed successfully.`}
                         className="w-full justify-content-start mt-3"
                     />
                 ) : null}

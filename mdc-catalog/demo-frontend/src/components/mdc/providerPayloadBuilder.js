@@ -40,11 +40,6 @@ export const buildProviderPreviewPayload = (form) => {
         };
     }
 
-    const splitList = (value) => String(value || '')
-        .split(',')
-        .map((item) => item.trim())
-        .filter(Boolean);
-
     const commonCapabilities = {
         materials: form.materials,
         available_grades: form.availableGrades,
@@ -72,7 +67,7 @@ export const buildProviderPreviewPayload = (form) => {
                 min: form.diameterMinMm,
                 max: form.diameterMaxMm
             },
-            quality: {
+            gear_quality: {
                 standard: form.qualityStandard,
                 class: form.qualityClass
             }
@@ -94,22 +89,16 @@ export const buildProviderPreviewPayload = (form) => {
             },
             tolerance: form.tolerance,
             surface_finish: form.surfaceFinish
-        },
-        general_precision_manufacturing: {
-            capability_description: form.capabilityDescription,
-            supported_keywords: splitList(form.partTypeKeywords),
-            maximum_size: form.maximumSizeDescription
         }
     };
 
+    const templateCapabilities = capabilityByTemplate[form.capabilityTemplate] || {};
     const capabilities = {
-        ...(capabilityByTemplate[form.capabilityTemplate] || capabilityByTemplate.gear_manufacturing),
+        ...templateCapabilities,
         ...commonCapabilities
     };
 
-    const supportedPartTypes = form.capabilityTemplate === 'general_precision_manufacturing'
-        ? splitList(form.partTypeKeywords)
-        : form.partTypes;
+    const supportedPartTypes = form.partTypes;
 
     return {
         action: form.action,

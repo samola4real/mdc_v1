@@ -21,11 +21,10 @@ import {
     certifications,
     materials,
     partTypes,
-    processes,
-    serviceCategories
+    processes
 } from './mockData';
 
-const qualityStandards = ['DIN', 'ISO', 'AGMA', 'Customer specified'];
+const qualityStandards = ['DIN', 'ISO', 'AGMA'];
 const availableGrades = ['18CrNiMo7-6', '16MnCr5', '20MnCr5'];
 
 const templateDefaults = {
@@ -40,19 +39,14 @@ const templateDefaults = {
         partTypes: ['splined_shaft', 'plain_shaft']
     },
     metal_part_manufacturing: {
-        serviceCategory: 'precision_manufacturing',
+        serviceCategory: 'precision_metal_parts',
         partFamily: 'metal_part',
-        partTypes: ['block', 'bracket', 'plate']
-    },
-    general_precision_manufacturing: {
-        serviceCategory: 'precision_manufacturing',
-        partFamily: 'general_precision',
-        partTypes: []
+        partTypes: ['block', 'plate', 'bracket', 'bushing', 'roller', 'collar']
     }
 };
 
 const baseCapabilityForm = {
-    supportStatus: 'declared',
+    supportStatus: 'confirmed',
     partTypes: templateDefaults.gear_manufacturing.partTypes,
     moduleMin: 1,
     moduleMax: 8,
@@ -70,9 +64,6 @@ const baseCapabilityForm = {
     maxDiameterMm: 300,
     tolerance: 'Customer specified',
     surfaceFinish: 'Customer specified',
-    capabilityDescription: '',
-    partTypeKeywords: '',
-    maximumSizeDescription: '',
     batchSizeMin: 1,
     batchSizeMax: 1000,
     leadTimeMinWeeks: 2,
@@ -175,16 +166,13 @@ const asArray = (value) => {
     return [];
 };
 
-const getCustomFieldValue = (fields, name) => {
-    const target = String(name).toLowerCase();
-    return (fields || []).find((field) => String(field?.name || '').toLowerCase() === target)?.value;
-};
-
-const getControlledServiceCategory = (offering) => {
-    const customServiceCategory = getCustomFieldValue(offering?.custom_offering_fields, 'Service category');
-    const candidate = offering?.service_category || customServiceCategory;
-    return serviceCategories.includes(candidate) ? candidate : 'precision_manufacturing';
-};
+const getControlledTemplate = (offering) => Object.entries(templateDefaults).find(
+    ([template, defaults]) => (
+        offering?.service_category === defaults.serviceCategory
+        && offering?.part_family === defaults.partFamily
+        && (!offering?.capability_template || offering.capability_template === template)
+    )
+);
 
 const getProviderStateEntries = (state) => {
     const providers = state?.providers || state?.state?.providers || state?.demo_state?.providers || state?.data?.providers;
@@ -196,13 +184,6 @@ const getProviderStateEntries = (state) => {
     return asArray(state);
 };
 
-const mapCapabilityTemplate = (offering) => {
-    if (offering?.capability_template) return offering.capability_template;
-    if (offering?.part_family === 'shaft') return 'shaft_manufacturing';
-    if (offering?.part_family === 'metal_part') return 'metal_part_manufacturing';
-    return 'general_precision_manufacturing';
-};
-
 const mapSavedProviderRows = (state) => getProviderStateEntries(state).flatMap((provider) => {
     const payload = provider?.payload || provider?.provider || provider;
     const providerId = payload?.provider_id || payload?.providerId || payload?.id || '';
@@ -212,9 +193,12 @@ const mapSavedProviderRows = (state) => getProviderStateEntries(state).flatMap((
 
     return asArray(payload?.offerings).map((offering, index) => {
         const capabilities = offering?.capabilities || {};
-        const customOfferingFields = offering?.custom_offering_fields || [];
         const offeringId = offering?.offering_id || offering?.offeringId || offering?.id || `${providerId || 'saved_provider'}_${index}`;
-        const partFamily = offering?.part_family || 'general_precision';
+        const controlledTemplate = getControlledTemplate(offering);
+        const [capabilityTemplate, controlledDefaults] = controlledTemplate || [null, null];
+        const supportedPartTypes = controlledDefaults
+            ? asArray(offering?.supported_part_types).filter((partType) => controlledDefaults.partTypes.includes(partType))
+            : [];
 
         return {
             id: offeringId,
@@ -223,14 +207,15 @@ const mapSavedProviderRows = (state) => getProviderStateEntries(state).flatMap((
             country,
             description,
             offering: offering?.offering_name || offering?.offeringName || offering?.name || offeringId,
-            serviceCategory: getControlledServiceCategory({ ...offering, custom_offering_fields: customOfferingFields }),
-            partFamily,
-            capabilityTemplate: mapCapabilityTemplate({ ...offering, part_family: partFamily }),
-            supportedPartTypes: offering?.supported_part_types || [],
+            serviceCategory: controlledDefaults?.serviceCategory || '',
+            partFamily: controlledDefaults?.partFamily || '',
+            capabilityTemplate,
+            supportedPartTypes,
             materials: capabilities?.materials || [],
             processes: capabilities?.processes || [],
             certifications: payload?.certifications || capabilities?.certifications || [],
-            status: 'saved'
+            status: controlledTemplate ? 'saved' : 'mapping-required',
+            requiresControlledMapping: !controlledTemplate
         };
     });
 });
@@ -256,6 +241,12 @@ const ProviderDemoPanel = () => {
     const [stateLoadWarning, setStateLoadWarning] = useState(null);
 
     const payload = useMemo(() => buildProviderPreviewPayload(form), [form]);
+    const selectedTemplate = templateDefaults[form.capabilityTemplate];
+    const hasValidControlledMapping = mode !== 'update' || Boolean(
+        selectedTemplate
+        && form.serviceCategory === selectedTemplate.serviceCategory
+        && form.partFamily === selectedTemplate.partFamily
+    );
 
     const setField = (field, value) => setForm((current) => ({ ...current, [field]: value }));
 
@@ -345,7 +336,8 @@ const ProviderDemoPanel = () => {
     };
 
     const applyTemplate = (templateValue) => {
-        const defaults = templateDefaults[templateValue] || templateDefaults.gear_manufacturing;
+        const defaults = templateDefaults[templateValue];
+        if (!defaults) return;
         setForm((current) => ({
             ...current,
             capabilityTemplate: templateValue,
@@ -379,7 +371,7 @@ const ProviderDemoPanel = () => {
             offeringName: next.offering,
             serviceCategory: next.serviceCategory,
             partFamily: next.partFamily,
-            capabilityTemplate: next.capabilityTemplate || (next.partFamily === 'shaft' ? 'shaft_manufacturing' : 'gear_manufacturing'),
+            capabilityTemplate: next.capabilityTemplate,
             partTypes: next.supportedPartTypes || [],
             materials: next.materials || [],
             certifications: next.certifications || [],
@@ -388,6 +380,17 @@ const ProviderDemoPanel = () => {
     };
 
     const runAction = async (action) => {
+        if (!hasValidControlledMapping) {
+            setActionResult(null);
+            toast.current?.show({
+                severity: 'warn',
+                summary: 'Controlled mapping required',
+                detail: 'Choose a valid controlled capability template before previewing or saving this update.',
+                life: 3500
+            });
+            return;
+        }
+
         const isPreview = action === 'preview';
         toast.current?.clear();
         setLoadingAction(action);
@@ -458,7 +461,12 @@ const ProviderDemoPanel = () => {
                     <>
                         <div className="field col-12 md:col-6">
                             <label htmlFor="serviceCategory" className="font-medium">Service category / capability area</label>
-                            <Dropdown inputId="serviceCategory" value={form.serviceCategory} options={serviceCategories} onChange={(e) => setField('serviceCategory', e.value)} className="w-full" />
+                            <InputText
+                                id="serviceCategory"
+                                value={form.serviceCategory || 'Choose a controlled template'}
+                                readOnly
+                                className="w-full"
+                            />
                         </div>
                         <div className="field col-12 md:col-6">
                             <label htmlFor="capabilityTemplate" className="font-medium">Capability template</label>
@@ -469,14 +477,24 @@ const ProviderDemoPanel = () => {
                                 optionLabel="label"
                                 optionValue="value"
                                 onChange={(e) => applyTemplate(e.value)}
+                                placeholder="Choose a controlled template"
                                 className="w-full"
                             />
                         </div>
                         <div className="field col-12">
                             <p className="text-600 line-height-3 mb-0">
-                                Choose a template to show useful capability fields. If the provider does not fit a specific template, use General precision manufacturing.
+                                Choose a controlled template to couple the current MDC service category, part family and supported part types. Flexible facts that do not map yet remain registration/custom staging data.
                             </p>
                         </div>
+                        {!hasValidControlledMapping ? (
+                            <div className="col-12">
+                                <Message
+                                    severity="warn"
+                                    text="This saved flexible offering requires an explicit controlled MDC mapping. Choose a capability template before previewing or saving the update."
+                                    className="w-full justify-content-start"
+                                />
+                            </div>
+                        ) : null}
                     </>
                 ) : null}
             </div>
@@ -668,28 +686,11 @@ const ProviderDemoPanel = () => {
         </>
     );
 
-    const renderGeneralFields = () => (
-        <>
-            <div className="field col-12">
-                <label htmlFor="capabilityDescription" className="font-medium">Capability description</label>
-                <InputTextarea id="capabilityDescription" value={form.capabilityDescription} onChange={(e) => setField('capabilityDescription', e.target.value)} {...textArea} />
-            </div>
-            <div className="field col-12 md:col-6">
-                <label htmlFor="partTypeKeywords" className="font-medium">Supported part types / keywords</label>
-                <InputText id="partTypeKeywords" value={form.partTypeKeywords} onChange={(e) => setField('partTypeKeywords', e.target.value)} className="w-full" placeholder="shafts, housings, precision assemblies" />
-            </div>
-            <div className="field col-12 md:col-6">
-                <label htmlFor="maximumSizeDescription" className="font-medium">Maximum size / dimensions</label>
-                <InputText id="maximumSizeDescription" value={form.maximumSizeDescription} onChange={(e) => setField('maximumSizeDescription', e.target.value)} className="w-full" />
-            </div>
-        </>
-    );
-
     const renderTemplateFields = () => {
         if (form.capabilityTemplate === 'shaft_manufacturing') return renderShaftFields();
         if (form.capabilityTemplate === 'metal_part_manufacturing') return renderMetalPartFields();
-        if (form.capabilityTemplate === 'general_precision_manufacturing') return renderGeneralFields();
-        return renderGearFields();
+        if (form.capabilityTemplate === 'gear_manufacturing') return renderGearFields();
+        return null;
     };
 
     const renderCapabilityInformation = () => (
@@ -840,7 +841,7 @@ const ProviderDemoPanel = () => {
                     label={mode === 'register' ? 'Preview' : 'Preview update'}
                     icon="pi pi-eye"
                     loading={loadingAction === 'preview'}
-                    disabled={Boolean(loadingAction)}
+                    disabled={Boolean(loadingAction) || !hasValidControlledMapping}
                     onClick={() => runAction('preview')}
                 />
                 <Button
@@ -848,7 +849,7 @@ const ProviderDemoPanel = () => {
                     icon={mode === 'register' ? 'pi pi-plus' : 'pi pi-save'}
                     outlined
                     loading={loadingAction === 'save'}
-                    disabled={Boolean(loadingAction)}
+                    disabled={Boolean(loadingAction) || !hasValidControlledMapping}
                     onClick={() => runAction('save')}
                 />
             </div>
