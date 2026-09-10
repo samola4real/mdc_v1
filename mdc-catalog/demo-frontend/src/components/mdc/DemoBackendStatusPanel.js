@@ -47,7 +47,7 @@ const isHealthyResponse = (data) => {
 
 const getErrorMessage = (key, error) => {
     if (key === 'backendHealth') {
-        return 'Backend API unavailable. Check that Django is running at http://localhost:8000.';
+        return 'Backend API unavailable. Check the configured MDC API URL, backend availability, HTTPS, and CORS settings.';
     }
 
     if (error?.status === 404) {
@@ -231,4 +231,3 @@ const DemoBackendStatusPanel = () => {
 };
 
 export default DemoBackendStatusPanel;
-

@@ -1,3 +1,5 @@
+// Public browser runtime configuration only. Never place lifecycle tokens or
+// other secrets here. Override baseUrl with the deployed HTTPS MDC API URL.
 window.MAASAI_CONFIG = {
     keycloak: {
         enabled: true,

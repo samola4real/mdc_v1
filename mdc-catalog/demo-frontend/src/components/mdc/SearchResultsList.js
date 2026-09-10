@@ -1,22 +1,10 @@
 import React from 'react';
 import { Message } from 'primereact/message';
 import ProviderResultAccordion from './ProviderResultAccordion';
-
-const getResults = (response) => {
-    if (Array.isArray(response)) {
-        return response;
-    }
-    if (Array.isArray(response?.results)) {
-        return response.results;
-    }
-    if (Array.isArray(response?.data?.results)) {
-        return response.data.results;
-    }
-    return [];
-};
+import { normalizeSearchResults } from './searchResultFormatters';
 
 const SearchResultsList = ({ response, demoProviderWarning }) => {
-    const results = getResults(response);
+    const results = normalizeSearchResults(response);
     const backendCount = response?.demo_overlay?.backend_count;
     const demoCount = response?.demo_overlay?.demo_count || 0;
     const showDemoOnlyMessage = results.length > 0 && backendCount === 0 && demoCount > 0;

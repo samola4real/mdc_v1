@@ -812,6 +812,12 @@ const ProviderDemoPanel = () => {
         <div className="flex flex-column gap-4">
             <Toast ref={toast} />
 
+            <Message
+                severity="info"
+                text="This provider flow uses demo persistence only. It illustrates a future Marketplace/CMM-mediated lifecycle, does not call trusted production lifecycle APIs from the browser, and requires a deliberately demo-enabled backend."
+                className="w-full justify-content-start"
+            />
+
             <div className="flex flex-wrap gap-2">
                 <Button
                     label="Register New Provider"

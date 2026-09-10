@@ -38,10 +38,11 @@ export const demoPath = (path) => joinPath(getMdcDemoApiPrefix(), path);
 
 export const normalizeMdcError = (error) => {
     if (error?.response) {
+        const responseData = error.response.data;
         return {
-            message: error.response.data?.message || error.message || 'Request failed',
+            message: responseData?.error?.message || responseData?.message || error.message || 'Request failed',
             status: error.response.status,
-            details: error.response.data
+            details: responseData?.error?.details || responseData?.error || responseData
         };
     }
 

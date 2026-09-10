@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "primereact/button";
 import { Card } from "primereact/card";
 import { Dropdown } from "primereact/dropdown";
@@ -9,17 +9,18 @@ import { MultiSelect } from "primereact/multiselect";
 import { Panel } from "primereact/panel";
 import { Toast } from "primereact/toast";
 import { getProviderDemoState } from "@/services/mdc/demoAdmin.service";
+import { getCatalogFilters } from "@/services/mdc/catalog.service";
 import { searchServiceDiscovery } from "@/services/mdc/search.service";
 import SearchErrorMessage from "./SearchErrorMessage";
 import SearchPayloadPreview from "./SearchPayloadPreview";
 import SearchResultsList from "./SearchResultsList";
 import {
-  certifications,
-  materials,
-  metalPartTypeOptions,
-  partFamilies,
-  partTypes,
-  processes,
+  certifications as fallbackCertifications,
+  materials as fallbackMaterials,
+  metalPartTypeOptions as fallbackMetalPartTypes,
+  partFamilies as fallbackPartFamilies,
+  partTypes as fallbackPartTypes,
+  processes as fallbackProcesses,
 } from "./mockData";
 
 const normalizeFamily = (family) => {
@@ -37,24 +38,60 @@ const serviceCategoryByFamily = {
   metal_part: "precision_metal_parts",
 };
 
-const acceptedMetalPartTypes = new Set([
-  "block",
-  "plate",
-  "bracket",
-  "bushing",
-  "roller",
-  "collar",
-]);
+const getServiceCategoryForFamily = (family, categoryMap = serviceCategoryByFamily) =>
+  categoryMap[normalizeFamily(family)] || serviceCategoryByFamily[normalizeFamily(family)];
 
-const getServiceCategoryForFamily = (family) =>
-  serviceCategoryByFamily[normalizeFamily(family)] || serviceCategoryByFamily.gear;
+const getPartTypeForFamily = (_family, partType) => partType;
 
-const getPartTypeForFamily = (family, partType) => {
-  if (normalizeFamily(family) === "metal_part") {
-    return acceptedMetalPartTypes.has(partType) ? partType : "block";
+const toOptions = (items = []) => items.map((item) => (
+  typeof item === "string"
+    ? { value: item, label: item.replace(/_/g, " ").replace(/\b\w/g, (char) => char.toUpperCase()) }
+    : { ...item, value: item.value, label: item.label || item.value }
+));
+
+const fallbackCatalogFilters = {
+  partFamilies: toOptions(fallbackPartFamilies),
+  partTypes: {
+    gear: toOptions(fallbackPartTypes.gears),
+    shaft: toOptions(fallbackPartTypes.shafts),
+    metal_part: toOptions(fallbackMetalPartTypes),
+  },
+  materials: toOptions(fallbackMaterials),
+  processes: toOptions(fallbackProcesses),
+  certifications: toOptions(fallbackCertifications),
+  serviceCategoryByFamily,
+};
+
+const normalizeCatalogFilters = (data) => {
+  if (
+    data?.contract_version !== "1.0"
+    || !Array.isArray(data.service_categories)
+    || !Array.isArray(data.part_families)
+    || !data.part_types
+    || !Array.isArray(data.materials)
+    || !Array.isArray(data.processes)
+    || !Array.isArray(data.certifications)
+  ) {
+    throw new Error("The catalogue-filter response does not match contract version 1.0.");
   }
 
-  return partType;
+  const categories = toOptions(data.service_categories);
+  const families = toOptions(data.part_families);
+  const categoryMap = Object.fromEntries([
+    ...categories.filter((item) => item.part_family).map((item) => [item.part_family, item.value]),
+    ...families.filter((item) => item.service_category).map((item) => [item.value, item.service_category]),
+  ]);
+
+  return {
+    partFamilies: families,
+    partTypes: Object.fromEntries(
+      Object.entries(data.part_types).map(([family, items]) => [family, toOptions(items)])
+    ),
+    materials: toOptions(data.materials),
+    processes: toOptions(data.processes),
+    certifications: toOptions(data.certifications),
+    serviceCategoryByFamily: categoryMap,
+  };
 };
 
 const exactNumber = (value) => (value == null ? undefined : { exact: value });
@@ -510,7 +547,7 @@ const buildMetalPartRequirements = (form) => {
   };
 };
 
-const buildSearchPayload = (form) => {
+const buildSearchPayload = (form, categoryMap = serviceCategoryByFamily) => {
   const partFamily = toBackendFamily(form.partFamily);
   const partType = getPartTypeForFamily(partFamily, form.partType);
   const isShaft = partFamily === "shaft";
@@ -568,7 +605,7 @@ const buildSearchPayload = (form) => {
   return cleanObject({
     request_id: form.requestId,
     consumer_id: form.consumerId,
-    service_category: getServiceCategoryForFamily(partFamily),
+    service_category: getServiceCategoryForFamily(partFamily, categoryMap),
     part_family: partFamily,
     part_type: partType || undefined,
     requirements: {
@@ -590,6 +627,8 @@ const ConsumerSearchMockup = () => {
   const [response, setResponse] = useState(null);
   const [error, setError] = useState(null);
   const [demoProviderWarning, setDemoProviderWarning] = useState(null);
+  const [catalogFilters, setCatalogFilters] = useState(fallbackCatalogFilters);
+  const [filterSource, setFilterSource] = useState("loading");
   const [form, setForm] = useState({
     consumerId: "consumer_demo_001",
     requestId: `req-demo-${Date.now()}`,
@@ -644,36 +683,43 @@ const ConsumerSearchMockup = () => {
 
   const normalizedPartFamily = normalizeFamily(form.partFamily);
   const isMetalPart = normalizedPartFamily === "metal_part";
-  const availablePartTypes =
-    normalizedPartFamily === "shaft"
-      ? partTypes.shafts
-      : normalizedPartFamily === "gear"
-      ? partTypes.gears
-      : metalPartTypeOptions;
-  const payload = useMemo(() => buildSearchPayload(form), [form]);
+  const availablePartTypes = catalogFilters.partTypes[normalizedPartFamily] || [];
+  const payload = useMemo(
+    () => buildSearchPayload(form, catalogFilters.serviceCategoryByFamily),
+    [form, catalogFilters.serviceCategoryByFamily]
+  );
+
+  useEffect(() => {
+    let active = true;
+
+    getCatalogFilters()
+      .then((data) => {
+        if (!active) return;
+        setCatalogFilters(normalizeCatalogFilters(data));
+        setFilterSource("canonical");
+      })
+      .catch(() => {
+        if (!active) return;
+        setCatalogFilters(fallbackCatalogFilters);
+        setFilterSource("fallback");
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const setField = (field, value) =>
     setForm((current) => ({ ...current, [field]: value }));
 
   const handlePartFamilyChange = (value) => {
     const family = normalizeFamily(value);
-    const defaults = {
-      gear: {
-        partType: "spur_gear",
-      },
-      shaft: {
-        partType: "splined_shaft",
-      },
-      metal_part: {
-        partType: "block",
-      },
-    };
-    const nextDefaults = defaults[family] || defaults.gear;
+    const nextPartType = catalogFilters.partTypes[family]?.[0]?.value;
 
     setForm((current) => ({
       ...current,
       partFamily: family,
-      partType: nextDefaults.partType,
+      partType: nextPartType,
     }));
   };
 
@@ -848,6 +894,20 @@ const ConsumerSearchMockup = () => {
     <div className="flex flex-column gap-4">
       <Toast ref={toast} />
       <Card title="Consumer search request">
+        {filterSource === "fallback" ? (
+          <Message
+            severity="warn"
+            text="Catalogue filters could not be loaded; explicit demo fallback vocabulary is in use."
+            className="w-full justify-content-start mb-3"
+          />
+        ) : null}
+        {filterSource === "loading" ? (
+          <Message
+            severity="info"
+            text="Loading current catalogue filters..."
+            className="w-full justify-content-start mb-3"
+          />
+        ) : null}
         <div className="grid formgrid">
           <div className="field col-12 md:col-6">
             <label htmlFor="consumerId" className="font-medium">
@@ -878,7 +938,7 @@ const ConsumerSearchMockup = () => {
             <Dropdown
               inputId="partFamily"
               value={form.partFamily}
-              options={partFamilies}
+              options={catalogFilters.partFamilies}
               optionLabel="label"
               optionValue="value"
               onChange={(e) => handlePartFamilyChange(e.value)}
@@ -894,8 +954,8 @@ const ConsumerSearchMockup = () => {
               value={form.partType}
               options={availablePartTypes}
               onChange={(e) => setField("partType", e.value)}
-              optionLabel={isMetalPart ? "label" : undefined}
-              optionValue={isMetalPart ? "value" : undefined}
+              optionLabel="label"
+              optionValue="value"
               className="w-full"
             />
           </div>
@@ -906,8 +966,10 @@ const ConsumerSearchMockup = () => {
             <Dropdown
               inputId="material"
               value={form.material}
-              options={materials}
+              options={catalogFilters.materials}
               onChange={(e) => setField("material", e.value)}
+              optionLabel="label"
+              optionValue="value"
               className="w-full"
             />
           </div>
@@ -918,8 +980,10 @@ const ConsumerSearchMockup = () => {
             <MultiSelect
               inputId="processes"
               value={form.processes}
-              options={processes}
+              options={catalogFilters.processes}
               onChange={(e) => setField("processes", e.value)}
+              optionLabel="label"
+              optionValue="value"
               display="chip"
               className="w-full"
             />
@@ -931,8 +995,10 @@ const ConsumerSearchMockup = () => {
             <Dropdown
               inputId="certification"
               value={form.certification}
-              options={certifications}
+              options={catalogFilters.certifications}
               onChange={(e) => setField("certification", e.value)}
+              optionLabel="label"
+              optionValue="value"
               className="w-full"
             />
           </div>

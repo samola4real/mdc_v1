@@ -1,36 +1,61 @@
-This is a [Next.js](https://nextjs.org/) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+# MDC Demo Frontend
 
-## Getting Started
+This Next.js application is an illustrative frontend for the MaaS Dynamic Catalogue (MDC). It demonstrates how provider, consumer, and administrator interactions could look before full Marketplace integration. It is **not the real Cloud MaaS Marketplace (CMM)**.
 
-First, run the development server:
+## Demo roles and API boundaries
+
+- Consumer search uses the current public MDC API: `GET /api/catalog/filters` and `POST /api/service-discovery/search`.
+- Shared health status uses `GET /api/health`.
+- Provider registration/update and administrator controls use `/api/demo/...` endpoints and demo persistence. These endpoints may be disabled in normal production environments.
+- Provider, consumer, and admin role guards are client-side presentation controls. Backend authorization remains a separate responsibility.
+
+The browser does not call trusted provider lifecycle write APIs. Those APIs require a server-to-server service-token, actor, and ETag boundary that must eventually sit behind the Marketplace/CMM or another backend-for-frontend. Never place lifecycle tokens or other secrets in source, `NEXT_PUBLIC_*`, `public/config.js`, `window.MAASAI_CONFIG`, local storage, or session storage.
+
+## Local development
+
+The Docker build uses Node.js 20.18.0. Use Node.js 20.18 or another compatible Node 20 release and an npm version that supports the committed lockfile v3.
 
 ```bash
+npm ci
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+The frontend runs at `http://localhost:3000`. By local convention, its default MDC API is `http://localhost:8000`.
 
-You can start editing the page by modifying `_page.js`. The page auto-updates as you edit the file.
+Validation and production-style startup commands are:
 
-This project uses [`next/font`](https://nextjs.org/docs/basic-features/font-optimization) to automatically optimize and load Inter, a custom Google Font.
+```bash
+npm run lint
+npm run build
+npm run start
+```
 
-## Learn More
+## Browser runtime configuration
 
-To learn more about Next.js, take a look at the following resources:
+The application loads `/config.js`, which defines `window.MAASAI_CONFIG`. Override it for each deployed environment; browser runtime configuration is public and must never contain credentials.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```js
+window.MAASAI_CONFIG = {
+    keycloak: {
+        enabled: true,
+        realmUrl: 'https://identity.example.org/realms/example',
+        clientId: 'mdc-demo-frontend',
+        onLoad: 'check-sso'
+    },
+    mdcApi: {
+        baseUrl: 'https://mdc-api.example.org',
+        sharedApiPrefix: '/api',
+        demoApiPrefix: '/api/demo'
+    }
+};
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js/) - your feedback and contributions are welcome!
+Deployed browser-to-backend traffic should use an appropriate HTTPS endpoint. The backend CORS/origin policy must permit the deployed frontend origin. The accepted current MDC production deployment normally has the demo API disabled, so provider/admin demo actions require a deliberately demo-enabled backend environment.
 
-## Deploy on Vercel
+## Repository and release boundary
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+GitHub is the controlled development source after the sanitized snapshot import. GitLab remains the historical and official release repository; approved releases use a fresh checkout and reviewed file synchronization rather than importing GitLab history or retaining a GitLab remote here.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/deployment) for more details.
+- [Sanitized snapshot provenance](../docs/Demo_Frontend/00_frontend_sanitized_snapshot_import_provenance.md)
+- [GitHub-to-GitLab release mapping](../docs/Demo_Frontend/01_frontend_github_to_gitlab_release_mapping.md)
+- [Comprehensive MDC implementation report and user manual](../docs/MDC_Comprehensive_Implementation_Report_and_User_Manual.md)

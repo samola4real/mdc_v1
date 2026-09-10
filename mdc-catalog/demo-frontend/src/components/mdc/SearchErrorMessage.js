@@ -20,7 +20,7 @@ const getFriendlyError = (error) => {
     }
 
     if (error.status == null) {
-        return 'Cannot reach MDC backend at the configured API URL. Check that Django is running at http://localhost:8000.';
+        return 'Cannot reach the configured MDC API URL. Check the browser runtime configuration, backend availability, HTTPS, and CORS settings.';
     }
 
     return error.message || 'The MDC search request failed.';
@@ -50,4 +50,3 @@ const SearchErrorMessage = ({ error }) => {
 };
 
 export default SearchErrorMessage;
-

@@ -135,3 +135,38 @@ export const asArray = (value) => {
     return Array.isArray(value) ? value : [value];
 };
 
+const normalizeCapabilityItems = (items, status) => (
+    asArray(items).map((item) => ({
+        ...item,
+        status: item?.status || status
+    }))
+);
+
+/**
+ * Adapt the current flattened public contract to the established presentation
+ * model while retaining compatibility with historical and demo-overlay data.
+ */
+export const normalizeSearchResult = (result, context = {}) => {
+    const matched = result?.matched_capabilities ?? result?.matched_attributes;
+    const unmatched = result?.unmatched_capabilities ?? result?.unmatched_attributes;
+    const unknown = result?.unknown_capabilities ?? result?.unknown_attributes;
+
+    return {
+        ...result,
+        part_type: result?.part_type || context.part_type,
+        matched_attributes: normalizeCapabilityItems(matched, 'matched'),
+        unmatched_attributes: normalizeCapabilityItems(unmatched, 'unmatched'),
+        unknown_attributes: normalizeCapabilityItems(unknown, 'unknown')
+    };
+};
+
+export const normalizeSearchResults = (response) => {
+    const results = Array.isArray(response)
+        ? response
+        : response?.results || response?.data?.results || [];
+    const context = Array.isArray(response) ? {} : {
+        part_type: response?.part_type || response?.data?.part_type
+    };
+
+    return asArray(results).map((result) => normalizeSearchResult(result, context));
+};

@@ -1,3 +1,5 @@
+// localhost is a development convention only. Deployments override this object
+// through /config.js (window.MAASAI_CONFIG) with an HTTPS API URL allowed by CORS.
 const defaultConfig = {
     keycloak: {
         enabled: true,

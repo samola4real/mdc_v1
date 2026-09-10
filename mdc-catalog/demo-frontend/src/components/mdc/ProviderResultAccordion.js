@@ -24,6 +24,9 @@ import {
 const getProvider = (result) => result.provider || {};
 const getOffering = (result) => result.offering || {};
 const getMatch = (result) => result.match || {};
+const getMatchedAttributes = (result) => asArray(result.matched_attributes);
+const getUnmatchedAttributes = (result) => asArray(result.unmatched_attributes);
+const getUnknownAttributes = (result) => asArray(result.unknown_attributes);
 
 const getProviderName = (result) => (
     result.provider_name || result.providerName || getProvider(result).provider_name || 'Not provided'
@@ -44,7 +47,7 @@ const getOfferingId = (result) => (
 const getPartFamily = (result) => getOffering(result).part_family || result.part_family || 'Not provided';
 
 const getPartTypeMatch = (result) => (
-    asArray(result.matched_attributes).find((item) => item?.field === 'part_type')
+    getMatchedAttributes(result).find((item) => item?.field === 'part_type')
 );
 
 const getPartTypeLabel = (result) => {
@@ -55,7 +58,11 @@ const getPartTypeLabel = (result) => {
 const getSuitability = (result) => formatSuitability(getMatch(result).status || result.status);
 
 const getSupportStatus = (result) => (
-    formatSupportStatus(getPartTypeMatch(result)?.status || getPartTypeMatch(result)?.provided?.support_status)
+    formatSupportStatus(
+        getPartTypeMatch(result)?.status
+        || getPartTypeMatch(result)?.provided?.support_status
+        || getMatch(result).status
+    )
 );
 
 const getSeverity = (status) => {
@@ -91,12 +98,21 @@ const formatCapability = (attribute) => {
 };
 
 const makeSuitabilityRows = (result) => (
-    [...asArray(result.matched_attributes), ...asArray(result.unmatched_attributes)].map((attribute, index) => ({
+    [...getMatchedAttributes(result), ...getUnmatchedAttributes(result)].map((attribute, index) => ({
         id: `${attribute.field || 'attribute'}-${index}`,
         requirement: formatRequirement(attribute),
         capability: formatCapability(attribute),
         status: formatSupportStatus(attribute.status)
     }))
+);
+
+const getCanonicalCapabilityRows = (result) => (
+    getMatchedAttributes(result)
+        .filter((item) => !['part_type', 'materials', 'processes', 'certifications'].includes(item?.field))
+        .map((item) => ({
+            label: formatFieldLabel(item.field),
+            value: formatCapabilityRange(item.provided ?? item.requested)
+        }))
 );
 
 const flattenCapabilities = (evidence) => {
@@ -122,26 +138,42 @@ const flattenCapabilities = (evidence) => {
 const getMaterials = (result) => {
     const evidenceMaterials = asArray(getNested(result, 'evidence.materials'));
     const genericMaterials = asArray(getNested(result, 'evidence.generic_capabilities.materials'));
-    return [...evidenceMaterials, ...genericMaterials].flatMap((item) => {
+    const canonicalMaterials = getMatchedAttributes(result)
+        .filter((item) => item?.field === 'materials')
+        .flatMap((item) => asArray(item.provided ?? item.requested));
+    return [...evidenceMaterials, ...genericMaterials, ...canonicalMaterials].flatMap((item) => {
         if (typeof item === 'string') return [item];
         return [item.material, ...asArray(item.available_grades)].filter(Boolean);
     });
 };
 
 const getProcesses = (result) => (
-    asArray(getNested(result, 'evidence.generic_capabilities.processes')).map((item) => (
+    [
+        ...asArray(getNested(result, 'evidence.generic_capabilities.processes')),
+        ...getMatchedAttributes(result)
+            .filter((item) => item?.field === 'processes')
+            .flatMap((item) => asArray(item.provided ?? item.requested))
+    ].map((item) => (
         typeof item === 'string' ? item : item.process
     )).filter(Boolean)
 );
 
 const getCertifications = (result) => (
-    asArray(getNested(result, 'evidence.certifications')).map((item) => (
+    [
+        ...asArray(getNested(result, 'evidence.certifications')),
+        ...getMatchedAttributes(result)
+            .filter((item) => item?.field === 'certifications')
+            .flatMap((item) => asArray(item.provided ?? item.requested))
+    ].map((item) => (
         typeof item === 'string' ? item : item.code
     )).filter(Boolean)
 );
 
 const getUnknownItems = (result) => (
-    asArray(result.unknown_attributes).map((item) => formatFieldLabel(item.field))
+    getUnknownAttributes(result).map((item) => ({
+        field: formatFieldLabel(item.field),
+        reason: item.reason || 'Provider capability was not confirmed.'
+    }))
 );
 
 const formatDemoValue = (value) => {
@@ -206,7 +238,10 @@ const ProviderResultPanel = ({ result }) => {
     const suitability = getSuitability(result);
     const supportStatus = getSupportStatus(result);
     const suitabilityRows = makeSuitabilityRows(result);
-    const capabilities = flattenCapabilities(result.evidence || {});
+    const capabilities = [
+        ...getCanonicalCapabilityRows(result),
+        ...flattenCapabilities(result.evidence || {})
+    ];
     const unknownItems = getUnknownItems(result);
 
     const demoAction = (label) => {
@@ -329,7 +364,12 @@ const ProviderResultPanel = ({ result }) => {
                             <div className="font-semibold mb-2">Not confirmed by provider:</div>
                             <div className="flex flex-wrap gap-2">
                                 {unknownItems.map((item) => (
-                                    <Tag key={item} value={item} severity="warning" rounded />
+                                    <Tag
+                                        key={`${item.field}-${item.reason}`}
+                                        value={`${item.field}: ${item.reason}`}
+                                        severity="warning"
+                                        rounded
+                                    />
                                 ))}
                             </div>
                         </div>

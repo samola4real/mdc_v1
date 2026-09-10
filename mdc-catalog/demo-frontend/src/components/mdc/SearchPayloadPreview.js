@@ -10,4 +10,3 @@ const SearchPayloadPreview = ({ payload }) => {
 };
 
 export default SearchPayloadPreview;
-
