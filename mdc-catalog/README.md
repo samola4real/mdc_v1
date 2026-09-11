@@ -1,320 +1,592 @@
+# MaaSAI MaaS Dynamic Catalogue (MDC)
 
-## 1. Week 1 status: finalized
+Current implementation repository for the **MaaSAI MaaS Dynamic Catalogue (MDC)** backend and its **MDC Demo Frontend**.
 
-Yes — based on your confirmations, **Week 1 is finalized**.
+The repository now contains the integrated Phase 3 backend, the sanitized and aligned demonstration frontend, current implementation reports, API/testing evidence, and operating manuals.
 
-The Week 1 exit criteria were: API contract approved, ontology profile approved, seed-data template approved, Tasowheel seed data has at least one valid offering, and matching policy approved.  Your confirmations close the remaining decisions: provider ID, primary offering ID, TSW capability ranges, unknown fields, excluded route fields, DIN quality rule, lead-time rule, and unsupported-field behavior.
+> **Current-source rule:** use the code on `main` and the current master manuals as the source of truth. Older Week 1, Phase 1, or milestone reports are historical evidence only and may describe superseded routes, schemas, or deployment assumptions.
 
-We can now move into **Week 2: Build catalogue backbone**, starting with Django app creation. The baseline architecture already defines the runtime flow from marketplace JSON to Django validation, canonical `SearchRequest`, SPARQL query builder, Fuseki, result normalization, scoring, and explanation. 
-
----
-
-# 2. Recommended Django app structure
-
-Use the agreed app structure from the architecture document. The five apps are: `api`, `catalog`, `ontology`, `providers`, and `search`. Their responsibilities are already defined in the baseline architecture. 
-
-Recommended structure:
-
-```text
-backend/
-├── manage.py
-├── config/
-│   ├── settings/
-│   │   ├── base.py
-│   │   ├── local.py
-│   │   └── test.py
-│   ├── urls.py
-│   ├── asgi.py
-│   └── wsgi.py
-├── apps/
-│   ├── api/
-│   │   ├── v1/
-│   │   │   ├── urls.py
-│   │   │   ├── views.py
-│   │   │   └── serializers.py
-│   │   └── apps.py
-│   ├── ontology/
-│   │   ├── vocabularies.py
-│   │   ├── mappings.py
-│   │   ├── constants.py
-│   │   └── apps.py
-│   ├── providers/
-│   │   ├── loaders.py
-│   │   ├── services.py
-│   │   └── apps.py
-│   ├── search/
-│   │   ├── request.py
-│   │   ├── normalizer.py
-│   │   ├── query_builder.py
-│   │   ├── sparql_client.py
-│   │   └── apps.py
-│   └── catalog/
-│       ├── scoring.py
-│       ├── explanation.py
-│       ├── result_builder.py
-│       └── apps.py
-└── tests/
-```
-
-## App responsibilities
-
-| App         | Responsibility                                                               |
-| ----------- | ---------------------------------------------------------------------------- |
-| `api`       | REST endpoints, serializers, URL routing, OpenAPI integration                |
-| `ontology`  | Controlled vocabularies, ontology URI mappings, constants                    |
-| `providers` | Reading provider/offering seed data and provider detail logic                |
-| `search`    | Canonical request normalization, SPARQL query builder, Fuseki client         |
-| `catalog`   | Match scoring, matched/unknown/unmatched explanation, final response shaping |
-
-Important: **do not put Tasowheel-specific business logic inside the app code**. Tasowheel should only appear in seed data, RDF instances, test fixtures, or demo examples.
+> **Frontend scope:** the MDC Demo Frontend is an illustrative interface for MaaSAI pilot demonstrations. It is **not** the Cloud MaaS Marketplace (CMM) and does not replace the Marketplace frontend. It demonstrates how provider and consumer interactions with MDC could work before integration with the real MaaSAI Marketplace components.
 
 ---
 
-# 3. First development tasks for creating the Django apps
+## 1. Current status
 
-## Task 1 — Create app folders
+The current integrated baseline includes:
 
-Create these apps under:
+- Django/DRF MDC backend;
+- PostgreSQL-backed provider/offering lifecycle;
+- transactional catalogue synchronization outbox;
+- RDF generation and Apache Jena Fuseki semantic retrieval;
+- deterministic public service discovery;
+- trusted provider lifecycle APIs with bearer authentication, actor attribution, and ETag concurrency controls;
+- Vercel-hosted backend pilot;
+- managed PostgreSQL pilot database;
+- Next.js 14 MDC Demo Frontend;
+- Keycloak-based browser login and demo-role selection;
+- Provider, Consumer, and Admin demonstration flows;
+- comprehensive backend and frontend operating manuals.
 
-```text
-backend/apps/
-```
-
-Recommended apps:
-
-```text
-api
-catalog
-ontology
-providers
-search
-```
-
-Start with empty/skeleton apps only. Do not implement search logic yet.
-
-## Task 2 — Register apps in settings
-
-Add the apps to `INSTALLED_APPS`.
-
-Use stable app paths such as:
+The maintained development repository for this integrated version is the personal GitHub repository:
 
 ```text
-apps.api
-apps.catalog
-apps.ontology
-apps.providers
-apps.search
+samola4real/mdc_v1
 ```
 
-Also ensure `rest_framework`, `drf_spectacular`, and `corsheaders` are registered when needed.
-
-## Task 3 — Create initial URL structure
-
-Start with:
+The normal working branch is:
 
 ```text
-/api/v1/health
-/api/v1/catalog/filters
+main
 ```
 
-Do **not** start with `/catalog/search` first. The health and filters endpoints are simpler and validate the project structure.
+No MaaSAI GitLab synchronization is part of the current workflow.
 
-The API contract defines `/health`, `/catalog/filters`, `/catalog/search`, `/providers/{provider_id}`, and `/offerings/{offering_id}` as the v1 endpoints. 
+---
 
-## Task 4 — Implement controlled vocabularies
+## 2. Repository structure
 
-Create static controlled vocabulary definitions in the `ontology` app.
+```text
+mdc-catalog/
+├── backend/                  Django/DRF MDC backend
+│   ├── apps/
+│   │   ├── api/
+│   │   ├── catalog/
+│   │   ├── demo/
+│   │   ├── ontology/
+│   │   ├── providers/
+│   │   └── search/
+│   ├── config/
+│   ├── tests/
+│   └── manage.py
+│
+├── demo-frontend/            Next.js MDC Demo Frontend
+│   ├── public/
+│   ├── src/
+│   ├── Dockerfile
+│   ├── docker-compose.yml
+│   ├── package.json
+│   └── README.md
+│
+├── data/                     Curated/generated/demo data
+├── ontologies/               Ontology assets
+├── scripts/                  Validation and operational scripts
+├── docs/                     Implementation reports and manuals
+├── requirements/             Python dependency definitions
+├── requirements.txt
+├── pyproject.toml
+└── .env.example
+```
 
-Start with:
+For normal development, backend code lives under `backend/` and frontend code lives under `demo-frontend/`.
 
-* service types
-* part families
-* processes
-* materials
-* material grades
-* certifications
-* quality standards
+---
 
-The existing ontology profile already defines service types, part families, processes, materials, certifications, and Tasowheel offering identifiers. 
+## 3. Architecture overview
 
-## Task 5 — Implement `/api/v1/health`
+```text
+Provider / Consumer / Demo Admin
+             |
+             v
+      MDC Demo Frontend
+         Next.js 14
+             |
+             | HTTP / JSON
+             v
+        Django MDC API
+             |
+     +-------+---------+
+     |                 |
+     v                 v
+PostgreSQL        RDF / Fuseki
+source of truth   semantic layer
+     |
+     v
+Transactional catalogue-sync outbox
+```
 
-This confirms the Django API is working.
+### Backend authority
 
-Expected response:
+PostgreSQL is the operational source of truth for current provider and offering lifecycle state. RDF/Fuseki is a derived semantic representation used for discovery. Catalogue synchronization is performed through trusted operator workflows rather than a public synchronization endpoint.
+
+### Frontend authority
+
+The browser frontend owns only presentation, browser-side form handling, demo-role navigation, and calls to permitted MDC interfaces. It does not own trusted provider lifecycle credentials or backend authorization.
+
+---
+
+## 4. Canonical public API
+
+The current public contract is **`1.0`** and uses unversioned `/api/` routes.
+
+| Method | Endpoint | Purpose |
+|---|---|---|
+| `GET` | `/api/health` | MDC service health |
+| `GET` | `/api/catalog/filters` | Controlled search vocabulary |
+| `POST` | `/api/service-discovery/search` | Provider/offering discovery |
+
+There is **no current `/api/v1/...` public route**.
+
+A current discovery request uses controlled selection fields such as:
 
 ```json
 {
-  "status": "ok",
-  "service": "maasai-mdc",
-  "version": "v1"
+  "request_id": "req-demo-001",
+  "consumer_id": "consumer-demo",
+  "service_category": "precision_gears",
+  "part_family": "gear",
+  "part_type": "spur_gear",
+  "requirements": {
+    "part_family_specifications": {
+      "module": { "exact": 2 },
+      "outside_diameter_mm": { "max": 100 }
+    },
+    "part_type_specifications": {
+      "face_width_mm": { "exact": 25 }
+    },
+    "generic_requirements": {
+      "materials": ["alloyed_carburizing_steel"],
+      "processes": ["hobbing"],
+      "certifications": ["ISO9001_2015"]
+    }
+  },
+  "match_policy": {
+    "unknown_policy": "keep_as_unknown",
+    "optional_match_mode": "score_only",
+    "minimum_score": null
+  }
 }
 ```
 
-The API contract says this endpoint should return HTTP `200` when Django is running and does not need Fuseki for the basic check. 
-
-## Task 6 — Implement `/api/v1/catalog/filters`
-
-This endpoint returns the controlled vocabulary values used by the marketplace UI. It can be implemented before Fuseki because it can come from static backend vocabulary definitions. 
+For complete payload and response examples, use the backend and frontend master manuals listed below.
 
 ---
 
-# 4. Suggested order of implementation
+## 5. Trusted provider lifecycle API
 
-Use this order:
+Provider lifecycle operations are a separate trusted server-side integration surface.
 
-## Phase A — Django foundation
+| Method | Endpoint | Purpose |
+|---|---|---|
+| `POST` | `/api/provider-publication/validation` | Validate provider publication |
+| `POST` | `/api/provider-publication` | Register/publish provider |
+| `GET`, `PATCH` | `/api/providers/{provider_id}` | Read/update provider |
+| `GET`, `POST` | `/api/providers/{provider_id}/offerings` | List/create offerings |
+| `GET`, `PATCH` | `/api/offerings/{offering_id}` | Read/update offering |
 
-1. Create `apps/` package.
-2. Create the five Django apps.
-3. Register apps in settings.
-4. Confirm `python manage.py check` passes.
-5. Confirm development server still runs.
+The trusted lifecycle can require:
 
-## Phase B — API skeleton
+- `Authorization: Bearer <service token>`;
+- `X-MDC-Actor-Id` for mutating operations;
+- strong `ETag` values on reads;
+- `If-Match` for safe updates.
 
-6. Create `/api/v1/` URL routing.
-7. Implement `/api/v1/health`.
-8. Add basic API test for `/health`.
-
-## Phase C — Controlled vocabularies
-
-9. Add controlled vocabularies in `ontology`.
-10. Add material grades from TSW: `18CrNiMo7-6`, `16MnCr5`, `20MnCr5`.
-11. Add certification values: `ISO9001_2015`, `ISO14001_2015`, partial ISO/TS 16949, APQP.
-12. Implement `/api/v1/catalog/filters`.
-
-The TSW questionnaire confirms batch size, module/DP range, diameter range, quality up to DIN4, weight up to about 200 kg, material grades, lead time, and certifications. 
-
-## Phase D — Provider seed data access
-
-13. Add YAML loading service in `providers`.
-14. Load `data/curated/tasowheel_offerings.yaml`.
-15. Implement internal provider/offering lookup by ID.
-16. Later expose `/providers/{provider_id}` and `/offerings/{offering_id}`.
-
-## Phase E — Search foundation
-
-17. Create canonical `SearchRequest` structure.
-18. Add request normalization.
-19. Add validation using DRF serializers.
-20. Only after this, begin SPARQL/RDF/Fuseki work.
+**Never place the trusted lifecycle service token in browser code, `public/config.js`, `NEXT_PUBLIC_*`, local storage, session storage, or committed files.** A future CMM integration should hold trusted credentials behind a Marketplace backend or BFF.
 
 ---
 
-# 5. Database preparation
+## 6. Demo-only API
 
-For now: **do not create provider/offering database models**.
+The frontend Provider and Admin demonstrations use a separate `/api/demo/...` namespace.
 
-Reason: for v1, the catalogue source of truth is:
+Examples include:
 
 ```text
-curated YAML → RDF/Turtle → Fuseki → SPARQL
+GET  /api/demo/health
+GET  /api/demo/provider-publication/state
+POST /api/demo/provider-publication/preview
+POST /api/demo/provider-publication/simulate-update
+GET  /api/demo/service-discovery/backend-status
+GET  /api/demo/service-discovery/fuseki-smoke-test
+POST /api/demo/service-discovery/regenerate-rdf
+POST /api/demo/service-discovery/reload-fuseki
 ```
 
-The architecture already defines this lifecycle. 
+These endpoints are demonstration interfaces, not the trusted production lifecycle.
 
-Use Django’s default SQLite database only for framework-level needs. Later, we may add database models for:
-
-| Future model        | Purpose                               |
-| ------------------- | ------------------------------------- |
-| `SearchLog`         | Store search request/response history |
-| `ImportJob`         | Track RDF/YAML import runs            |
-| `ProviderSnapshot`  | Cache provider summaries              |
-| `VocabularyVersion` | Track vocabulary changes              |
-
-But for the first implementation slice, avoid database complexity.
+The current backend intentionally treats several technical demo actions as reserved/not implemented. Production deployments normally keep the demo API disabled unless a specific demo environment is deliberately configured.
 
 ---
 
-# 6. Risks and design decisions for future provider extensibility
+## 7. Quick start — backend
 
-## Keep Tasowheel as data, not logic
+### Prerequisites
 
-Bad pattern:
+- Python 3.12
+- Git
+- PowerShell, Command Prompt, Bash, or equivalent shell
 
-```text
-if provider_id == "tasowheel":
-    apply special search logic
+From `mdc-catalog/`:
+
+```powershell
+py -3.12 -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt
+Copy-Item .env.example .env
+python backend\manage.py migrate
+python backend\manage.py runserver 8000
 ```
 
-Good pattern:
+With `DATABASE_URL` empty, local development uses SQLite. Never commit `.env`.
 
-```text
-for each offering in catalogue:
-    apply the same matching rules
+Verify the backend:
+
+```powershell
+Invoke-RestMethod http://localhost:8000/api/health
+Invoke-RestMethod http://localhost:8000/api/catalog/filters
 ```
 
-TSW should be the first provider record, not a hardcoded branch.
-
-## Keep provider capabilities generic
-
-Your seed-data format should support:
+Expected base URL:
 
 ```text
-providers:
-  - provider_id: tasowheel
-  - provider_id: future_provider_1
-  - provider_id: future_provider_2
+http://localhost:8000
 ```
 
-Each provider should have one or more offerings. Search should operate over all offerings, not over one known provider.
-
-## Keep vocabularies extensible
-
-For future providers, you will need new:
-
-* materials
-* material grades
-* processes
-* service types
-* certifications
-* part families
-* industry sectors
-
-Put these in the `ontology` app as controlled vocabulary data, not scattered across serializers or views.
-
-## Separate offering-level and machine-level capability
-
-Even though TSW has machine data, do not let machine-level maximums automatically override provider-confirmed offering-level values. Offering-level values should drive v1 search. Machine-level data can support future detail views or advanced matching.
-
-## Preserve unknown fields
-
-Surface finish and general tolerance remain unknown for TSW. The system must continue to return `unknown_attributes` instead of pretending those fields are supported. The API contract already expects unknown attributes in the response. 
-
-## Keep search pipeline provider-neutral
-
-The future search flow should be:
-
-```text
-SearchRequest
-→ validate
-→ normalize to ontology concepts
-→ query all provider offerings
-→ score all results
-→ return ranked/explained results
-```
-
-Not:
-
-```text
-SearchRequest
-→ check Tasowheel
-→ return Tasowheel
-```
+For full backend setup, lifecycle testing, PostgreSQL, RDF/Fuseki, synchronization, and deployment procedures, use the backend master manual.
 
 ---
 
-# 7. Clear next step
+## 8. Quick start — demo frontend
 
-Start coding with this sequence:
+### Prerequisites
 
-1. Create the five Django apps: `api`, `catalog`, `ontology`, `providers`, `search`.
-2. Register them in Django settings.
-3. Create API v1 routing.
-4. Implement `/api/v1/health`.
-5. Add controlled vocabularies in `ontology`.
-6. Implement `/api/v1/catalog/filters`.
-7. Add a simple test for both endpoints.
+- Node.js 20
+- npm
+- running MDC backend or an approved deployed MDC API
+- valid Keycloak access for authenticated demo routes
 
-That gives you the first clean backend slice and keeps the project ready for RDF/Fuseki integration next.
+From `mdc-catalog/demo-frontend/`:
+
+```powershell
+npm ci
+npm run dev
+```
+
+Open:
+
+```text
+http://localhost:3000/demo
+```
+
+The browser runtime configuration is in:
+
+```text
+demo-frontend/public/config.js
+```
+
+Its local MDC API default is:
+
+```text
+http://localhost:8000
+```
+
+`config.js` is delivered to the browser and therefore must contain **public configuration only**.
+
+Useful validation commands:
+
+```powershell
+npm run lint
+npm run build
+npm run start
+```
+
+The full frontend quick-start, Provider walkthrough, Consumer walkthrough, Admin walkthrough, field mappings, Docker procedure, and troubleshooting guide are in the frontend master manual.
+
+---
+
+## 9. Demo frontend roles and routes
+
+The main demo routes are:
+
+| Route | Purpose | Access |
+|---|---|---|
+| `/demo` | Demo console and role selection | Public shell |
+| `/demo/provider` | Provider demonstration | Authenticated Provider/Admin role |
+| `/demo/consumer-search` | Consumer discovery demonstration | Authenticated Consumer/Admin role |
+| `/demo/admin-audit` | Demo administration/audit | Authenticated Admin role |
+
+Recognized role aliases include:
+
+```text
+Provider: provider, mdc_provider, maas_provider
+Consumer: consumer, mdc_consumer, maas_consumer
+Admin:    admin, mdc_admin, maas_admin
+```
+
+Browser route and role guards are presentation controls only. Backend authorization remains authoritative.
+
+---
+
+## 10. Main demo workflows
+
+### Provider
+
+The Provider experience demonstrates two flows:
+
+1. **Register New Provider** — capture provider/offering facts in a flexible staging structure, preview them, and save them to demo persistence.
+2. **Update Existing Provider** — select an existing demo offering, explicitly map it to a controlled Gear/Shaft/Metal Part template when required, edit controlled capabilities, preview, and save the demo update.
+
+Provider demo save does **not** publish directly to the trusted PostgreSQL lifecycle and does not automatically synchronize Fuseki.
+
+### Consumer
+
+The Consumer experience:
+
+1. loads controlled values from `GET /api/catalog/filters`;
+2. builds a canonical discovery payload;
+3. submits `POST /api/service-discovery/search`;
+4. displays provider candidates and matched, unmatched, and unknown capabilities;
+5. may append clearly labelled demo-provider overlay entries when demo state is available.
+
+### Admin
+
+The Admin experience shows health, filters, demo provider state, and demo-reported backend information. Static demo metadata must not be interpreted as proof that a specific Fuseki runtime is live. Reserved technical actions currently return not-implemented responses and are labelled accordingly.
+
+---
+
+## 11. Controlled manufacturing scope
+
+The current public search registry includes three main service-category/part-family pairs:
+
+```text
+precision_gears       -> gear
+precision_shafts      -> shaft
+precision_metal_parts -> metal_part
+```
+
+Current part types include:
+
+**Gear:** spur, helical, bevel, worm, crown.
+
+**Shaft:** plain, stepped, splined, worm, hollow.
+
+**Metal part:** block, plate, bracket, bushing, roller, collar.
+
+Current public filters also advertise controlled materials, processes, and certifications. Consumer search should load these dynamically from `/api/catalog/filters` rather than assuming a permanently fixed list.
+
+`material_grades` are provider evidence and are not a current canonical consumer search criterion.
+
+---
+
+## 12. Testing
+
+### Backend
+
+The repository contains focused and full backend tests under:
+
+```text
+backend/tests/
+```
+
+Use the backend master manual for the accepted milestone test matrix and current commands.
+
+### Frontend
+
+The accepted frontend baseline has been validated with:
+
+```text
+npm ci
+npm run lint
+npm run build
+```
+
+The frontend currently does not have a full automated unit/integration/browser test suite. Manual role and API checks are documented in the frontend master manual.
+
+---
+
+## 13. Deployment
+
+### Backend
+
+The accepted pilot backend is hosted on Vercel:
+
+```text
+https://maasai-mdc-v1.vercel.app
+```
+
+The canonical public endpoints are available below that origin. Deployment-specific feature flags and secrets remain server-side.
+
+The current repository also contains AWS-readiness planning, but AWS migration has not been completed.
+
+### Frontend
+
+The repository contains a production-capable Next.js build plus Docker assets, but the repository itself does not prove that a public production frontend deployment is currently active.
+
+A deployed frontend requires:
+
+- HTTPS frontend origin;
+- HTTPS MDC backend origin;
+- correct CORS/CSRF policy;
+- valid public Keycloak client and redirect URIs;
+- deliberate demo-API policy;
+- no browser-delivered secrets.
+
+---
+
+## 14. Docker frontend
+
+From `mdc-catalog/demo-frontend/`:
+
+```powershell
+docker compose up --build
+```
+
+Then open:
+
+```text
+http://localhost:3000
+```
+
+Useful commands:
+
+```powershell
+docker compose logs -f frontend
+docker compose down
+```
+
+The compose configuration mounts `public/config.js` read-only so public runtime URLs can be changed without rebuilding the image.
+
+---
+
+## 15. Security rules
+
+Do not commit or expose:
+
+- `MDC_PROVIDER_LIFECYCLE_SERVICE_TOKEN`;
+- `DJANGO_SECRET_KEY`;
+- `DATABASE_URL` credentials;
+- Fuseki passwords;
+- private keys;
+- real bearer tokens;
+- secret-bearing identity exports;
+- credentials in browser runtime configuration.
+
+Do not:
+
+- reintroduce `/api/v1/...` unless the backend contract genuinely changes;
+- expose catalogue synchronization as a public browser action;
+- place trusted lifecycle credentials in the frontend;
+- treat demo role selection as backend authorization;
+- treat demo JSON state as authoritative provider lifecycle data.
+
+---
+
+## 16. Authoritative documentation
+
+### Backend master manual
+
+```text
+docs/MDC_Comprehensive_Implementation_Report_and_User_Manual.md
+```
+
+Use it for:
+
+- backend architecture;
+- PostgreSQL persistence;
+- provider lifecycle;
+- API contract details;
+- ETags and concurrency;
+- matching semantics;
+- RDF/Fuseki;
+- catalogue synchronization;
+- Postman testing;
+- Vercel/Neon deployment;
+- Phase 3 validation;
+- AWS readiness.
+
+### Frontend master manual
+
+```text
+docs/Demo_Frontend/MDC_Demo_Frontend_Comprehensive_Implementation_Report_and_User_Manual.md
+```
+
+Use it for:
+
+- first-time setup;
+- frontend architecture;
+- Keycloak/browser configuration;
+- Provider walkthrough;
+- Consumer walkthrough;
+- Admin walkthrough;
+- UI-field/API mappings;
+- local and Docker execution;
+- frontend validation;
+- security boundaries;
+- troubleshooting;
+- future CMM integration.
+
+Historical reports under `docs/Phase_2/`, `docs/Phase_3/`, and `docs/Demo_Frontend/Implementation_History/` provide traceability but do not override the current manuals or code.
+
+---
+
+## 17. Development workflow
+
+For normal work in the personal repository:
+
+```powershell
+git switch main
+git pull --ff-only origin main
+git status
+```
+
+Create a focused branch for substantive changes, make scoped edits, run relevant tests/builds, inspect the diff, and merge back through normal review.
+
+The maintained remote is:
+
+```text
+origin -> https://github.com/samola4real/mdc_v1.git
+```
+
+Avoid adding unrelated remotes or reviving completed milestone branches unless there is a specific recovery need.
+
+---
+
+## 18. Known limitations
+
+The current pilot does not provide:
+
+- the real Cloud MaaS Marketplace frontend;
+- end-user Marketplace identity/authorization integration;
+- browser-based trusted lifecycle publication;
+- automatic mapping of arbitrary provider text into controlled MDC semantics;
+- production quotation/pricing workflows;
+- live capacity scheduling;
+- manufacturing routing generation;
+- CAD/2D/3D geometry analysis;
+- fully automated frontend test coverage;
+- permanent production Fuseki/AWS infrastructure.
+
+These are future-development areas rather than current capabilities.
+
+---
+
+## 19. Project principle
+
+MDC should remain provider-neutral and evidence-driven:
+
+```text
+Provider facts
+    -> validate and normalize
+    -> persist authoritative lifecycle state
+    -> derive semantic representation
+    -> retrieve candidate offerings
+    -> apply one deterministic matcher
+    -> return explained public results
+```
+
+Tasowheel is the primary pilot example, but provider-specific facts belong in data/evidence rather than hard-coded provider branches in application logic.
+
+---
+
+## 20. Where to begin
+
+If you are new to the project:
+
+1. Read this README.
+2. For backend/API work, open `docs/MDC_Comprehensive_Implementation_Report_and_User_Manual.md`.
+3. For frontend/demo work, open `docs/Demo_Frontend/MDC_Demo_Frontend_Comprehensive_Implementation_Report_and_User_Manual.md`.
+4. Run the local backend and verify `/api/health`.
+5. Run the frontend and open `/demo`.
+6. Use the relevant Provider, Consumer, or Admin walkthrough before making changes.
+
+That gives the shortest path from a fresh checkout to understanding and operating the current MDC pilot.
