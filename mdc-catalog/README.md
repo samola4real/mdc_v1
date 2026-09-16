@@ -2,9 +2,9 @@
 
 Current implementation repository for the **MaaSAI MaaS Dynamic Catalogue (MDC)** backend and its **MDC Demo Frontend**.
 
-The repository now contains the integrated Phase 3 backend, the sanitized and aligned demonstration frontend, current implementation reports, API/testing evidence, and operating manuals.
+The repository contains the integrated Phase 3 backend, the sanitized and aligned demonstration frontend, current implementation reports, API/testing evidence, and operating manuals.
 
-> **Current-source rule:** use the code on `main` and the current master manuals as the source of truth. Older Week 1, Phase 1, or milestone reports are historical evidence only and may describe superseded routes, schemas, or deployment assumptions.
+> **Current-source rule:** use the code on `main` and the current master manuals/API reference as the source of truth. Older Week 1, Phase 1, or milestone reports are historical evidence only and may describe superseded routes, schemas, or deployment assumptions.
 
 > **Frontend scope:** the MDC Demo Frontend is an illustrative interface for MaaSAI pilot demonstrations. It is **not** the Cloud MaaS Marketplace (CMM) and does not replace the Marketplace frontend. It demonstrates how provider and consumer interactions with MDC could work before integration with the real MaaSAI Marketplace components.
 
@@ -25,7 +25,7 @@ The current integrated baseline includes:
 - Next.js 14 MDC Demo Frontend;
 - Keycloak-based browser login and demo-role selection;
 - Provider, Consumer, and Admin demonstration flows;
-- comprehensive backend and frontend operating manuals.
+- comprehensive backend, frontend, and API documentation.
 
 The maintained development repository for this integrated version is the personal GitHub repository:
 
@@ -70,7 +70,7 @@ mdc-catalog/
 ├── data/                     Curated/generated/demo data
 ├── ontologies/               Ontology assets
 ├── scripts/                  Validation and operational scripts
-├── docs/                     Implementation reports and manuals
+├── docs/                     API reference, reports, and manuals
 ├── requirements/             Python dependency definitions
 ├── requirements.txt
 ├── pyproject.toml
@@ -126,6 +126,14 @@ The current public contract is **`1.0`** and uses unversioned `/api/` routes.
 
 There is **no current `/api/v1/...` public route**.
 
+The complete current API reference is:
+
+```text
+docs/MDC_API_Documentation.md
+```
+
+It documents the public API, controlled vocabulary, search request/response fields, trusted provider lifecycle, publication payloads, ETags, errors, demo routes, legacy route status, and integration examples.
+
 A current discovery request uses controlled selection fields such as:
 
 ```json
@@ -156,8 +164,6 @@ A current discovery request uses controlled selection fields such as:
   }
 }
 ```
-
-For complete payload and response examples, use the backend and frontend master manuals listed below.
 
 ---
 
@@ -473,6 +479,25 @@ Do not:
 
 ## 16. Authoritative documentation
 
+### Current API documentation
+
+```text
+docs/MDC_API_Documentation.md
+```
+
+Use it for:
+
+- canonical public endpoints;
+- controlled search vocabulary;
+- complete search request field matrix;
+- public search response and match semantics;
+- trusted provider lifecycle endpoints;
+- provider publication structure;
+- authentication, actor attribution, ETags and concurrency;
+- error codes and HTTP statuses;
+- demo-only and legacy endpoint boundaries;
+- cURL/Postman integration examples.
+
 ### Backend master manual
 
 ```text
@@ -483,10 +508,7 @@ Use it for:
 
 - backend architecture;
 - PostgreSQL persistence;
-- provider lifecycle;
-- API contract details;
-- ETags and concurrency;
-- matching semantics;
+- provider lifecycle implementation;
 - RDF/Fuseki;
 - catalogue synchronization;
 - Postman testing;
@@ -515,7 +537,7 @@ Use it for:
 - troubleshooting;
 - future CMM integration.
 
-Historical reports under `docs/Phase_2/`, `docs/Phase_3/`, and `docs/Demo_Frontend/Implementation_History/` provide traceability but do not override the current manuals or code.
+Historical reports under `docs/Phase_2/`, `docs/Phase_3/`, and `docs/Demo_Frontend/Implementation_History/` provide traceability but do not override the current manuals, API reference, or code.
 
 ---
 
@@ -583,10 +605,11 @@ Tasowheel is the primary pilot example, but provider-specific facts belong in da
 If you are new to the project:
 
 1. Read this README.
-2. For backend/API work, open `docs/MDC_Comprehensive_Implementation_Report_and_User_Manual.md`.
-3. For frontend/demo work, open `docs/Demo_Frontend/MDC_Demo_Frontend_Comprehensive_Implementation_Report_and_User_Manual.md`.
-4. Run the local backend and verify `/api/health`.
-5. Run the frontend and open `/demo`.
-6. Use the relevant Provider, Consumer, or Admin walkthrough before making changes.
+2. For API integration, open `docs/MDC_API_Documentation.md`.
+3. For backend implementation/operations, open `docs/MDC_Comprehensive_Implementation_Report_and_User_Manual.md`.
+4. For frontend/demo work, open `docs/Demo_Frontend/MDC_Demo_Frontend_Comprehensive_Implementation_Report_and_User_Manual.md`.
+5. Run the local backend and verify `/api/health`.
+6. Run the frontend and open `/demo`.
+7. Use the relevant Provider, Consumer, or Admin walkthrough before making changes.
 
-That gives the shortest path from a fresh checkout to understanding and operating the current MDC pilot.
+That gives the shortest path from a fresh checkout to understanding, integrating with, and operating the current MDC pilot.
