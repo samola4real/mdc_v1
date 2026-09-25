@@ -136,14 +136,103 @@ def _create_publication(
     )
 
 
-def _create_sync_event(publication, entity_type, entity_id):
+def _create_sync_event(
+    publication,
+    entity_type,
+    entity_id,
+    *,
+    operation=CatalogueSyncEvent.Operation.UPSERT,
+):
     return CatalogueSyncEvent.objects.create(
         publication=publication,
         entity_type=entity_type,
         entity_id=entity_id,
-        operation=CatalogueSyncEvent.Operation.UPSERT,
+        operation=operation,
         status=CatalogueSyncEvent.Status.PENDING,
     )
+
+
+def _create_deletion_publication(
+    provider,
+    *,
+    entity_type,
+    entity_id,
+    actor_id=None,
+    offering_ids=None,
+):
+    """Persist a durable, deliberately minimal tombstone before row deletion."""
+    now = timezone.now()
+    tombstone = {
+        "entity_type": entity_type,
+        "entity_id": entity_id,
+        "provider_id": provider.provider_id,
+    }
+    if offering_ids is not None:
+        tombstone["offering_ids"] = list(offering_ids)
+    return ProviderPublication.objects.create(
+        provider=provider,
+        provider_id_snapshot=provider.provider_id,
+        operation=ProviderPublication.Operation.DELETE,
+        status=ProviderPublication.Status.SYNC_PENDING,
+        contract_version="1.0",
+        submitted_payload={},
+        normalized_payload={"tombstone": tombstone},
+        submitted_by_external_id=actor_id,
+        validated_at=now,
+        persisted_at=now,
+    )
+
+
+def _redact_provider_history(provider):
+    """Remove full deleted-provider data while retaining lifecycle evidence."""
+    publications = list(
+        ProviderPublication.objects.select_for_update().filter(provider=provider)
+    )
+    for publication in publications:
+        publication.submitted_payload = {}
+        publication.normalized_payload = {}
+        publication.validation_errors = {}
+        publication.submitted_by_external_id = None
+    if publications:
+        ProviderPublication.objects.bulk_update(
+            publications,
+            [
+                "submitted_payload",
+                "normalized_payload",
+                "validation_errors",
+                "submitted_by_external_id",
+            ],
+        )
+
+
+def _redact_offering_history(provider, offering_id):
+    """Remove a target offering from retained aggregate snapshots."""
+    publications = list(
+        ProviderPublication.objects.select_for_update().filter(provider=provider)
+    )
+    changed = []
+    for publication in publications:
+        normalized = deepcopy(publication.normalized_payload)
+        offerings = normalized.get("offerings")
+        if not isinstance(offerings, list):
+            continue
+        filtered = [
+            item
+            for item in offerings
+            if not isinstance(item, dict) or item.get("offering_id") != offering_id
+        ]
+        if len(filtered) == len(offerings):
+            continue
+        normalized["offerings"] = filtered
+        publication.submitted_payload = {}
+        publication.normalized_payload = normalized
+        publication.validation_errors = {}
+        changed.append(publication)
+    if changed:
+        ProviderPublication.objects.bulk_update(
+            changed,
+            ["submitted_payload", "normalized_payload", "validation_errors"],
+        )
 
 
 def _create_certifications(provider, certifications):
@@ -247,6 +336,31 @@ def _result(publication, provider, offering_ids, *, offering_id=None, etag=None)
         result["offering_id"] = offering_id
     if etag is not None:
         result["_etag"] = etag
+    return result
+
+
+def _deletion_result(
+    publication,
+    entity_type,
+    entity_id,
+    provider_id,
+    offering_ids=None,
+):
+    result = {
+        "contract_version": "1.0",
+        "status": "accepted",
+        "operation": ProviderPublication.Operation.DELETE,
+        "target": {
+            "entity_type": entity_type,
+            "entity_id": entity_id,
+        },
+        "provider_id": provider_id,
+        "publication_id": str(publication.id),
+        "publication_status": publication.status,
+        "sync_status": "pending",
+    }
+    if offering_ids is not None:
+        result["offering_ids"] = list(offering_ids)
     return result
 
 
@@ -475,5 +589,103 @@ def update_offering(
             offering_id=offering.offering_id,
             etag=_entity_etag("offering", offering),
         )
+    except DatabaseError as exc:
+        raise LifecycleWriteError from exc
+
+
+def delete_provider(provider_id, *, actor_id=None, expected_etag=None):
+    """Delete a provider aggregate after durable tombstones are committed."""
+    try:
+        with transaction.atomic():
+            try:
+                provider = Provider.objects.select_for_update().get(
+                    provider_id=provider_id
+                )
+            except Provider.DoesNotExist as exc:
+                raise LifecycleNotFound("provider") from exc
+
+            _assert_expected_etag("provider", provider, expected_etag)
+            offering_ids = list(
+                provider.offerings.select_for_update()
+                .order_by("sequence_index", "offering_id")
+                .values_list("offering_id", flat=True)
+            )
+            list(
+                provider.certifications.select_for_update().values_list(
+                    "pk", flat=True
+                )
+            )
+            _redact_provider_history(provider)
+            publication = _create_deletion_publication(
+                provider,
+                entity_type=CatalogueSyncEvent.EntityType.PROVIDER,
+                entity_id=provider_id,
+                actor_id=actor_id,
+                offering_ids=offering_ids,
+            )
+            _create_sync_event(
+                publication,
+                CatalogueSyncEvent.EntityType.PROVIDER,
+                provider_id,
+                operation=CatalogueSyncEvent.Operation.DELETE,
+            )
+            for offering_id in offering_ids:
+                _create_sync_event(
+                    publication,
+                    CatalogueSyncEvent.EntityType.OFFERING,
+                    offering_id,
+                    operation=CatalogueSyncEvent.Operation.DELETE,
+                )
+            result = _deletion_result(
+                publication,
+                CatalogueSyncEvent.EntityType.PROVIDER,
+                provider_id,
+                provider_id,
+                offering_ids,
+            )
+            provider.delete()
+        return result
+    except DatabaseError as exc:
+        raise LifecycleWriteError from exc
+
+
+def delete_offering(offering_id, *, actor_id=None, expected_etag=None):
+    """Delete one offering and advance its parent aggregate revision."""
+    try:
+        with transaction.atomic():
+            try:
+                offering = (
+                    Offering.objects.select_for_update()
+                    .select_related("provider")
+                    .get(offering_id=offering_id)
+                )
+            except Offering.DoesNotExist as exc:
+                raise LifecycleNotFound("offering") from exc
+            provider = Provider.objects.select_for_update().get(pk=offering.provider_id)
+            _assert_expected_etag("offering", offering, expected_etag)
+            provider_id = provider.provider_id
+
+            _redact_offering_history(provider, offering_id)
+            publication = _create_deletion_publication(
+                provider,
+                entity_type=CatalogueSyncEvent.EntityType.OFFERING,
+                entity_id=offering_id,
+                actor_id=actor_id,
+            )
+            _create_sync_event(
+                publication,
+                CatalogueSyncEvent.EntityType.OFFERING,
+                offering_id,
+                operation=CatalogueSyncEvent.Operation.DELETE,
+            )
+            result = _deletion_result(
+                publication,
+                CatalogueSyncEvent.EntityType.OFFERING,
+                offering_id,
+                provider_id,
+            )
+            offering.delete()
+            _touch_provider(provider)
+        return result
     except DatabaseError as exc:
         raise LifecycleWriteError from exc

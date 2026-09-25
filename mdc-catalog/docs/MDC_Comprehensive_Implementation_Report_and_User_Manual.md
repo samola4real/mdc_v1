@@ -65,11 +65,11 @@ Trusted providers and operators use a separate lifecycle surface:
 
 - `POST /api/provider-publication/validation`
 - `POST /api/provider-publication`
-- `GET` and `PATCH /api/providers/{provider_id}`
+- `GET`, `PATCH`, and `DELETE /api/providers/{provider_id}`
 - `GET` and `POST /api/providers/{provider_id}/offerings`
-- `GET` and `PATCH /api/offerings/{offering_id}`
+- `GET`, `PATCH`, and `DELETE /api/offerings/{offering_id}`
 
-The trusted boundary uses a bearer service token. Mutating requests require `X-MDC-Actor-Id`. Updates use strong ETags and optimistic concurrency through the canonical `If-Match` header; the deployed Vercel pilot also accepts `X-MDC-If-Match` as a temporary transport compatibility header. A missing precondition returns `428`, a stale revision returns `412`, and malformed preconditions return `400`.
+The trusted boundary uses a bearer service token. Mutating requests require `X-MDC-Actor-Id`. Updates and deletes use strong ETags and optimistic concurrency through the canonical `If-Match` header; the deployed Vercel pilot also accepts `X-MDC-If-Match` as a temporary transport compatibility header. DELETE always requires the current ETag, independently of the optional PATCH concurrency setting. A missing precondition returns `428`, a stale revision returns `412`, and malformed preconditions return `400`.
 
 Every accepted lifecycle write runs in a database transaction. It changes the provider or offering, records a `ProviderPublication`, and creates one or more `CatalogueSyncEvent` outbox rows. It does not call Fuseki inside the request transaction. A trusted operator later runs the Django synchronization command, which rebuilds RDF from the complete active PostgreSQL catalogue and replaces the configured Fuseki default graph. This separation protects request latency, makes failures durable and retryable, and preserves PostgreSQL as the authoritative state.
 
@@ -106,7 +106,7 @@ The **harmonized contract** is the current controlled representation shared by p
 
 **PostgreSQL** is the operational source of truth: it owns current provider/offering state and durable publication/outbox history. **RDF** is a graph representation derived from that database. **Fuseki** is the RDF server queried with SPARQL. **SPARQL** retrieves candidate records; the H5 matcher then applies the same request interpretation and scoring used by local fallbacks.
 
-An **ETag** is a strong quoted revision fingerprint returned with a provider or offering read. A client sends it back in `If-Match` before a PATCH. This prevents one editor from unknowingly overwriting a newer edit. The **outbox** is the set of durable `CatalogueSyncEvent` rows written in the same transaction as domain changes. It is a queue of semantic work, not a public HTTP endpoint.
+An **ETag** is a strong quoted revision fingerprint returned with a provider or offering read. A client sends it back in `If-Match` before a PATCH or DELETE. This prevents one editor from unknowingly overwriting or deleting a newer edit. The **outbox** is the set of durable `CatalogueSyncEvent` rows written in the same transaction as domain changes. It is a queue of semantic work, not a public HTTP endpoint.
 
 The **pilot** is the verified current deployment and data flow. **Production settings** means Django's hardened configuration profile; it does not mean every pilot dependency is already a permanent enterprise platform. **Future AWS readiness** refers to the P3.6 plan and recommendations, not a completed cloud migration.
 
@@ -175,10 +175,11 @@ The system evolved through controlled increments rather than a single replacemen
 | H9 | Alignment adapters and gates | Remote/local/YAML equality | One public result independent of retrieval backend |
 | Phase 2 M1–M6 | Stabilized repository and Vercel preparation | Harmonize tests/data, API, docs, deployment | Clean, deployable public pilot baseline |
 | M7.1–M7.2 | Django ORM and managed PostgreSQL | Persistence foundation, import, DB repository | PostgreSQL became operational source of truth |
-| M7.3–M7.4 | Trusted lifecycle API | Validate/read/register/update provider and offering | Complete controlled CRUD-like lifecycle without delete |
+| M7.3–M7.4 | Trusted lifecycle API | Validate/read/register/update provider and offering | Controlled lifecycle foundation |
 | M7.5–M7.6 | Transactional outbox and external exposure gates | Fuseki sync, production safety | Operator-controlled semantic publishing and hardened API |
 | Phase 3 P3.0–P3.5 | Vercel + Neon + external Fuseki validation | Deploy, enable, validate, synchronize, discover | Accepted end-to-end pilot proof |
 | Phase 3 P3.6 | Planning evidence | AWS migration readiness | Future plan only; migration not executed |
+| Phase 4 M1–M3 | Lifecycle refactor | Baseline, multiple offerings, deletion and attribute removal | Complete operational lifecycle with pending semantic-delete handoff |
 
 Three distinctions prevent historical material from being mistaken for current behavior:
 
@@ -301,11 +302,11 @@ erDiagram
 
 **Provider** uses an internal UUID primary key and an external unique `provider_id`. It stores `provider_name`, `country`, lifecycle `status` (`draft`, `active`, `suspended`, or `archived`), `custom_provider_fields`, `publication_metadata`, and timestamps.
 
-**Offering** uses an internal UUID and a unique external `offering_id`. It belongs to a provider and stores its name, service category, part family, support status, supported part-type evidence, family/type/generic capability maps, custom offering/capability maps, active flag, stable sequence index, and timestamps. Deleting a provider would cascade to offerings, though the current API exposes no delete operation.
+**Offering** uses an internal UUID and a unique external `offering_id`. It belongs to a provider and stores its name, service category, part family, support status, supported part-type evidence, family/type/generic capability maps, custom offering/capability maps, active flag, stable sequence index, and timestamps. Provider DELETE cascades to its offerings; offering DELETE removes only its target and preserves the parent and siblings.
 
 **ProviderCertification** belongs to a provider and stores controlled certification code, source type, confidence, optional source note, a flag distinguishing omitted from explicitly null notes, and sequence index. `(provider, code)` is unique.
 
-**ProviderPublication** is durable lifecycle history. It stores the external provider snapshot, operation (`create` or `update`), state (`received`, `validation_failed`, `validated`, `persisted`, `sync_pending`, `synced`, `sync_failed`, or `rejected`), contract version, submitted and normalized payloads, actor external ID, errors, and lifecycle times. Its provider foreign key may become null while the external snapshot remains.
+**ProviderPublication** is durable lifecycle history. Create/update records store the accepted provider snapshot, operation, state, contract version, submitted and normalized payloads, actor external ID, errors, and lifecycle times. A delete record stores only a minimal entity-ID tombstone with `operation=delete` and pending outbox evidence. Full historical payloads in the deleted scope are redacted before operational deletion, while the nullable provider foreign key allows the minimal tombstone and events to survive.
 
 **CatalogueSyncEvent** is the transactional outbox. Each row identifies its publication, entity type (`provider` or `offering`), external entity ID, operation (`upsert` or `delete`), processing state (`pending`, `processing`, `succeeded`, or `failed`), attempt count, redacted failure record, and processing times. An index on state and creation time supports ordered claims.
 
@@ -457,7 +458,7 @@ The API uses stable, unversioned canonical paths and reports the payload contrac
 There are four route groups:
 
 1. **Canonical public:** health, filters, and service discovery. These need no lifecycle token.
-2. **Trusted lifecycle:** validation, registration, provider read/update, and offering list/create/read/update. These require the shared pilot bearer token; writes also require actor attribution.
+2. **Trusted lifecycle:** validation, registration, provider read/update/delete, and offering list/create/read/update/delete. These require the shared pilot bearer token; writes also require actor attribution, and deletes require the current ETag.
 3. **Legacy:** `POST /api/catalog/search`, retained for the older `service_type` contract. It is not the route documented for new consumers.
 4. **Demo:** `/api/demo/*`, available when `DEBUG` or `MDC_DEMO_API_ENABLED` is true. Production defaults the feature off and then returns `404` for all demo paths. The two apparent graph-mutation demo routes return `501` and do not mutate RDF.
 
@@ -1318,9 +1319,9 @@ pm.test("Offering updated with a new revision", function () {
 
 ### 19.6 Reruns, duplicate IDs, and cleanup
 
-Registration and offering creation are intentionally non-idempotent by identity. A second registration for the same provider or a second offering for the same provider/category returns `409`. This proves duplicate protection but prevents requests 06 or 13 from returning a fresh `201` on a full rerun.
+Registration and offering creation are intentionally non-idempotent by identity. A second registration for the same provider or a second offering using an already reserved offering ID returns `409`. This proves duplicate protection but prevents requests 06 or 13 from returning a fresh `201` on a full rerun.
 
-For a clean run, change the `provider_id` suffix and clear captured ETag/offering variables. There is no public delete endpoint, so do not invent a cleanup call. Test records should use a recognizable namespace and be retired using an approved operator process or marked inactive through the trusted API when appropriate.
+For a clean run, change the `provider_id` suffix and clear captured ETag/offering variables. Trusted lifecycle DELETE is available for approved cleanup: GET the target, capture its current ETag, then DELETE it with bearer, actor, and `If-Match`. The `200` receipt reports `sync_pending`; it proves operational PostgreSQL deletion, not immediate RDF/Fuseki or search convergence.
 
 ### 19.7 What Postman cannot test or trigger
 
@@ -1567,7 +1568,7 @@ The pilot has a strong, verified backend path, but it is not a complete manufact
 - No CAD, 2D drawing, or 3D geometry ingestion, feature extraction, manufacturability analysis, or automatic requirement derivation is implemented.
 - Discovery scores describe contract matching. They are not probabilities, rankings of provider quality, or commercial recommendations.
 - The vocabulary covers three current service categories and their controlled part families/types. Custom fields are stored but are not automatically searchable.
-- The lifecycle surface has create/read/update but no partner-facing delete. Deactivation is available for offerings; provider lifecycle status can be changed.
+- Lifecycle DELETE removes operational rows and leaves a minimal pending tombstone/outbox record. Automatic semantic publication and immediate search convergence remain future work.
 - The legacy catalogue route and stale documentation remain in the repository and can confuse clients unless clearly labeled.
 - Demo routes remain in the URL table, although production hides them by default and graph-mutation stubs return `501`.
 - Standalone ontology Turtle files are placeholders at this commit even though runtime RDF mappings/generation are implemented and tested.
@@ -1701,13 +1702,13 @@ Migration preserves the three canonical public routes, absence of a public `/api
 | H1–H9 | Harmonization gates from registry through cross-backend endpoint alignment |
 | H5 matcher | Deterministic engine that evaluates candidate capabilities and unknowns |
 | Harmonized record | Provider/offering data using the current controlled schema and evidence model |
-| Lifecycle API | Trusted validation, registration, read, and update endpoints |
+| Lifecycle API | Trusted validation, registration, read, update, and deletion endpoints |
 | Neon | Managed PostgreSQL service used by the current pilot |
 | Optimistic concurrency | Update pattern that proceeds only when the client's ETag still matches |
 | Outbox | Durable queue written in the same transaction as business state |
 | Part family/type | Controlled hierarchy such as `gear` and `spur_gear` |
 | Provider | Manufacturing organization publishing capabilities |
-| ProviderPublication | Audit/history record for a validated lifecycle create or update |
+| ProviderPublication | Audit/history or minimal deletion-tombstone record for a lifecycle write |
 | RDF | Graph data model expressing facts as subject-predicate-object triples |
 | RDFLib | Python RDF engine used for local semantic retrieval fallback |
 | Service category | Top-level controlled offering class such as `precision_gears` |
@@ -1732,10 +1733,12 @@ Migration preserves the three canonical public routes, absence of a public `/api
 | POST | `/api/provider-publication` | Trusted write | Bearer, actor, publication feature | `201` | `400`, `401`, `403`, `409`, `503` |
 | GET | `/api/providers/{provider_id}` | Trusted | Bearer | `200` + ETag | `401`, `404`, `503` auth unavailable |
 | PATCH | `/api/providers/{provider_id}` | Trusted write | Bearer, actor, strong precondition | `200` + new ETag | `400`, `401`, `403`, `404`, `412`, `428`, `503` |
+| DELETE | `/api/providers/{provider_id}` | Trusted write | Bearer, actor, current strong ETag | `200` pending receipt | `400`, `401`, `403`, `404`, `412`, `428`, `503` |
 | GET | `/api/providers/{provider_id}/offerings` | Trusted | Bearer | `200` | `401`, `404`, `503` |
 | POST | `/api/providers/{provider_id}/offerings` | Trusted write | Bearer, actor, publication feature | `201` + new offering ETag | `400`, `401`, `403`, `404`, `409`, `503` |
 | GET | `/api/offerings/{offering_id}` | Trusted | Bearer | `200` + ETag | `401`, `404`, `503` |
 | PATCH | `/api/offerings/{offering_id}` | Trusted write | Bearer, actor, strong precondition | `200` + new ETag | `400`, `401`, `403`, `404`, `412`, `428`, `503` |
+| DELETE | `/api/offerings/{offering_id}` | Trusted write | Bearer, actor, current strong ETag | `200` pending receipt | `400`, `401`, `403`, `404`, `412`, `428`, `503` |
 | POST | `/api/catalog/search` | Legacy | Legacy behavior | compatibility response | Historical `service_type` contract; not for new clients |
 | GET | `/api/demo/health` | Local/demo | Demo gate | demo response | Production `404` |
 | GET | `/api/demo/service-discovery/backend-status` | Local/demo | Demo gate | diagnostic | Production `404` |

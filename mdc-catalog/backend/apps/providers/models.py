@@ -84,6 +84,7 @@ class ProviderPublication(models.Model):
     class Operation(models.TextChoices):
         CREATE = "create", "Create"
         UPDATE = "update", "Update"
+        DELETE = "delete", "Delete"
 
     class Status(models.TextChoices):
         RECEIVED = "received", "Received"

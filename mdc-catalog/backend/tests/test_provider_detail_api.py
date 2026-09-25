@@ -158,10 +158,10 @@ class ProviderLifecycleReadApiTests(TestCase):
         with self.assertNumQueries(1):
             self.client.get("/api/offerings/lifecycle_provider_shafts")
 
-    def test_put_and_delete_methods_are_not_added(self):
+    def test_put_is_not_added_and_delete_requires_a_precondition(self):
         self.assertEqual(self.client.put("/api/providers/lifecycle_provider", {}, format="json").status_code,
                          status.HTTP_405_METHOD_NOT_ALLOWED)
         self.assertEqual(self.client.delete("/api/providers/lifecycle_provider").status_code,
-                         status.HTTP_405_METHOD_NOT_ALLOWED)
+                         428)
         self.assertEqual(self.client.delete("/api/offerings/lifecycle_provider_gears").status_code,
-                         status.HTTP_405_METHOD_NOT_ALLOWED)
+                         428)

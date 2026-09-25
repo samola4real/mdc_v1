@@ -120,15 +120,17 @@ def _validate_if_match_value(value: str):
     return value, None
 
 
-def get_if_match_or_error(request):
+def get_if_match_or_error(request, *, required: bool = False):
     """Resolve the optimistic-concurrency token.
 
-    ``If-Match`` remains the canonical HTTP header. The temporary Vercel pilot
-    also accepts ``X-MDC-If-Match`` because an intermediary can apply standard
-    conditional-request semantics after the Django function has already
-    committed a PATCH, producing a false 412 at the client boundary. The custom
-    header is intentionally transport-only compatibility; the ETag value and
-    persistence semantics are unchanged.
+    ``If-Match`` remains the canonical HTTP header. DELETE callers pass
+    ``required=True`` so destructive writes always require the current revision,
+    independently of the environment's PATCH concurrency setting. The temporary
+    Vercel pilot also accepts ``X-MDC-If-Match`` because an intermediary can
+    apply standard conditional-request semantics after the Django function has
+    already committed a PATCH, producing a false 412 at the client boundary.
+    The custom header is intentionally transport-only compatibility; the ETag
+    value and persistence semantics are unchanged.
     """
     standard = request.headers.get("If-Match")
     pilot = request.headers.get(PILOT_CONCURRENCY_HEADER)
@@ -145,10 +147,10 @@ def get_if_match_or_error(request):
 
     value = standard or pilot
     if value is None:
-        if getattr(settings, "MDC_PROVIDER_CONCURRENCY_REQUIRED", False):
+        if required or getattr(settings, "MDC_PROVIDER_CONCURRENCY_REQUIRED", False):
             return None, _error(
                 "concurrency_precondition_required",
-                "If-Match is required for this lifecycle update.",
+                "If-Match is required for this lifecycle write.",
                 428,
             )
         return None, None

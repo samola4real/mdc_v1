@@ -44,11 +44,14 @@ def _trusted_read_or_response(request):
     return error_response
 
 
-@api_view(["GET", "PATCH"])
+@api_view(["GET", "PATCH", "DELETE"])
 def provider_detail(request, provider_id):
     if request.method == "PATCH":
         from apps.api.views.post_views import provider_update
         return provider_update(request, provider_id)
+    if request.method == "DELETE":
+        from apps.api.views.post_views import provider_delete
+        return provider_delete(request, provider_id)
 
     error_response = _trusted_read_or_response(request)
     if error_response is not None:
@@ -86,11 +89,14 @@ def provider_offerings(request, provider_id):
     )
 
 
-@api_view(["GET", "PATCH"])
+@api_view(["GET", "PATCH", "DELETE"])
 def offering_detail(request, offering_id):
     if request.method == "PATCH":
         from apps.api.views.post_views import offering_update
         return offering_update(request, offering_id)
+    if request.method == "DELETE":
+        from apps.api.views.post_views import offering_delete
+        return offering_delete(request, offering_id)
 
     error_response = _trusted_read_or_response(request)
     if error_response is not None:
