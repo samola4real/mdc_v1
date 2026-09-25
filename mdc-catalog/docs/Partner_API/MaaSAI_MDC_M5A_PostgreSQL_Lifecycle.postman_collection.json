@@ -1,0 +1,225 @@
+{
+  "info": {
+    "_postman_id": "90ff2b67-a544-43f9-a5bd-54ae3dc786d7",
+    "name": "MaaSAI MDC M5-A PostgreSQL Lifecycle Acceptance",
+    "description": "Ordered, disposable M5-A acceptance flow for the reviewed PostgreSQL-only Preview. The collection creates only a generated postman_m5a_* provider and removes its operational rows before completing. Lifecycle writes must remain accepted/sync_pending/pending; PostgreSQL lifecycle GETs, not canonical semantic search, are the post-write oracle. Send no bearer or actor headers in the temporary approved no-auth profile.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "const c = pm.collectionVariables;",
+          "let providerId = c.get('provider_id');",
+          "if (!providerId) { providerId = `postman_m5a_${Date.now()}`; c.set('provider_id', providerId); }",
+          "const firstId = c.get('offering_id') || `${providerId}_precision_metal_parts`;",
+          "const secondId = c.get('second_offering_id') || `${providerId}_precision_metal_parts_flexible_cell`;",
+          "c.set('offering_id', firstId); c.set('second_offering_id', secondId);",
+          "const evidence = { source_type: 'provider_confirmed', confidence: 'declared' };",
+          "const caps = (lengthMax, vertical = true) => { const v = { bounding_box_mm: { length_mm: { max: lengthMax }, width_mm: { max: 100 }, height_mm: { max: 80 }, ...evidence }, horizontal_flange_length_mm: { max: 140, ...evidence } }; if (vertical) v.vertical_flange_length_mm = { max: 75, ...evidence }; return { bracket: v }; };",
+          "const offering = (id, name, lengthMax) => ({ offering_id: id, service_category: 'precision_metal_parts', offering_name: name, part_family: 'metal_part', support_status: 'confirmed', supported_part_types: [{ part_type: 'bracket', support_status: 'confirmed', ...evidence }], part_type_capabilities: caps(lengthMax), custom_capability_fields: { remove_after_patch: { value: 1 }, retained_marker: { value: 2 } } });",
+          "c.set('provider_payload', JSON.stringify({ provider_id: providerId, provider_name: 'M5-A Disposable Provider', country: 'Finland', offerings: [offering(firstId, 'M5-A baseline bracket cell', 180)] }));",
+          "c.set('second_offering_payload', JSON.stringify(offering(secondId, 'M5-A flexible bracket cell', 220)));",
+          "c.set('updated_offering_payload', JSON.stringify({ offering_name: 'M5-A updated flexible bracket cell', part_type_capabilities: caps(240), custom_capability_fields: { remove_after_patch: { value: 1 }, retained_marker: { value: 2 } } }));",
+          "c.set('attribute_removal_payload', JSON.stringify({ part_type_capabilities: caps(240, false), custom_capability_fields: { retained_marker: { value: 2 } } }));"
+        ]
+      }
+    }
+  ],
+  "variable": [
+    { "key": "provider_id", "value": "" },
+    { "key": "offering_id", "value": "" },
+    { "key": "second_offering_id", "value": "" },
+    { "key": "provider_etag", "value": "" },
+    { "key": "offering_etag", "value": "" },
+    { "key": "stale_offering_etag", "value": "" },
+    { "key": "provider_payload", "value": "" },
+    { "key": "second_offering_payload", "value": "" },
+    { "key": "updated_offering_payload", "value": "" },
+    { "key": "attribute_removal_payload", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "00 Readiness",
+      "item": [
+        {
+          "name": "Health",
+          "request": { "method": "GET", "header": [], "url": "{{base_url}}/api/health" },
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test('health 200 and contract 1.0', () => { pm.response.to.have.status(200); pm.expect(pm.response.json().contract_version).to.eql('1.0'); });"] } }]
+        },
+        {
+          "name": "Catalogue filters",
+          "request": { "method": "GET", "header": [], "url": "{{base_url}}/api/catalog/filters" },
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test('filters 200 and contract 1.0', () => { pm.response.to.have.status(200); pm.expect(pm.response.json().contract_version).to.eql('1.0'); });"] } }]
+        },
+        {
+          "name": "Canonical search baseline only",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\"contract_version\":\"1.0\",\"request_id\":\"{{$guid}}\",\"consumer_id\":\"postman_m5a\",\"service_category\":\"precision_metal_parts\",\"part_family\":\"metal_part\",\"part_type\":\"bracket\",\"requirements\":{}}" },
+            "url": "{{base_url}}/api/service-discovery/search"
+          },
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test('canonical search baseline responds', () => { pm.response.to.have.status(200); pm.expect(pm.response.json().contract_version).to.eql('1.0'); });"] } }]
+        },
+        {
+          "name": "Demo API disabled",
+          "request": { "method": "GET", "header": [], "url": "{{base_url}}/api/demo/health" },
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test('demo endpoint is absent', () => pm.response.to.have.status(404));"] } }]
+        },
+        {
+          "name": "Versioned route absent",
+          "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{}" }, "url": "{{base_url}}/api/v1/service-discovery/search" },
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test('/api/v1 is not the partner contract', () => pm.response.to.have.status(404));"] } }]
+        }
+      ]
+    },
+    {
+      "name": "01 PostgreSQL lifecycle acceptance",
+      "item": [
+        {
+          "name": "Confirm disposable provider absent",
+          "request": { "method": "GET", "header": [], "url": "{{base_url}}/api/providers/{{provider_id}}" },
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test('provider starts absent', () => pm.response.to.have.status(404));"] } }]
+        },
+        {
+          "name": "Validate provider payload without auth",
+          "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{{provider_payload}}" }, "url": "{{base_url}}/api/provider-publication/validation" },
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test('validation succeeds without bearer or actor', () => { pm.response.to.have.status(200); pm.expect(pm.response.json().valid).to.eql(true); });"] } }]
+        },
+        {
+          "name": "Register provider and first offering",
+          "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{{provider_payload}}" }, "url": "{{base_url}}/api/provider-publication" },
+          "event": [{ "listen": "test", "script": { "exec": ["const b=pm.response.json();", "pm.test('registration is accepted for pending sync', () => { pm.response.to.have.status(201); pm.expect(b.status).to.eql('accepted'); pm.expect(b.publication_status).to.eql('sync_pending'); pm.expect(b.sync_status).to.eql('pending'); });"] } }]
+        },
+        {
+          "name": "GET provider proves PostgreSQL persistence",
+          "request": { "method": "GET", "header": [], "url": "{{base_url}}/api/providers/{{provider_id}}" },
+          "event": [{ "listen": "test", "script": { "exec": ["const b=pm.response.json();", "pm.test('provider persisted with first offering', () => { pm.response.to.have.status(200); pm.expect(b.provider_id).to.eql(pm.collectionVariables.get('provider_id')); pm.expect(b.offerings.map(x=>x.offering_id)).to.include(pm.collectionVariables.get('offering_id')); pm.expect(pm.response.headers.get('ETag')).to.be.ok; });"] } }]
+        },
+        {
+          "name": "List first offering proves PostgreSQL persistence",
+          "request": { "method": "GET", "header": [], "url": "{{base_url}}/api/providers/{{provider_id}}/offerings" },
+          "event": [{ "listen": "test", "script": { "exec": ["const ids=pm.response.json().offerings.map(x=>x.offering_id);", "pm.test('list contains first offering', () => { pm.response.to.have.status(200); pm.expect(ids).to.include(pm.collectionVariables.get('offering_id')); });"] } }]
+        },
+        {
+          "name": "Duplicate provider conflicts",
+          "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{{provider_payload}}" }, "url": "{{base_url}}/api/provider-publication" },
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test('duplicate provider is conflict', () => pm.response.to.have.status(409));"] } }]
+        },
+        {
+          "name": "Add second same-category offering",
+          "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{{second_offering_payload}}" }, "url": "{{base_url}}/api/providers/{{provider_id}}/offerings" },
+          "event": [{ "listen": "test", "script": { "exec": ["const b=pm.response.json();", "pm.test('second offering is accepted for pending sync', () => { pm.response.to.have.status(201); pm.expect(b.status).to.eql('accepted'); pm.expect(b.publication_status).to.eql('sync_pending'); pm.expect(b.sync_status).to.eql('pending'); pm.expect(b.offering_id).to.eql(pm.collectionVariables.get('second_offering_id')); });"] } }]
+        },
+        {
+          "name": "List proves both distinct same-category offerings",
+          "request": { "method": "GET", "header": [], "url": "{{base_url}}/api/providers/{{provider_id}}/offerings" },
+          "event": [{ "listen": "test", "script": { "exec": ["const ids=pm.response.json().offerings.map(x=>x.offering_id);", "pm.test('both offerings persisted independently', () => { pm.response.to.have.status(200); pm.expect(ids).to.include.members([pm.collectionVariables.get('offering_id'), pm.collectionVariables.get('second_offering_id')]); });"] } }]
+        },
+        {
+          "name": "GET first offering detail",
+          "request": { "method": "GET", "header": [], "url": "{{base_url}}/api/offerings/{{offering_id}}" },
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test('first offering detail is distinct', () => { pm.response.to.have.status(200); pm.expect(pm.response.json().offering_id).to.eql(pm.collectionVariables.get('offering_id')); });"] } }]
+        },
+        {
+          "name": "Duplicate offering ID conflicts",
+          "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{{second_offering_payload}}" }, "url": "{{base_url}}/api/providers/{{provider_id}}/offerings" },
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test('duplicate offering is conflict', () => pm.response.to.have.status(409));"] } }]
+        },
+        {
+          "name": "Invalid controlled field rejected",
+          "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\"offering_id\":\"{{provider_id}}_invalid\",\"service_category\":\"not_a_category\",\"offering_name\":\"Invalid\",\"part_family\":\"metal_part\",\"support_status\":\"confirmed\"}" }, "url": "{{base_url}}/api/providers/{{provider_id}}/offerings" },
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test('invalid controlled field is 400', () => pm.response.to.have.status(400));"] } }]
+        },
+        {
+          "name": "GET second offering and capture ETag",
+          "request": { "method": "GET", "header": [], "url": "{{base_url}}/api/offerings/{{second_offering_id}}" },
+          "event": [{ "listen": "test", "script": { "exec": ["const e=pm.response.headers.get('ETag');", "pm.test('second offering detail has ETag', () => { pm.response.to.have.status(200); pm.expect(pm.response.json().offering_id).to.eql(pm.collectionVariables.get('second_offering_id')); pm.expect(e).to.be.ok; });", "pm.collectionVariables.set('offering_etag',e); pm.collectionVariables.set('stale_offering_etag',e);"] } }]
+        },
+        {
+          "name": "PATCH name and capabilities",
+          "request": { "method": "PATCH", "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "If-Match", "value": "{{offering_etag}}" }], "body": { "mode": "raw", "raw": "{{updated_offering_payload}}" }, "url": "{{base_url}}/api/offerings/{{second_offering_id}}" },
+          "event": [{ "listen": "test", "script": { "exec": ["const b=pm.response.json();", "pm.test('PATCH is accepted for pending sync', () => { pm.response.to.have.status(200); pm.expect(b.status).to.eql('accepted'); pm.expect(b.publication_status).to.eql('sync_pending'); pm.expect(b.sync_status).to.eql('pending'); });", "pm.collectionVariables.set('offering_etag',pm.response.headers.get('ETag'));"] } }]
+        },
+        {
+          "name": "Stale PATCH rejected",
+          "request": { "method": "PATCH", "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "If-Match", "value": "{{stale_offering_etag}}" }], "body": { "mode": "raw", "raw": "{\"offering_name\":\"must not persist\"}" }, "url": "{{base_url}}/api/offerings/{{second_offering_id}}" },
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test('stale PATCH is 412', () => pm.response.to.have.status(412));"] } }]
+        },
+        {
+          "name": "GET confirms patched PostgreSQL state",
+          "request": { "method": "GET", "header": [], "url": "{{base_url}}/api/offerings/{{second_offering_id}}" },
+          "event": [{ "listen": "test", "script": { "exec": ["const b=pm.response.json();", "pm.test('updated name and retained maps persisted', () => { pm.response.to.have.status(200); pm.expect(b.offering_name).to.eql('M5-A updated flexible bracket cell'); pm.expect(b.custom_capability_fields.remove_after_patch).to.be.ok; pm.expect(b.custom_capability_fields.retained_marker).to.be.ok; });"] } }]
+        },
+        {
+          "name": "PATCH selected maps removes optional keys",
+          "request": { "method": "PATCH", "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "If-Match", "value": "{{offering_etag}}" }], "body": { "mode": "raw", "raw": "{{attribute_removal_payload}}" }, "url": "{{base_url}}/api/offerings/{{second_offering_id}}" },
+          "event": [{ "listen": "test", "script": { "exec": ["const b=pm.response.json();", "pm.test('attribute removal is accepted for pending sync', () => { pm.response.to.have.status(200); pm.expect(b.status).to.eql('accepted'); pm.expect(b.publication_status).to.eql('sync_pending'); pm.expect(b.sync_status).to.eql('pending'); });", "pm.collectionVariables.set('offering_etag',pm.response.headers.get('ETag'));"] } }]
+        },
+        {
+          "name": "GET confirms removal and sibling retention",
+          "request": { "method": "GET", "header": [], "url": "{{base_url}}/api/offerings/{{second_offering_id}}" },
+          "event": [{ "listen": "test", "script": { "exec": ["const b=pm.response.json(); const bracket=b.part_type_capabilities.bracket;", "pm.test('selected map keys removed and retained', () => { pm.response.to.have.status(200); pm.expect(bracket).not.to.have.property('vertical_flange_length_mm'); pm.expect(bracket.bounding_box_mm).to.be.ok; pm.expect(b.custom_capability_fields).not.to.have.property('remove_after_patch'); pm.expect(b.custom_capability_fields.retained_marker).to.be.ok; });"] } }]
+        },
+        {
+          "name": "DELETE offering without ETag rejected",
+          "request": { "method": "DELETE", "header": [], "url": "{{base_url}}/api/offerings/{{second_offering_id}}" },
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test('missing DELETE ETag is 428', () => pm.response.to.have.status(428));"] } }]
+        },
+        {
+          "name": "DELETE offering with stale ETag rejected",
+          "request": { "method": "DELETE", "header": [{ "key": "If-Match", "value": "{{stale_offering_etag}}" }], "url": "{{base_url}}/api/offerings/{{second_offering_id}}" },
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test('stale DELETE ETag is 412', () => pm.response.to.have.status(412));"] } }]
+        },
+        {
+          "name": "GET second offering and refresh ETag",
+          "request": { "method": "GET", "header": [], "url": "{{base_url}}/api/offerings/{{second_offering_id}}" },
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test('second offering still exists', () => pm.response.to.have.status(200));", "pm.collectionVariables.set('offering_etag',pm.response.headers.get('ETag'));"] } }]
+        },
+        {
+          "name": "DELETE second offering",
+          "request": { "method": "DELETE", "header": [{ "key": "If-Match", "value": "{{offering_etag}}" }], "url": "{{base_url}}/api/offerings/{{second_offering_id}}" },
+          "event": [{ "listen": "test", "script": { "exec": ["const b=pm.response.json();", "pm.test('offering deletion is accepted for pending sync', () => { pm.response.to.have.status(200); pm.expect(b.status).to.eql('accepted'); pm.expect(b.publication_status).to.eql('sync_pending'); pm.expect(b.sync_status).to.eql('pending'); });"] } }]
+        },
+        {
+          "name": "GET deleted offering is absent",
+          "request": { "method": "GET", "header": [], "url": "{{base_url}}/api/offerings/{{second_offering_id}}" },
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test('deleted offering is absent', () => pm.response.to.have.status(404));"] } }]
+        },
+        {
+          "name": "List confirms first sibling remains",
+          "request": { "method": "GET", "header": [], "url": "{{base_url}}/api/providers/{{provider_id}}/offerings" },
+          "event": [{ "listen": "test", "script": { "exec": ["const ids=pm.response.json().offerings.map(x=>x.offering_id);", "pm.test('sibling is retained and deleted offering absent', () => { pm.response.to.have.status(200); pm.expect(ids).to.include(pm.collectionVariables.get('offering_id')); pm.expect(ids).not.to.include(pm.collectionVariables.get('second_offering_id')); });"] } }]
+        },
+        {
+          "name": "GET provider and capture current ETag",
+          "request": { "method": "GET", "header": [], "url": "{{base_url}}/api/providers/{{provider_id}}" },
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test('provider remains with current ETag', () => { pm.response.to.have.status(200); pm.expect(pm.response.headers.get('ETag')).to.be.ok; });", "pm.collectionVariables.set('provider_etag',pm.response.headers.get('ETag'));"] } }]
+        },
+        {
+          "name": "DELETE disposable provider",
+          "request": { "method": "DELETE", "header": [{ "key": "If-Match", "value": "{{provider_etag}}" }], "url": "{{base_url}}/api/providers/{{provider_id}}" },
+          "event": [{ "listen": "test", "script": { "exec": ["const b=pm.response.json();", "pm.test('provider deletion is accepted for pending sync', () => { pm.response.to.have.status(200); pm.expect(b.status).to.eql('accepted'); pm.expect(b.publication_status).to.eql('sync_pending'); pm.expect(b.sync_status).to.eql('pending'); });"] } }]
+        },
+        {
+          "name": "Final provider GET is absent",
+          "request": { "method": "GET", "header": [], "url": "{{base_url}}/api/providers/{{provider_id}}" },
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test('disposable provider is absent', () => pm.response.to.have.status(404));"] } }]
+        },
+        {
+          "name": "Final first offering GET is absent",
+          "request": { "method": "GET", "header": [], "url": "{{base_url}}/api/offerings/{{offering_id}}" },
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test('first offering removed with provider', () => pm.response.to.have.status(404));"] } }]
+        },
+        {
+          "name": "Final second offering GET remains absent",
+          "request": { "method": "GET", "header": [], "url": "{{base_url}}/api/offerings/{{second_offering_id}}" },
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test('second offering remains absent', () => pm.response.to.have.status(404));"] } }]
+        }
+      ]
+    }
+  ]
+}
