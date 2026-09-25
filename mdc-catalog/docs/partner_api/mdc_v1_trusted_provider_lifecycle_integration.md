@@ -33,10 +33,12 @@ POST  /api/provider-publication/validation
 POST  /api/provider-publication
 GET   /api/providers/{provider_id}
 PATCH /api/providers/{provider_id}
+DELETE /api/providers/{provider_id}
 GET   /api/providers/{provider_id}/offerings
 POST  /api/providers/{provider_id}/offerings
 GET   /api/offerings/{offering_id}
 PATCH /api/offerings/{offering_id}
+DELETE /api/offerings/{offering_id}
 ```
 
 ### Authentication
@@ -174,6 +176,81 @@ Important responses:
 
 This prevents a stale edit screen from silently overwriting a newer accepted update.
 
+### Removing an editable attribute
+
+Optional keys inside editable JSON-map fields use a whole-selected-map
+replacement contract. First GET the entity and its ETag, copy the current map,
+remove exactly the unwanted key, and PATCH the complete replacement map with
+`If-Match`. Omitted top-level fields remain unchanged. For example:
+
+```http
+PATCH /api/offerings/example_provider_precision_gears
+If-Match: "<ETag from GET>"
+Content-Type: application/json
+
+{
+  "custom_capability_fields": {
+    "retained_key": {"value": 2},
+    "explicitly_unknown_key": {"status": "unknown"}
+  }
+}
+```
+
+The omitted key in `custom_capability_fields` is removed; other top-level
+offering fields and sibling offerings are untouched. An empty object clears an
+optional map. `null` does not mean deletion and is rejected. A missing key means
+not declared, while an explicit valid `unknown` value remains declared as
+unknown. Provider `custom_provider_fields` follows the same rule. Immutable
+identities and controlled offering `service_category`/`part_family` cannot be
+removed or changed through PATCH.
+
+## Permanent deletion
+
+```text
+DELETE /api/providers/{provider_id}
+DELETE /api/offerings/{offering_id}
+```
+
+Every DELETE requires the current strong ETag, independently of the deployment's
+PATCH concurrency setting. GET the target immediately before deletion and send:
+
+```text
+If-Match: "<ETag from GET>"
+```
+
+`X-MDC-If-Match` remains available as the pilot transport compatibility header.
+A successful deletion returns `200` with an honest lifecycle receipt, for
+example:
+
+```json
+{
+  "contract_version": "1.0",
+  "status": "accepted",
+  "operation": "delete",
+  "target": {
+    "entity_type": "offering",
+    "entity_id": "example_provider_precision_gears"
+  },
+  "provider_id": "example_provider",
+  "publication_id": "<opaque publication UUID>",
+  "publication_status": "sync_pending",
+  "sync_status": "pending"
+}
+```
+
+Provider deletion permanently removes the provider's operational row and its
+offerings, certifications, and capability data. Offering deletion removes only
+that offering, preserves its parent and all siblings (including same-category
+siblings), and changes the parent's aggregate ETag. Historical full payloads for
+the deleted scope are redacted; only minimal entity identifiers and pending
+delete tombstone/outbox evidence remain. `pending` means PostgreSQL accepted the
+deletion but RDF/Fuseki has not necessarily converged. Do not claim immediate
+search removal or repeatedly submit the DELETE.
+
+DELETE-specific responses are `428` when the precondition is missing, `400` for
+a malformed/weak/list/wildcard precondition, `412` when it is stale, and `404`
+for a missing target or a repeated DELETE using the prior valid ETag.
+
 ## Adding an offering
 
 ```text
@@ -224,7 +301,8 @@ For production-like environments:
 - catalogue synchronization is disabled by default until explicit enablement;
 - trusted lifecycle authentication defaults to required;
 - actor attribution defaults to required for writes;
-- optimistic concurrency defaults to required for PATCH.
+- optimistic concurrency defaults to required for PATCH; DELETE always requires
+  the current strong ETag.
 
 The temporary pilot may run on Vercel + managed PostgreSQL. The future MaaSAI deployment may run on AWS. The API and persistence contract intentionally does not depend on either cloud provider.
 

@@ -33,6 +33,8 @@ from apps.providers.provider_lifecycle_write_service import (
     LifecyclePreconditionFailed,
     LifecycleWriteError,
     add_provider_offering,
+    delete_offering,
+    delete_provider,
     register_provider,
     update_offering,
     update_provider,
@@ -223,6 +225,34 @@ def provider_update(request, provider_id):
     return _write_response(result, status.HTTP_200_OK)
 
 
+def provider_delete(request, provider_id):
+    security, security_error = _trusted_context_or_response(request, write=True)
+    if security_error is not None:
+        return security_error
+    if not getattr(settings, "MDC_PROVIDER_PUBLICATION_ENABLED", False):
+        return _write_disabled()
+    expected_etag, precondition_error = get_if_match_or_error(
+        request, required=True
+    )
+    if precondition_error is not None:
+        return precondition_error
+    try:
+        result = delete_provider(
+            provider_id,
+            actor_id=security.actor_id,
+            expected_etag=expected_etag,
+        )
+    except (
+        LifecycleConflict,
+        LifecycleInvalidOfferingIdentity,
+        LifecycleNotFound,
+        LifecyclePreconditionFailed,
+        LifecycleWriteError,
+    ) as exc:
+        return _write_exception_response(exc)
+    return _write_response(result, status.HTTP_200_OK)
+
+
 def provider_offering_create(request, provider_id):
     security, security_error = _trusted_context_or_response(request, write=True)
     if security_error is not None:
@@ -278,6 +308,34 @@ def offering_update(request, offering_id):
     except ValidationError as exc:
         return _invalid("invalid_offering_update", "The offering update is invalid.", exc.detail)
     except (LifecycleConflict, LifecycleInvalidOfferingIdentity, LifecycleNotFound, LifecyclePreconditionFailed, LifecycleWriteError) as exc:
+        return _write_exception_response(exc)
+    return _write_response(result, status.HTTP_200_OK)
+
+
+def offering_delete(request, offering_id):
+    security, security_error = _trusted_context_or_response(request, write=True)
+    if security_error is not None:
+        return security_error
+    if not getattr(settings, "MDC_PROVIDER_PUBLICATION_ENABLED", False):
+        return _write_disabled()
+    expected_etag, precondition_error = get_if_match_or_error(
+        request, required=True
+    )
+    if precondition_error is not None:
+        return precondition_error
+    try:
+        result = delete_offering(
+            offering_id,
+            actor_id=security.actor_id,
+            expected_etag=expected_etag,
+        )
+    except (
+        LifecycleConflict,
+        LifecycleInvalidOfferingIdentity,
+        LifecycleNotFound,
+        LifecyclePreconditionFailed,
+        LifecycleWriteError,
+    ) as exc:
         return _write_exception_response(exc)
     return _write_response(result, status.HTTP_200_OK)
 
