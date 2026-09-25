@@ -75,6 +75,7 @@ assert production.DATABASES == base.DATABASES
 assert production.MDC_PROVIDER_PUBLICATION_ENABLED is False
 assert production.MDC_PROVIDER_VALIDATION_ENABLED is False
 assert production.MDC_CATALOG_SYNC_ENABLED is False
+assert production.MDC_CATALOG_AUTO_SYNC_ENABLED is False
 assert production.MDC_PROVIDER_LIFECYCLE_AUTH_REQUIRED is True
 assert production.MDC_PROVIDER_LIFECYCLE_ACTOR_REQUIRED is True
 assert production.MDC_PROVIDER_CONCURRENCY_REQUIRED is True
@@ -90,6 +91,7 @@ assert production.MDC_PROVIDER_CONCURRENCY_REQUIRED is True
                     MDC_PROVIDER_PUBLICATION_ENABLED="",
                     MDC_PROVIDER_VALIDATION_ENABLED="",
                     MDC_CATALOG_SYNC_ENABLED="",
+                    MDC_CATALOG_AUTO_SYNC_ENABLED="",
                     MDC_PROVIDER_LIFECYCLE_AUTH_REQUIRED="",
                     MDC_PROVIDER_LIFECYCLE_ACTOR_REQUIRED="",
                     MDC_PROVIDER_CONCURRENCY_REQUIRED="",

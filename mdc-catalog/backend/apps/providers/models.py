@@ -150,3 +150,15 @@ class CatalogueSyncEvent(models.Model):
 
     def __str__(self):
         return f"{self.operation} {self.entity_type} {self.entity_id} ({self.status})"
+
+
+class CatalogueSyncLease(models.Model):
+    """Database-visible mutex for complete catalogue graph replacements."""
+
+    key = models.CharField(max_length=64, primary_key=True)
+    owner_token = models.UUIDField(null=True, blank=True)
+    expires_at = models.DateTimeField(null=True, blank=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return self.key

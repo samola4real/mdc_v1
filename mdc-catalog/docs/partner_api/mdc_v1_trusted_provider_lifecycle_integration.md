@@ -122,7 +122,7 @@ publication_status: sync_pending
 sync_status: pending
 ```
 
-This means the operational provider state is durable even though RDF/Fuseki convergence is still pending.
+This means the operational provider state is durable even though RDF/Fuseki convergence is still pending. It is the normal response while automatic publication mode is disabled.
 
 ## Validation-only request
 
@@ -219,8 +219,8 @@ If-Match: "<ETag from GET>"
 ```
 
 `X-MDC-If-Match` remains available as the pilot transport compatibility header.
-A successful deletion returns `200` with an honest lifecycle receipt, for
-example:
+A successful deletion returns `200` with an honest lifecycle receipt. In
+enabled automatic-publication mode, for example:
 
 ```json
 {
@@ -233,8 +233,8 @@ example:
   },
   "provider_id": "example_provider",
   "publication_id": "<opaque publication UUID>",
-  "publication_status": "sync_pending",
-  "sync_status": "pending"
+  "publication_status": "synced",
+  "sync_status": "succeeded"
 }
 ```
 
@@ -242,10 +242,12 @@ Provider deletion permanently removes the provider's operational row and its
 offerings, certifications, and capability data. Offering deletion removes only
 that offering, preserves its parent and all siblings (including same-category
 siblings), and changes the parent's aggregate ETag. Historical full payloads for
-the deleted scope are redacted; only minimal entity identifiers and pending
-delete tombstone/outbox evidence remain. `pending` means PostgreSQL accepted the
-deletion but RDF/Fuseki has not necessarily converged. Do not claim immediate
-search removal or repeatedly submit the DELETE.
+the deleted scope are redacted; only minimal entity identifiers and delete
+tombstone/outbox evidence remain. In automatic mode the shown
+`synced`/`succeeded` receipt means the same committed catalogue revision was
+verified through the canonical Fuseki query endpoint. When automatic mode is
+off, the receipt remains `sync_pending`/`pending` and does not claim immediate
+search removal. Do not repeatedly submit the DELETE.
 
 DELETE-specific responses are `428` when the precondition is missing, `400` for
 a malformed/weak/list/wildcard precondition, `412` when it is stale, and `404`
@@ -286,11 +288,50 @@ Trusted lifecycle clients should handle these HTTP classes:
 
 Error responses are intentionally redacted and do not contain credentials, SQL, filesystem paths, internal database identifiers, or stack traces.
 
-## Retry and synchronization expectations
+## Automatic publication and retry expectations
 
-Accepted provider writes are committed to PostgreSQL before asynchronous/operator semantic synchronization. Fuseki failure therefore does not erase the accepted operational state.
+Automatic publication is an explicit deployment opt-in requiring both
+`MDC_CATALOG_SYNC_ENABLED=True` and `MDC_CATALOG_AUTO_SYNC_ENABLED=True`. The
+configured `SERVICE_DISCOVERY_FUSEKI_QUERY_ENDPOINT` and
+`SERVICE_DISCOVERY_FUSEKI_GRAPH_STORE_ENDPOINT` must use the same origin and
+dataset, with the Graph Store URL selecting the default graph.
 
-The M7 outbox records pending/failed synchronization work and supports retries. Integration clients should not repeatedly resubmit an accepted provider write merely because semantic synchronization is still pending. Use the publication/sync status returned by MDC and the agreed operational monitoring/retry mechanism.
+The lifecycle database transaction commits before any Fuseki HTTP call. MDC then
+rebuilds the entire graph from current active PostgreSQL state, replaces the
+default graph, and queries a revision marker through the canonical query
+endpoint. A successful automatic-mode response keeps the normal `201` or `200`
+status and reports:
+
+```json
+{
+  "status": "completed",
+  "publication_status": "synced",
+  "sync_status": "succeeded"
+}
+```
+
+The next canonical search is authoritative Fuseki-only in this mode. If its
+revision cannot be confirmed, search returns a safe `503`; MDC does not silently
+serve stale checked-in RDF or YAML.
+
+PostgreSQL and Fuseki do not share one transaction. If Graph Store transport,
+timeout, configuration, or query verification fails after the database commit,
+the lifecycle response is `503` with `status: accepted`, the safe
+`publication_id`, and `sync_failed`/`failed` or `sync_pending`/`pending`. This is
+explicitly not a completed publication. The operational mutation and outbox
+remain durable; do not resubmit registration or another non-idempotent mutation.
+An automatically scheduled trusted worker retries the publication with the
+existing `sync_service_discovery_catalogue` command, without Marketplace action.
+
+When automatic mode is disabled, accepted provider writes keep the existing
+`sync_pending` response and operator-managed behavior. Fuseki failure therefore
+never erases accepted PostgreSQL state in either mode.
+
+The durable outbox records pending/failed synchronization work and supports
+idempotent full-graph retries. Integration clients should not repeatedly
+resubmit an accepted provider write merely because semantic synchronization is
+still pending. Use the publication/sync status returned by MDC and the agreed
+automated operational monitoring/retry mechanism.
 
 ## Deployment policy
 
@@ -299,10 +340,21 @@ For production-like environments:
 - provider publication is disabled by default until explicit enablement;
 - provider validation is disabled by default until explicit enablement;
 - catalogue synchronization is disabled by default until explicit enablement;
+- automatic lifecycle publication is independently disabled by default;
 - trusted lifecycle authentication defaults to required;
 - actor attribution defaults to required for writes;
 - optimistic concurrency defaults to required for PATCH; DELETE always requires
   the current strong ETag.
+
+M5 deployment must apply the `CatalogueSyncLease` migration, configure both
+opt-in flags, configure the same Fuseki dataset as
+`.../{dataset}/sparql` and `.../{dataset}/data?default`, provide write
+credentials only through `SERVICE_DISCOVERY_FUSEKI_USERNAME` and
+`SERVICE_DISCOVERY_FUSEKI_PASSWORD` when required, and choose bounded
+`FUSEKI_TIMEOUT_SECONDS`/`FUSEKI_SYNC_TIMEOUT_SECONDS` values within the request
+runtime limit. It must also schedule the existing synchronization command to
+retry pending/failed publications and recover stale processing leases. M4 does
+not apply those settings or create that scheduler.
 
 The temporary pilot may run on Vercel + managed PostgreSQL. The future MaaSAI deployment may run on AWS. The API and persistence contract intentionally does not depend on either cloud provider.
 

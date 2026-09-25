@@ -111,6 +111,10 @@ MDC_CATALOG_SYNC_ENABLED = env_bool(
     "MDC_CATALOG_SYNC_ENABLED",
     False,
 )
+MDC_CATALOG_AUTO_SYNC_ENABLED = env_bool(
+    "MDC_CATALOG_AUTO_SYNC_ENABLED",
+    False,
+)
 
 # M7.6 trusted provider-lifecycle boundary. Local development remains backwards
 # compatible by default; production settings override the required flags to true.

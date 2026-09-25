@@ -1,6 +1,8 @@
 from unittest.mock import patch
 
-from django.test import SimpleTestCase
+from django.test import SimpleTestCase, override_settings
+
+from apps.providers.catalogue_sync_service import CatalogueSyncVisibilityError
 
 from apps.search.service_discovery_fuseki_service import (
     ServiceDiscoveryFusekiRetrievalError,
@@ -141,3 +143,80 @@ class ServiceDiscoveryRuntimeSearchTests(SimpleTestCase):
 
         with self.assertRaises(ServiceDiscoveryRuntimeSearchError):
             search_service_discovery_with_runtime_backends(self.request)
+
+    @override_settings(MDC_CATALOG_AUTO_SYNC_ENABLED=True)
+    @patch(
+        "apps.search.service_discovery_runtime_search.search_service_discovery_catalog"
+    )
+    @patch(
+        "apps.search.service_discovery_runtime_search.search_service_discovery_catalog_via_local_rdf"
+    )
+    @patch(
+        "apps.search.service_discovery_runtime_search.search_service_discovery_catalog_via_fuseki"
+    )
+    @patch(
+        "apps.search.service_discovery_runtime_search.verify_current_catalogue_visibility"
+    )
+    def test_auto_mode_never_falls_back_when_authoritative_fuseki_fails(
+        self, verify, fuseki, local_rdf, yaml
+    ):
+        verify.return_value = "current-revision"
+        fuseki.side_effect = ServiceDiscoveryFusekiRetrievalError("down")
+
+        with self.assertRaises(ServiceDiscoveryRuntimeSearchError):
+            search_service_discovery_with_runtime_backends(self.request)
+
+        verify.assert_called_once()
+        local_rdf.assert_not_called()
+        yaml.assert_not_called()
+
+    @override_settings(MDC_CATALOG_AUTO_SYNC_ENABLED=True)
+    @patch(
+        "apps.search.service_discovery_runtime_search.search_service_discovery_catalog"
+    )
+    @patch(
+        "apps.search.service_discovery_runtime_search.search_service_discovery_catalog_via_local_rdf"
+    )
+    @patch(
+        "apps.search.service_discovery_runtime_search.search_service_discovery_catalog_via_fuseki"
+    )
+    @patch(
+        "apps.search.service_discovery_runtime_search.verify_current_catalogue_visibility",
+        side_effect=CatalogueSyncVisibilityError("stale"),
+    )
+    def test_auto_mode_rejects_stale_revision_without_any_search_fallback(
+        self, verify, fuseki, local_rdf, yaml
+    ):
+        with self.assertRaises(ServiceDiscoveryRuntimeSearchError):
+            search_service_discovery_with_runtime_backends(self.request)
+
+        verify.assert_called_once()
+        fuseki.assert_not_called()
+        local_rdf.assert_not_called()
+        yaml.assert_not_called()
+
+    @override_settings(MDC_CATALOG_AUTO_SYNC_ENABLED=True)
+    @patch(
+        "apps.search.service_discovery_runtime_search.search_service_discovery_catalog"
+    )
+    @patch(
+        "apps.search.service_discovery_runtime_search.search_service_discovery_catalog_via_local_rdf"
+    )
+    @patch(
+        "apps.search.service_discovery_runtime_search.search_service_discovery_catalog_via_fuseki"
+    )
+    @patch(
+        "apps.search.service_discovery_runtime_search.verify_current_catalogue_visibility",
+        side_effect=["revision-before", "revision-after"],
+    )
+    def test_auto_mode_rejects_catalogue_change_during_search(
+        self, verify, fuseki, local_rdf, yaml
+    ):
+        fuseki.return_value = response("harmonized_fuseki_with_h5_policy")
+
+        with self.assertRaises(ServiceDiscoveryRuntimeSearchError):
+            search_service_discovery_with_runtime_backends(self.request)
+
+        self.assertEqual(verify.call_count, 2)
+        local_rdf.assert_not_called()
+        yaml.assert_not_called()
