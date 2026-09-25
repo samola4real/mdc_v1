@@ -41,6 +41,23 @@ PATCH /api/offerings/{offering_id}
 DELETE /api/offerings/{offering_id}
 ```
 
+### M5 Postman acceptance assets
+
+The repository includes an ordered disposable lifecycle collection and a
+secret-free environment template:
+
+- `MaaSAI_MDC_M5_Lifecycle.postman_collection.json`
+- `MaaSAI_MDC_M5_Lifecycle.postman_environment.json`
+
+Set `base_url` only to the reviewed Preview or Production deployment approved
+for lifecycle mutation, then run the collection in order. It generates a unique
+`postman_m5_*` provider, captures strong ETags, exercises automatic publication
+and immediate canonical search, checks negative concurrency/validation cases,
+and deletes the disposable provider at the end. It intentionally sends no
+Bearer token or actor header because it targets only the approved temporary
+plenary no-auth profile. Do not use it against another environment without an
+explicit configuration review.
+
 ### Authentication
 
 When the trusted lifecycle boundary is enabled, send:
