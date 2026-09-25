@@ -69,6 +69,50 @@ POST /api/provider-publication
 
 The request uses the harmonized provider-publication contract. Provider-supplied business/free-text information that is not an official MDC controlled vocabulary value belongs in the supported `custom_*` staging fields rather than being promoted into controlled search fields.
 
+Each item in `offerings` may include an optional stable `offering_id`. The ID
+must be lower snake case, no longer than 512 characters, and begin with the
+owning `provider_id` followed by an underscore. The same provider may submit
+several independently identified offerings in the same `service_category` and
+`part_family`; category classifies an offering and is not its identity.
+
+If `offering_id` is omitted, the first unused provider/category identity keeps
+the legacy form:
+
+```text
+{provider_id}_{service_category}
+```
+
+When that ID is already reserved, MDC deterministically appends a safe slug of
+`offering_name`:
+
+```text
+{provider_id}_{service_category}_{offering_name_slug}
+```
+
+For example, two initial gear offerings named `Standard gear line` and
+`Heavy duty gear line` can resolve to:
+
+```json
+{
+  "offerings": [
+    {
+      "service_category": "precision_gears",
+      "offering_name": "Standard gear line"
+    },
+    {
+      "offering_id": "example_provider_heavy_duty_gears",
+      "service_category": "precision_gears",
+      "offering_name": "Heavy duty gear line"
+    }
+  ]
+}
+```
+
+The first omitted ID remains `example_provider_precision_gears`; the second
+explicit ID is preserved exactly. Duplicate IDs in one registration are a
+validation error. An identity already present in persistence is a conflict and
+is never overwritten.
+
 A successful registration is persisted transactionally in PostgreSQL. MDC creates publication history and pending semantic synchronization events. The response can therefore report a state such as:
 
 ```text
@@ -136,7 +180,17 @@ This prevents a stale edit screen from silently overwriting a newer accepted upd
 POST /api/providers/{provider_id}/offerings
 ```
 
-The provider identity comes from the path. MDC owns/generates the offering identifier. Client-supplied `provider_id` or MDC-owned `offering_id` values are rejected in the offering body.
+The provider identity comes from the path. The body may contain the same
+optional stable `offering_id` described for initial registration. If omitted,
+MDC uses the legacy provider/category ID when free, then the deterministic
+offering-name form when the legacy ID is taken. If that fallback is also taken,
+the request returns a conflict and the client must supply a distinct explicit
+ID.
+
+`offering_id` is accepted only in an initial `offerings[]` item or this offering
+creation body. It is immutable under PATCH. Client-supplied `provider_id`,
+cross-provider IDs, unsafe IDs, and `offering_id` nested inside custom or
+capability data are rejected.
 
 ## Error semantics
 

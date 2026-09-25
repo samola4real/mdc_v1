@@ -311,7 +311,7 @@ erDiagram
 
 ### 8.3 Transaction rules
 
-Registration validates the full publication before entering an atomic write. A successful new provider is active, its certifications and offerings are created in deterministic order, a create publication becomes `sync_pending`, and provider/offering outbox events are committed with it. The generated offering identity is `{provider_id}_{service_category}`. A confirmed duplicate provider returns `409`; an integrity race is handled without leaving partial history.
+Registration validates the full publication before entering an atomic write. A successful new provider is active, its certifications and offerings are created in deterministic order, a create publication becomes `sync_pending`, and provider/offering outbox events are committed with it. An offering may supply an owned stable `offering_id`; when omitted, the first unused category identity keeps `{provider_id}_{service_category}` and later same-category offerings use the deterministic `{provider_id}_{service_category}_{offering_name_slug}` fallback. A confirmed duplicate provider or offering identity returns `409`; an integrity race is handled without leaving partial history.
 
 Provider PATCH locks the provider row, merges only allowed fields, revalidates the complete state, replaces supplied list/object fields, rewrites certifications when supplied, and creates a provider event. Offering creation locks the parent provider to allocate a stable next sequence. Offering PATCH locks both provider and offering, preserves identity/category/family/sequence, revalidates the merged offering, touches the provider revision, and creates an offering event.
 
@@ -362,7 +362,7 @@ Custom fields do not create new searchable controlled properties by themselves. 
 
 ### 9.4 Identity ownership
 
-The client chooses `provider_id`, which must follow the lower snake-case identifier rules. The server owns offering identity using `{provider_id}_{service_category}`. Clients must not supply `offering_id`, `facility_id`, `material_id`, or `grade_id`. Provider identity, offering identity, service category, and part family are immutable through PATCH. To prevent silent semantic movement, create a separate offering rather than trying to change an existing offering's controlled identity.
+The client chooses `provider_id`, which must follow the lower snake-case identifier rules. At offering-creation locations only, the client may supply a stable lower-snake-case `offering_id` of at most 512 characters beginning with `{provider_id}_`; otherwise MDC derives the legacy category ID and, when needed, the deterministic offering-name fallback. `facility_id`, `material_id`, `grade_id`, cross-provider IDs, and identity fields nested elsewhere remain rejected. Provider identity, offering identity, service category, and part family are immutable through PATCH. To prevent silent semantic movement, create a separate offering rather than trying to change an existing offering's controlled identity.
 
 ---
 

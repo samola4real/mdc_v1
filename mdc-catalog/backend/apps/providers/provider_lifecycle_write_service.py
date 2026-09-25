@@ -18,8 +18,11 @@ from apps.providers.models import (
     ProviderPublication,
 )
 from apps.providers.service_discovery_publication import (
+    OfferingIdentityError,
     generate_offering_id,
+    generate_named_offering_id,
     normalize_service_discovery_publication,
+    validate_offering_id,
 )
 
 
@@ -40,6 +43,10 @@ class LifecyclePreconditionFailed(Exception):
 
 class LifecycleWriteError(Exception):
     """Safe boundary for unexpected persistence failures."""
+
+
+class LifecycleInvalidOfferingIdentity(Exception):
+    """A creation request cannot produce an owned, stable offering identity."""
 
 
 OFFERING_JSON_FIELDS = (
@@ -170,6 +177,38 @@ def _create_offering(provider, item, sequence_index, *, offering_id=None):
     )
 
 
+def _resolve_new_offering_id(provider_id, offering_data):
+    explicit_id = offering_data.get("offering_id")
+    if explicit_id is not None:
+        try:
+            offering_id = validate_offering_id(
+                explicit_id, provider_id=provider_id
+            )
+        except OfferingIdentityError as exc:
+            raise LifecycleInvalidOfferingIdentity from exc
+        if Offering.objects.filter(offering_id=offering_id).exists():
+            raise LifecycleConflict("offering_already_exists")
+        return offering_id
+
+    legacy_id = generate_offering_id(
+        provider_id, offering_data["service_category"]
+    )
+    if not Offering.objects.filter(offering_id=legacy_id).exists():
+        return legacy_id
+
+    try:
+        named_id = generate_named_offering_id(
+            provider_id,
+            offering_data["service_category"],
+            offering_data["offering_name"],
+        )
+    except OfferingIdentityError as exc:
+        raise LifecycleInvalidOfferingIdentity from exc
+    if Offering.objects.filter(offering_id=named_id).exists():
+        raise LifecycleConflict("offering_already_exists")
+    return named_id
+
+
 def _entity_etag(entity_type, row):
     external_id = row.provider_id if entity_type == "provider" else row.offering_id
     return build_entity_etag(entity_type, external_id, row.updated_at)
@@ -216,6 +255,11 @@ def register_provider(validated_data, submitted_payload, *, actor_id=None):
     normalized = normalize_service_discovery_publication(validated_data)
     if Provider.objects.filter(provider_id=provider_id).exists():
         raise LifecycleConflict("provider_already_exists")
+    offering_ids = [
+        offering["offering_id"] for offering in normalized["offerings"]
+    ]
+    if Offering.objects.filter(offering_id__in=offering_ids).exists():
+        raise LifecycleConflict("offering_already_exists")
     try:
         with transaction.atomic():
             provider = Provider.objects.create(
@@ -259,6 +303,8 @@ def register_provider(validated_data, submitted_payload, *, actor_id=None):
         try:
             if Provider.objects.filter(provider_id=provider_id).exists():
                 raise LifecycleConflict("provider_already_exists") from exc
+            if Offering.objects.filter(offering_id__in=offering_ids).exists():
+                raise LifecycleConflict("offering_already_exists") from exc
         except DatabaseError:
             pass
         raise LifecycleWriteError from exc
@@ -328,18 +374,20 @@ def add_provider_offering(
     *,
     actor_id=None,
 ):
-    offering_id = generate_offering_id(provider_id, offering_data["service_category"])
+    offering_id = offering_data.get("offering_id")
     try:
         with transaction.atomic():
             try:
                 provider = Provider.objects.select_for_update().get(provider_id=provider_id)
             except Provider.DoesNotExist as exc:
                 raise LifecycleNotFound("provider") from exc
-            if Offering.objects.filter(offering_id=offering_id).exists():
-                raise LifecycleConflict("offering_already_exists")
+            offering_id = _resolve_new_offering_id(provider_id, offering_data)
             maximum = provider.offerings.aggregate(value=Max("sequence_index"))["value"]
             offering = _create_offering(
-                provider, offering_data, 0 if maximum is None else maximum + 1
+                provider,
+                offering_data,
+                0 if maximum is None else maximum + 1,
+                offering_id=offering_id,
             )
             _touch_provider(provider)
             publication = _create_publication(
@@ -358,7 +406,7 @@ def add_provider_offering(
             offering_id=offering.offering_id,
             etag=_entity_etag("offering", offering),
         )
-    except LifecycleConflict:
+    except (LifecycleConflict, LifecycleInvalidOfferingIdentity):
         raise
     except IntegrityError as exc:
         try:

@@ -28,6 +28,7 @@ from apps.api.provider_lifecycle_serializers import (
 )
 from apps.providers.provider_lifecycle_write_service import (
     LifecycleConflict,
+    LifecycleInvalidOfferingIdentity,
     LifecycleNotFound,
     LifecyclePreconditionFailed,
     LifecycleWriteError,
@@ -90,6 +91,17 @@ def _invalid(code, message, details):
 
 
 def _write_exception_response(exc):
+    if isinstance(exc, LifecycleInvalidOfferingIdentity):
+        return Response(
+            build_public_error(
+                code="invalid_offering_id",
+                message=(
+                    "A stable offering identity could not be generated; "
+                    "supply a distinct valid offering_id."
+                ),
+            ),
+            status=status.HTTP_400_BAD_REQUEST,
+        )
     if isinstance(exc, LifecycleNotFound):
         return Response(
             build_public_error(
@@ -176,7 +188,7 @@ def provider_publication(request):
             payload,
             actor_id=security.actor_id,
         )
-    except (LifecycleConflict, LifecycleNotFound, LifecyclePreconditionFailed, LifecycleWriteError) as exc:
+    except (LifecycleConflict, LifecycleInvalidOfferingIdentity, LifecycleNotFound, LifecyclePreconditionFailed, LifecycleWriteError) as exc:
         return _write_exception_response(exc)
     return _write_response(result, status.HTTP_201_CREATED)
 
@@ -206,7 +218,7 @@ def provider_update(request, provider_id):
             actor_id=security.actor_id,
             expected_etag=expected_etag,
         )
-    except (LifecycleConflict, LifecycleNotFound, LifecyclePreconditionFailed, LifecycleWriteError) as exc:
+    except (LifecycleConflict, LifecycleInvalidOfferingIdentity, LifecycleNotFound, LifecyclePreconditionFailed, LifecycleWriteError) as exc:
         return _write_exception_response(exc)
     return _write_response(result, status.HTTP_200_OK)
 
@@ -220,7 +232,10 @@ def provider_offering_create(request, provider_id):
     payload, error_response = _parse_contract_or_response(request)
     if error_response is not None:
         return error_response
-    serializer = OfferingCreateSerializer(data=payload)
+    serializer = OfferingCreateSerializer(
+        data=payload,
+        context={"provider_id": provider_id},
+    )
     try:
         serializer.is_valid(raise_exception=True)
         offering = validate_lifecycle_offering(serializer.validated_data)
@@ -233,7 +248,7 @@ def provider_offering_create(request, provider_id):
             payload,
             actor_id=security.actor_id,
         )
-    except (LifecycleConflict, LifecycleNotFound, LifecyclePreconditionFailed, LifecycleWriteError) as exc:
+    except (LifecycleConflict, LifecycleInvalidOfferingIdentity, LifecycleNotFound, LifecyclePreconditionFailed, LifecycleWriteError) as exc:
         return _write_exception_response(exc)
     return _write_response(result, status.HTTP_201_CREATED)
 
@@ -262,7 +277,7 @@ def offering_update(request, offering_id):
         )
     except ValidationError as exc:
         return _invalid("invalid_offering_update", "The offering update is invalid.", exc.detail)
-    except (LifecycleConflict, LifecycleNotFound, LifecyclePreconditionFailed, LifecycleWriteError) as exc:
+    except (LifecycleConflict, LifecycleInvalidOfferingIdentity, LifecycleNotFound, LifecyclePreconditionFailed, LifecycleWriteError) as exc:
         return _write_exception_response(exc)
     return _write_response(result, status.HTTP_200_OK)
 

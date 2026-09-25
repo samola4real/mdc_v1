@@ -10,9 +10,15 @@ from apps.api.service_discovery_publication_serializers import (
     validate_publication_metadata,
 )
 from apps.providers.models import Offering, Provider
+from apps.providers.service_discovery_publication import (
+    OfferingIdentityError,
+    validate_offering_id,
+)
 
 
 class StrictPartialSerializer(serializers.Serializer):
+    allow_offering_creation_ids = False
+
     def to_internal_value(self, data):
         if not isinstance(data, dict):
             raise serializers.ValidationError("The request payload must be an object.")
@@ -22,7 +28,10 @@ class StrictPartialSerializer(serializers.Serializer):
                 {"unsupported_fields": sorted(unsupported)}
             )
         _reject_forbidden_fields(data)
-        _reject_externally_owned_identifiers(data)
+        _reject_externally_owned_identifiers(
+            data,
+            allow_offering_creation_ids=self.allow_offering_creation_ids,
+        )
         _validate_json_safety(data)
         return super().to_internal_value(data)
 
@@ -52,6 +61,9 @@ class ProviderPatchSerializer(StrictPartialSerializer):
 
 
 class OfferingCreateSerializer(StrictPartialSerializer):
+    allow_offering_creation_ids = True
+
+    offering_id = serializers.CharField(required=False, max_length=512)
     service_category = serializers.CharField(max_length=255)
     offering_name = serializers.CharField(max_length=255)
     part_family = serializers.CharField(max_length=255)
@@ -64,6 +76,20 @@ class OfferingCreateSerializer(StrictPartialSerializer):
     generic_capabilities = serializers.DictField(required=False, default=dict)
     custom_offering_fields = serializers.DictField(required=False, default=dict)
     custom_capability_fields = serializers.DictField(required=False, default=dict)
+
+    def validate(self, attrs):
+        attrs = super().validate(attrs)
+        if "offering_id" in attrs:
+            try:
+                validate_offering_id(
+                    attrs["offering_id"],
+                    provider_id=self.context.get("provider_id"),
+                )
+            except OfferingIdentityError as exc:
+                raise serializers.ValidationError(
+                    {"offering_id": str(exc)}
+                ) from exc
+        return attrs
 
 
 class OfferingPatchSerializer(StrictPartialSerializer):
