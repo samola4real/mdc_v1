@@ -1,6 +1,7 @@
 from copy import deepcopy
 
 from django.conf import settings
+from django.db import DatabaseError
 from rest_framework import status
 from rest_framework.decorators import api_view
 from rest_framework.exceptions import ValidationError
@@ -39,6 +40,11 @@ from apps.providers.provider_lifecycle_write_service import (
     update_offering,
     update_provider,
 )
+from apps.providers.catalogue_sync_service import (
+    CatalogueSyncError,
+    process_publication_sync,
+)
+from apps.providers.models import ProviderPublication
 from apps.providers.service_discovery_publication import (
     normalize_service_discovery_publication,
 )
@@ -158,6 +164,45 @@ def _trusted_context_or_response(request, *, write=False):
 def _write_response(result, http_status):
     result = dict(result)
     etag = result.pop("_etag", None)
+    if getattr(settings, "MDC_CATALOG_AUTO_SYNC_ENABLED", False):
+        publication_id = result["publication_id"]
+        try:
+            sync_result = process_publication_sync(
+                publication_id,
+                verify_visibility=True,
+            )
+        except (CatalogueSyncError, DatabaseError):
+            sync_result = {"status": "pending"}
+
+        publication = ProviderPublication.objects.get(pk=publication_id)
+        if (
+            sync_result["status"] in {"succeeded", "noop"}
+            and publication.status == ProviderPublication.Status.SYNCED
+        ):
+            result["status"] = "completed"
+            result["publication_status"] = publication.status
+            result["sync_status"] = "succeeded"
+            return attach_etag(Response(result, status=http_status), etag)
+
+        sync_status = (
+            "failed"
+            if publication.status == ProviderPublication.Status.SYNC_FAILED
+            else "pending"
+        )
+        result["publication_status"] = publication.status
+        result["sync_status"] = sync_status
+        result["error"] = build_public_error(
+            code="catalogue_publication_incomplete",
+            message=(
+                "The lifecycle change is committed, but authoritative catalogue "
+                "publication is not complete. Automated recovery can retry the "
+                "recorded publication without repeating the lifecycle mutation."
+            ),
+        )["error"]
+        return attach_etag(
+            Response(result, status=status.HTTP_503_SERVICE_UNAVAILABLE),
+            etag,
+        )
     return attach_etag(Response(result, status=http_status), etag)
 
 

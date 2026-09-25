@@ -164,6 +164,7 @@ from config import settings_production as production
 assert production.MDC_PROVIDER_PUBLICATION_ENABLED is True
 assert production.MDC_PROVIDER_VALIDATION_ENABLED is True
 assert production.MDC_CATALOG_SYNC_ENABLED is False
+assert production.MDC_CATALOG_AUTO_SYNC_ENABLED is False
 assert production.MDC_PROVIDER_LIFECYCLE_AUTH_REQUIRED is False
 assert production.MDC_PROVIDER_LIFECYCLE_ACTOR_REQUIRED is False
 assert production.MDC_PROVIDER_CONCURRENCY_REQUIRED is True
@@ -178,6 +179,7 @@ assert production.MDC_PROVIDER_CONCURRENCY_REQUIRED is True
             MDC_PROVIDER_PUBLICATION_ENABLED="True",
             MDC_PROVIDER_VALIDATION_ENABLED="True",
             MDC_CATALOG_SYNC_ENABLED="False",
+            MDC_CATALOG_AUTO_SYNC_ENABLED="False",
             MDC_PROVIDER_LIFECYCLE_AUTH_REQUIRED="False",
             MDC_PROVIDER_LIFECYCLE_SERVICE_TOKEN="",
             MDC_PROVIDER_LIFECYCLE_ACTOR_REQUIRED="False",

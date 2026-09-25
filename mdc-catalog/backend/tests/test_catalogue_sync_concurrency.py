@@ -1,15 +1,27 @@
 from io import StringIO
+from datetime import timedelta
+import uuid
 from unittest.mock import patch
 
 from django.core.management import call_command
 from django.core.management.base import CommandError
 from django.test import TestCase, override_settings
+from django.utils import timezone
+
+from apps.ontology.service_discovery_rdf_mappings import offering_resource
 
 from apps.providers.catalogue_sync_service import (
+    CatalogueSyncBusy,
     process_pending_catalogue_sync,
     process_publication_sync,
 )
-from apps.providers.models import CatalogueSyncEvent, Offering, Provider, ProviderPublication
+from apps.providers.models import (
+    CatalogueSyncEvent,
+    CatalogueSyncLease,
+    Offering,
+    Provider,
+    ProviderPublication,
+)
 
 
 @override_settings(
@@ -46,18 +58,21 @@ class CatalogueSyncConcurrencyTests(TestCase):
         )
         return provider, publication, event
 
-    def test_new_committed_write_during_put_keeps_original_attempt_retryable(self):
+    def test_new_committed_write_during_put_rebuilds_before_success(self):
         provider, publication, event = self.make_publication("first")
+        newer = {"publication": None}
 
         def commit_newer_write(_graph, **_kwargs):
-            newer = ProviderPublication.objects.create(
+            if newer["publication"] is not None:
+                return
+            newer["publication"] = ProviderPublication.objects.create(
                 provider=provider,
                 provider_id_snapshot=provider.provider_id,
                 operation=ProviderPublication.Operation.UPDATE,
                 status=ProviderPublication.Status.SYNC_PENDING,
             )
             CatalogueSyncEvent.objects.create(
-                publication=newer,
+                publication=newer["publication"],
                 entity_type=CatalogueSyncEvent.EntityType.PROVIDER,
                 entity_id=provider.provider_id,
                 operation=CatalogueSyncEvent.Operation.UPSERT,
@@ -66,15 +81,15 @@ class CatalogueSyncConcurrencyTests(TestCase):
         with patch(
             "apps.providers.catalogue_sync_service.replace_service_discovery_graph_in_fuseki",
             side_effect=commit_newer_write,
-        ):
+        ) as replace:
             result = process_publication_sync(publication.id)
 
-        self.assertEqual(result["status"], "failed")
-        self.assertEqual(result["failure_code"], "catalogue_changed_during_sync")
+        self.assertEqual(result["status"], "succeeded")
+        self.assertEqual(replace.call_count, 2)
         publication.refresh_from_db()
         event.refresh_from_db()
-        self.assertEqual(publication.status, ProviderPublication.Status.SYNC_FAILED)
-        self.assertEqual(event.status, CatalogueSyncEvent.Status.FAILED)
+        self.assertEqual(publication.status, ProviderPublication.Status.SYNCED)
+        self.assertEqual(event.status, CatalogueSyncEvent.Status.SUCCEEDED)
         self.assertEqual(event.attempt_count, 1)
         self.assertEqual(
             CatalogueSyncEvent.objects.filter(status=CatalogueSyncEvent.Status.PENDING).count(),
@@ -95,6 +110,63 @@ class CatalogueSyncConcurrencyTests(TestCase):
         event2.refresh_from_db()
         self.assertEqual(event1.status, CatalogueSyncEvent.Status.SUCCEEDED)
         self.assertEqual(event2.status, CatalogueSyncEvent.Status.PENDING)
+
+    def test_active_global_lease_prevents_overlapping_graph_replace(self):
+        _provider, publication, event = self.make_publication("leased")
+        CatalogueSyncLease.objects.update_or_create(
+            key="service_discovery_catalogue",
+            defaults={
+                "owner_token": uuid.uuid4(),
+                "expires_at": timezone.now() + timedelta(minutes=5),
+            },
+        )
+        with patch(
+            "apps.providers.catalogue_sync_service.replace_service_discovery_graph_in_fuseki"
+        ) as replace:
+            with self.assertRaises(CatalogueSyncBusy):
+                process_publication_sync(publication.id)
+        replace.assert_not_called()
+        event.refresh_from_db()
+        self.assertEqual(event.status, CatalogueSyncEvent.Status.PENDING)
+        self.assertEqual(event.attempt_count, 0)
+
+    def test_retrying_old_upsert_after_delete_cannot_resurrect_offering(self):
+        provider, old_publication, old_event = self.make_publication("deleted")
+        offering_id = "concurrent_deleted_precision_gears"
+        Offering.objects.get(offering_id=offering_id).delete()
+        delete_publication = ProviderPublication.objects.create(
+            provider=provider,
+            provider_id_snapshot=provider.provider_id,
+            operation=ProviderPublication.Operation.DELETE,
+            status=ProviderPublication.Status.SYNC_PENDING,
+        )
+        CatalogueSyncEvent.objects.create(
+            publication=delete_publication,
+            entity_type=CatalogueSyncEvent.EntityType.OFFERING,
+            entity_id=offering_id,
+            operation=CatalogueSyncEvent.Operation.DELETE,
+        )
+        captured = {}
+
+        def capture(graph, **_kwargs):
+            captured["graph"] = graph
+
+        with patch(
+            "apps.providers.catalogue_sync_service.replace_service_discovery_graph_in_fuseki",
+            side_effect=capture,
+        ):
+            result = process_publication_sync(old_publication.id)
+
+        self.assertEqual(result["status"], "succeeded")
+        old_event.refresh_from_db()
+        self.assertEqual(old_event.status, CatalogueSyncEvent.Status.SUCCEEDED)
+        self.assertFalse(
+            any(
+                captured["graph"].triples(
+                    (offering_resource(offering_id), None, None)
+                )
+            )
+        )
 
     def test_rebuild_rejects_outbox_selection_options(self):
         out = StringIO()

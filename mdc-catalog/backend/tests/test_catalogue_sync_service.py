@@ -10,13 +10,16 @@ from apps.ontology.service_discovery_rdf_generator import build_service_discover
 from apps.ontology.service_discovery_rdf_generator import ServiceDiscoveryRdfGenerationError
 from apps.ontology.service_discovery_rdf_mappings import offering_resource
 from apps.providers.catalogue_sync_service import (
+    CATALOGUE_REVISION_PREDICATE,
     CatalogueChangedDuringSync,
     CatalogueSyncConfigurationError,
     CatalogueSyncDisabled,
+    CatalogueSyncTransactionError,
     CatalogueSyncTransportError,
     process_pending_catalogue_sync,
     process_publication_sync,
     rebuild_service_discovery_catalogue,
+    validate_authoritative_fuseki_configuration,
 )
 from apps.providers.models import CatalogueSyncEvent, Offering, Provider, ProviderPublication
 from apps.providers.service_discovery_db_repository import import_service_discovery_provider_records
@@ -35,6 +38,7 @@ class _Response:
 
 @override_settings(
     MDC_CATALOG_SYNC_ENABLED=True,
+    SERVICE_DISCOVERY_FUSEKI_QUERY_ENDPOINT="http://example.invalid/mdc/sparql",
     SERVICE_DISCOVERY_FUSEKI_GRAPH_STORE_ENDPOINT="http://example.invalid/mdc/data?default",
     FUSEKI_SYNC_TIMEOUT_SECONDS=2,
 )
@@ -89,6 +93,27 @@ class CatalogueSyncServiceTests(TestCase):
             self.assertEqual(event.status, CatalogueSyncEvent.Status.PENDING)
             self.assertEqual(event.attempt_count, 0)
 
+    def test_automatic_sync_refuses_to_run_inside_an_open_transaction(self):
+        _provider, _offering, publication, events = self.make_provider()
+        with patch(
+            "apps.providers.catalogue_sync_service.replace_service_discovery_graph_in_fuseki"
+        ) as replace:
+            with self.assertRaises(CatalogueSyncTransactionError):
+                process_publication_sync(publication.id, verify_visibility=True)
+        replace.assert_not_called()
+        for event in events:
+            event.refresh_from_db()
+            self.assertEqual(event.status, CatalogueSyncEvent.Status.PENDING)
+
+    @override_settings(
+        SERVICE_DISCOVERY_FUSEKI_QUERY_ENDPOINT=(
+            "http://example.invalid/other/sparql"
+        )
+    )
+    def test_authoritative_mode_rejects_different_query_and_write_datasets(self):
+        with self.assertRaises(CatalogueSyncConfigurationError):
+            validate_authoritative_fuseki_configuration()
+
     @override_settings(SERVICE_DISCOVERY_FUSEKI_GRAPH_STORE_ENDPOINT="")
     def test_missing_endpoint_fails_safely_after_claim(self):
         _provider, _offering, publication, events = self.make_provider()
@@ -127,6 +152,11 @@ class CatalogueSyncServiceTests(TestCase):
         self.assertEqual(captured["timeout"], 2)
         actual = Graph()
         actual.parse(data=captured["body"].decode("utf-8"), format="turtle")
+        revision_triples = list(
+            actual.triples((None, CATALOGUE_REVISION_PREDICATE, None))
+        )
+        self.assertEqual(len(revision_triples), 1)
+        actual.remove(revision_triples[0])
         self.assertEqual(set(actual), set(expected))
 
     def test_success_settles_all_events_with_one_graph_replace(self):
@@ -223,7 +253,17 @@ class CatalogueSyncServiceTests(TestCase):
         ):
             result = rebuild_service_discovery_catalogue()
         self.assertEqual(result["triple_count"], 0)
-        self.assertEqual(len(captured["graph"]), 0)
+        self.assertEqual(
+            len(
+                list(
+                    captured["graph"].triples(
+                        (None, CATALOGUE_REVISION_PREDICATE, None)
+                    )
+                )
+            ),
+            1,
+        )
+        self.assertEqual(len(captured["graph"]), 1)
 
     def test_batch_limit_processes_each_selected_publication_once(self):
         self.make_provider("one")
@@ -303,9 +343,15 @@ class CatalogueSyncServiceTests(TestCase):
         self.assertEqual(str(context.exception), "Catalogue RDF generation failed.")
 
     def test_rebuild_detects_concurrent_catalogue_change(self):
+        counter = {"value": 0}
+
+        def changing_watermark():
+            counter["value"] += 1
+            return counter["value"], None
+
         with patch(
             "apps.providers.catalogue_sync_service._catalogue_write_watermark",
-            side_effect=[(1, None), (2, None)],
+            side_effect=changing_watermark,
         ), patch(
             "apps.providers.catalogue_sync_service.replace_service_discovery_graph_in_fuseki"
         ) as replace:

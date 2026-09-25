@@ -8,10 +8,12 @@ from apps.ontology.service_discovery_rdf_generator import (
 )
 from apps.providers.catalogue_sync_service import (
     CatalogueChangedDuringSync,
+    CatalogueSyncBusy,
     CatalogueSyncConfigurationError,
     CatalogueSyncDisabled,
     CatalogueSyncNotFound,
     CatalogueSyncTransportError,
+    CatalogueSyncVisibilityError,
     process_pending_catalogue_sync,
     rebuild_service_discovery_catalogue,
     recover_stale_processing_sync,
@@ -107,8 +109,16 @@ class Command(BaseCommand):
             raise CommandError(
                 "Catalogue changed during synchronization; retry is required."
             ) from None
+        except CatalogueSyncBusy:
+            raise CommandError(
+                "Catalogue synchronization is already in progress."
+            ) from None
         except CatalogueSyncTransportError:
             raise CommandError("Catalogue synchronization transport failed.") from None
+        except CatalogueSyncVisibilityError:
+            raise CommandError(
+                "Catalogue synchronization query verification failed."
+            ) from None
         except ServiceDiscoveryRdfGenerationError:
             raise CommandError("Catalogue RDF generation failed.") from None
         except DatabaseError:

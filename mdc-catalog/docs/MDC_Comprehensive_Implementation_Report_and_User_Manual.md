@@ -51,7 +51,7 @@
 
 ## 1. Executive Summary
 
-The MaaSAI MaaS Dynamic Catalogue is a working API-first pilot for publishing manufacturing-provider capabilities and finding providers against structured service requests. The implementation has moved beyond static demonstration files: PostgreSQL is the operational source of truth, trusted lifecycle APIs validate and persist provider data, and a transactional outbox records semantic synchronization work. RDF and Apache Jena Fuseki form a derived semantic query layer. The public discovery endpoint uses the same deterministic matching semantics whether candidates came from remote Fuseki, local RDF, or the harmonized fallback catalogue.
+The MaaSAI MaaS Dynamic Catalogue is a working API-first pilot for publishing manufacturing-provider capabilities and finding providers against structured service requests. PostgreSQL is the operational source of truth, trusted lifecycle APIs validate and persist provider data, and a transactional outbox records semantic synchronization work. RDF and Apache Jena Fuseki form a derived semantic query layer. Normal mode preserves remote Fuseki, local RDF, and harmonized fallback continuity. The explicit M4 automatic-publication mode instead requires verified authoritative Fuseki visibility and never masks stale state with checked-in fallbacks.
 
 The current canonical public API consists of three unversioned paths:
 
@@ -71,7 +71,7 @@ Trusted providers and operators use a separate lifecycle surface:
 
 The trusted boundary uses a bearer service token. Mutating requests require `X-MDC-Actor-Id`. Updates and deletes use strong ETags and optimistic concurrency through the canonical `If-Match` header; the deployed Vercel pilot also accepts `X-MDC-If-Match` as a temporary transport compatibility header. DELETE always requires the current ETag, independently of the optional PATCH concurrency setting. A missing precondition returns `428`, a stale revision returns `412`, and malformed preconditions return `400`.
 
-Every accepted lifecycle write runs in a database transaction. It changes the provider or offering, records a `ProviderPublication`, and creates one or more `CatalogueSyncEvent` outbox rows. It does not call Fuseki inside the request transaction. A trusted operator later runs the Django synchronization command, which rebuilds RDF from the complete active PostgreSQL catalogue and replaces the configured Fuseki default graph. This separation protects request latency, makes failures durable and retryable, and preserves PostgreSQL as the authoritative state.
+Every accepted lifecycle write runs in a database transaction. It changes the provider or offering, records a `ProviderPublication`, and creates one or more `CatalogueSyncEvent` outbox rows. It never calls Fuseki inside that transaction. With automatic publication disabled, a trusted operator/worker later runs the existing command. With both sync and automatic publication explicitly enabled, the request synchronously rebuilds RDF after commit, replaces the Fuseki default graph, and verifies the committed revision through the canonical query endpoint before returning `completed`/`synced`. Failures return a non-completed `503` while retaining durable retry work.
 
 The current hosted pilot uses Django on Vercel and managed PostgreSQL on Neon. The accepted P3.5 proof used an external Fuseki instance reached through a temporary Cloudflare Quick Tunnel. Vercel-side semantic synchronization remained disabled; graph writes came from a trusted operator environment. That tunnel arrangement is validation infrastructure, not the intended permanent production topology.
 
@@ -185,7 +185,7 @@ Three distinctions prevent historical material from being mistaken for current b
 
 1. The current paths are defined in `backend/apps/api/urls.py`, not old prose.
 2. The current public JSON schema is defined by the service-discovery serializers and public response builder, not the legacy catalogue serializer.
-3. PostgreSQL is the authoritative operational state, and operator synchronization builds the remote Fuseki default graph from active database providers and offerings. Runtime continuity also includes local RDFLib and harmonized-YAML fallback paths; those paths can reflect generated or curated fallback artifacts rather than a fresh database read. YAML remains bootstrap, regression-test, and fallback material and does not become authoritative.
+3. PostgreSQL is the authoritative operational state, and synchronization builds the remote Fuseki default graph from active database providers and offerings. Normal runtime continuity includes local RDFLib and harmonized-YAML fallback paths; those paths can reflect generated or curated artifacts rather than a fresh database read. Automatic-publication mode therefore disables those fallbacks, requires a current graph revision marker, and returns `503` when authoritative Fuseki cannot be verified.
 
 ---
 
@@ -239,7 +239,7 @@ flowchart TB
     L6 --> S1
 ```
 
-The discovery order is exact: remote Fuseki plus H5 first, local RDFLib plus H5 second, harmonized fallback records plus H5 third. Fallback occurs for classified recoverable backend failures. If every backend fails, the API returns a redacted `503` rather than fabricating a successful empty result.
+In normal mode the discovery order is exact: remote Fuseki plus H5 first, local RDFLib plus H5 second, harmonized fallback records plus H5 third. Fallback occurs for classified recoverable backend failures. In automatic-publication mode, MDC first verifies Fuseki's revision against current PostgreSQL outbox state and uses Fuseki only; unavailable or stale authoritative state returns a redacted `503` rather than stale fallback results.
 
 ### 6.3 Trust boundaries
 
@@ -248,7 +248,7 @@ The discovery order is exact: remote Fuseki plus H5 first, local RDFLib plus H5 
 | Public health/filters/discovery | Consumer and monitoring clients | Strict method and serializer rules; HTTPS in production | Public contract only |
 | Trusted lifecycle | Approved provider integration/operator | Bearer token, actor for writes, feature flags, ETag on PATCH | Provider lifecycle projection; no internal UUIDs/outbox rows |
 | Database | Application and controlled operators | Managed credentials, transactions, ORM constraints | Authoritative state and history |
-| Semantic sync | Trusted operator process | Feature flag, graph endpoint validation, optional Basic authentication | Full generated RDF graph |
+| Semantic sync | Lifecycle request or trusted worker | Independent sync/auto flags, same-dataset endpoint validation, lease, optional Basic authentication | Full generated RDF graph plus revision marker |
 | Demo API | Local development | `DEBUG` or `MDC_DEMO_API_ENABLED`; disabled by default in production | Diagnostics and non-persistent previews |
 
 ### 6.4 Deployment view
@@ -312,7 +312,7 @@ erDiagram
 
 ### 8.3 Transaction rules
 
-Registration validates the full publication before entering an atomic write. A successful new provider is active, its certifications and offerings are created in deterministic order, a create publication becomes `sync_pending`, and provider/offering outbox events are committed with it. An offering may supply an owned stable `offering_id`; when omitted, the first unused category identity keeps `{provider_id}_{service_category}` and later same-category offerings use the deterministic `{provider_id}_{service_category}_{offering_name_slug}` fallback. A confirmed duplicate provider or offering identity returns `409`; an integrity race is handled without leaving partial history.
+Registration validates the full publication before entering an atomic write. A successful new provider is active, its certifications and offerings are created in deterministic order, and provider/offering outbox events are committed with it. The publication remains `sync_pending` in normal mode; explicit automatic mode advances it to `synced` only after post-commit Graph Store replacement and query-side revision verification. An offering may supply an owned stable `offering_id`; when omitted, the first unused category identity keeps `{provider_id}_{service_category}` and later same-category offerings use the deterministic `{provider_id}_{service_category}_{offering_name_slug}` fallback. A confirmed duplicate provider or offering identity returns `409`; an integrity race is handled without leaving partial history.
 
 Provider PATCH locks the provider row, merges only allowed fields, revalidates the complete state, replaces supplied list/object fields, rewrites certifications when supplied, and creates a provider event. Offering creation locks the parent provider to allocate a stable next sequence. Offering PATCH locks both provider and offering, preserves identity/category/family/sequence, revalidates the merged offering, touches the provider revision, and creates an offering event.
 
@@ -701,7 +701,7 @@ This matrix completes the per-endpoint integration fields. “No body” means c
 | `GET /api/offerings/{offering_id}` | Bearer; external path ID; no body | `200` + ETag: contract and full offering projection | Includes inactive records; `401`, `404`, `503` | `views/get_views.py`, lifecycle repository |
 | `PATCH /api/offerings/{offering_id}` | Publication flag; bearer, actor, strong precondition; body in 17/C.4 | `200` + new ETag: accepted update plus `offering_id` | Identity/category/family immutable; `400`, `401`, `403`, `404`, `412`, `428`, `503` | post view, offering patch serializer/write service |
 
-Every accepted write result uses `status: "accepted"`, `operation`, `provider_id`, a dynamic `publication_id`, `publication_status: "sync_pending"`, `sync_status: "pending"`, and `offering_ids`. Offering create/update also supplies `offering_id`. Sync status describes durable work at response time; it does not claim that Fuseki already contains the change.
+With automatic publication disabled, every accepted write result uses `status: "accepted"`, `operation`, `provider_id`, a dynamic `publication_id`, `publication_status: "sync_pending"`, and `sync_status: "pending"`. In enabled automatic mode, the same successful `201`/`200` response reports `status: "completed"`, `publication_status: "synced"`, and `sync_status: "succeeded"` only after query visibility is confirmed. A post-commit sync failure returns `503` with the publication ID and honest pending/failed state; clients must not repeat the lifecycle mutation.
 
 ---
 
@@ -1431,7 +1431,7 @@ SPARQL is a graph query language. MDC builds a request-scoped query to retrieve 
 
 Fuseki is the remote SPARQL and Graph Store server. Reads go to a configured query endpoint. Synchronization generates one complete Turtle representation of the active PostgreSQL catalogue and uses a Graph Store PUT to replace the configured graph. Whole-graph replacement avoids a partly updated semantic catalogue, though it requires controlled single-writer operation and a graph sized appropriately for rebuilding.
 
-If remote Fuseki has a recoverable availability problem, discovery tries local RDFLib. If that also has a recoverable problem, it tries harmonized fallback records. Each path still uses H5. This provides continuity but does not make RDF or YAML authoritative. If every backend fails, MDC returns `503` so clients can distinguish infrastructure failure from a legitimate empty catalogue result.
+In normal mode, if remote Fuseki has a recoverable availability problem, discovery tries local RDFLib and then harmonized fallback records; each path still uses H5. In automatic-publication mode, canonical search requires a query-visible revision matching current committed outbox state and never falls back to potentially stale checked-in data. A missing, stale, or unavailable authoritative graph returns `503` so clients cannot mistake old offerings for current catalogue state.
 
 The ontology directory contains the expected core/profile/mapping/shape locations, but the top-level Turtle ontology placeholders are empty at the audited commit. Runtime RDF generation and mappings are implemented in Python and covered by tests. Completing independently consumable ontology artifacts is a documented future maintenance task.
 
@@ -1453,7 +1453,7 @@ The shared token is replaceable pilot security, not final multi-tenant Marketpla
 
 Strong ETags prevent lost updates. Weak validators, wildcard/list forms, oversized or malformed values, and conflicting compatibility/canonical headers are rejected. Database row locks serialize competing changes to the same provider/offering. Validation and all domain/history/event writes occur atomically.
 
-The outbox avoids the dual-write problem. An accepted API call never has to decide whether a simultaneous remote graph call really happened before a timeout. The transaction either commits both business state and durable sync intent or commits neither. The operator can retry failed work. A processing lease lets stale `processing` records be recovered as failed work after the configured interval, default 900 seconds.
+The outbox avoids pretending PostgreSQL and Fuseki share one atomic transaction. The database transaction commits business state and durable sync intent together. Automatic graph work starts only afterward. A database-visible global lease serializes complete graph replacements, bounded rebuild retries repair a catalogue change detected around a PUT, and a query-side revision marker fences stale visibility. Failed events remain retryable; the existing processing lease recovers abandoned claims after the configured interval, default 900 seconds.
 
 ### 23.4 Secret handling
 
@@ -1480,7 +1480,8 @@ The bearer token authorizes the trusted lifecycle as one service-level principal
 - Public health, filters, and canonical discovery.
 - Trusted provider lifecycle enabled for the controlled pilot.
 - Remote Fuseki query support plus local RDF/fallback paths.
-- Durable publication/outbox records and an operator synchronization command.
+- Durable publication/outbox records, automatic after-commit publication mode,
+  and the operator/worker retry command.
 
 ### 24.2 Accepted Phase-3 pilot configuration snapshot
 
@@ -1560,7 +1561,7 @@ The pilot has a strong, verified backend path, but it is not a complete manufact
 
 - No MaaSAI Marketplace frontend, provider onboarding UI, or end-consumer UI was built in Phase 3.
 - The trusted lifecycle uses one shared service bearer token. It is not final Marketplace OAuth/JWT identity, tenant authorization, or provider ownership enforcement.
-- There is no public or automatic semantic synchronization endpoint. An operator must process the outbox.
+- There is no public synchronization endpoint. Automatic mode runs internally after lifecycle commit; failed/pending work still requires an automatically scheduled trusted worker in deployment.
 - Whole-graph Graph Store replacement is appropriate for the present small catalogue but may require redesign at larger scale.
 - Manufacturing route sequencing and process planning are not queryable in the current contract. A process list is capability evidence, not an ordered route.
 - There is no pricing, quotation, commercial availability, or contract engine.
@@ -1568,7 +1569,7 @@ The pilot has a strong, verified backend path, but it is not a complete manufact
 - No CAD, 2D drawing, or 3D geometry ingestion, feature extraction, manufacturability analysis, or automatic requirement derivation is implemented.
 - Discovery scores describe contract matching. They are not probabilities, rankings of provider quality, or commercial recommendations.
 - The vocabulary covers three current service categories and their controlled part families/types. Custom fields are stored but are not automatically searchable.
-- Lifecycle DELETE removes operational rows and leaves a minimal pending tombstone/outbox record. Automatic semantic publication and immediate search convergence remain future work.
+- Lifecycle DELETE removes operational rows and leaves a minimal tombstone/outbox record. Explicit automatic mode publishes and verifies the deletion; normal mode retains pending/operator-managed behavior.
 - The legacy catalogue route and stale documentation remain in the repository and can confuse clients unless clearly labeled.
 - Demo routes remain in the URL table, although production hides them by default and graph-mutation stubs return `501`.
 - Standalone ontology Turtle files are placeholders at this commit even though runtime RDF mappings/generation are implemented and tested.
@@ -1677,7 +1678,7 @@ If pre-cutover acceptance fails, continue serving the pilot. If failure occurs a
 
 ### 28.8 Behavior that must remain stable
 
-Migration preserves the three canonical public routes, absence of a public `/api/v1` surface, contract `1.0`, trusted lifecycle paths and status codes, external IDs, PostgreSQL authority, publication/outbox audit, H1–H9 matching, RDF namespace/generation, operator-only synchronization, and ETag behavior. Cloud relocation is not an API or ontology redesign.
+Migration preserves the three canonical public routes, absence of a public `/api/v1` surface, contract `1.0`, trusted lifecycle paths and status codes, external IDs, PostgreSQL authority, publication/outbox audit, H1–H9 matching, RDF namespace/generation, opt-in automatic plus worker-retry synchronization, and ETag behavior. Cloud relocation is not an API or ontology redesign.
 
 ---
 
@@ -1775,7 +1776,8 @@ Migration preserves the three canonical public routes, absence of a public `/api
 | Lifecycle | `MDC_PROVIDER_LIFECYCLE_SERVICE_TOKEN` | **Yes** | Shared trusted-pilot bearer token |
 | Lifecycle | `MDC_PROVIDER_LIFECYCLE_ACTOR_REQUIRED` | No | Requires actor header on writes; production default true |
 | Lifecycle | `MDC_PROVIDER_CONCURRENCY_REQUIRED` | No | Requires ETag precondition on PATCH; production default true |
-| Sync | `MDC_CATALOG_SYNC_ENABLED` | No | Enables operator graph mutation; production should remain false |
+| Sync | `MDC_CATALOG_SYNC_ENABLED` | No | Enables graph mutation; production default false |
+| Sync | `MDC_CATALOG_AUTO_SYNC_ENABLED` | No | After-commit lifecycle publication plus authoritative Fuseki-only search; requires sync flag and same-dataset endpoints; production default false |
 | Sync | `MDC_CATALOG_SYNC_PROCESSING_LEASE_SECONDS` | No | Stale processing lease, default 900 |
 | Fuseki | `FUSEKI_BASE_URL` | No | Legacy/general base configuration |
 | Fuseki | `FUSEKI_DATASET` | No | Dataset name |
