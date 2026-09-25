@@ -13,6 +13,11 @@ from apps.ontology.vocabularies import (
     get_vocabulary_values,
 )
 from apps.providers.validators import FORBIDDEN_ROUTE_KEYS
+from apps.providers.service_discovery_publication import (
+    OfferingIdentityConflict,
+    OfferingIdentityError,
+    resolve_offering_ids,
+)
 
 
 PROVIDER_ID_PATTERN = re.compile(r"^[a-z0-9]+(?:_[a-z0-9]+)*$")
@@ -117,9 +122,24 @@ def _reject_forbidden_fields(data: Any) -> None:
             )
 
 
-def _reject_externally_owned_identifiers(data: Any) -> None:
+def _reject_externally_owned_identifiers(
+    data: Any,
+    *,
+    allow_offering_creation_ids: bool = False,
+) -> None:
     for key, _value, path in _iter_nested(data):
         if key in OWNED_IDENTIFIER_FIELDS:
+            supported_offering_id = key == "offering_id" and (
+                (
+                    allow_offering_creation_ids
+                    and len(path) == 3
+                    and path[0] == "offerings"
+                    and isinstance(path[1], int)
+                )
+                or (allow_offering_creation_ids and path == ("offering_id",))
+            )
+            if supported_offering_id:
+                continue
             _raise(
                 f"Field '{key}' is not accepted in the harmonized "
                 f"provider-publication contract at {_format_path(path)}."
@@ -287,7 +307,9 @@ class ServiceDiscoveryPublicationSerializer(serializers.Serializer):
         if unsupported:
             _raise(f"Unsupported provider-publication fields: {sorted(unsupported)}")
         _reject_forbidden_fields(data)
-        _reject_externally_owned_identifiers(data)
+        _reject_externally_owned_identifiers(
+            data, allow_offering_creation_ids=True
+        )
         _validate_json_safety(data)
         return super().to_internal_value(data)
 
@@ -301,7 +323,9 @@ class ServiceDiscoveryPublicationSerializer(serializers.Serializer):
     def validate(self, attrs):
         raw_payload = getattr(self, "initial_data", {})
         _reject_forbidden_fields(raw_payload)
-        _reject_externally_owned_identifiers(raw_payload)
+        _reject_externally_owned_identifiers(
+            raw_payload, allow_offering_creation_ids=True
+        )
 
         publication_metadata = attrs.get("publication_metadata") or {}
         publication_metadata.setdefault("source_type", "provider_confirmed")
@@ -311,6 +335,14 @@ class ServiceDiscoveryPublicationSerializer(serializers.Serializer):
         self._validate_publication_metadata(publication_metadata)
         self._validate_provider_certifications(attrs.get("certifications", []))
         self._validate_offerings(attrs["offerings"])
+        try:
+            offering_ids = resolve_offering_ids(
+                attrs["provider_id"], attrs["offerings"]
+            )
+        except (OfferingIdentityError, OfferingIdentityConflict) as exc:
+            _raise(str(exc))
+        for offering, offering_id in zip(attrs["offerings"], offering_ids):
+            offering["offering_id"] = offering_id
 
         return attrs
 
@@ -344,7 +376,6 @@ class ServiceDiscoveryPublicationSerializer(serializers.Serializer):
 
     def _validate_offerings(self, offerings: list[dict[str, Any]]) -> None:
         registry_context = _get_registry_context()
-        service_categories = []
 
         for index, offering in enumerate(offerings):
             location = f"offerings[{index}]"
@@ -352,9 +383,6 @@ class ServiceDiscoveryPublicationSerializer(serializers.Serializer):
                 _raise(f"{location} must be an object.")
 
             self._validate_offering_required_fields(offering, location=location)
-
-            service_category = offering["service_category"]
-            service_categories.append(service_category)
 
             self._validate_offering_taxonomy(
                 offering,
@@ -376,16 +404,6 @@ class ServiceDiscoveryPublicationSerializer(serializers.Serializer):
                 location=f"{location}.generic_capabilities",
             )
 
-        duplicate_categories = sorted(
-            {
-                service_category
-                for service_category in service_categories
-                if service_categories.count(service_category) > 1
-            }
-        )
-        if duplicate_categories:
-            _raise(f"Duplicate service_category values: {duplicate_categories}")
-
     def _validate_offering_required_fields(
         self,
         offering: dict[str, Any],
@@ -393,6 +411,7 @@ class ServiceDiscoveryPublicationSerializer(serializers.Serializer):
         location: str,
     ) -> None:
         allowed_fields = {
+            "offering_id",
             "service_category",
             "offering_name",
             "part_family",
@@ -692,7 +711,9 @@ def validate_lifecycle_offering(offering: dict[str, Any]) -> dict[str, Any]:
     """Validate one complete offering with the authoritative harmonized rules."""
     candidate = {"offerings": [offering]}
     _reject_forbidden_fields(candidate)
-    _reject_externally_owned_identifiers(candidate)
+    _reject_externally_owned_identifiers(
+        candidate, allow_offering_creation_ids=True
+    )
     _validate_json_safety(candidate)
     validated = dict(offering)
     ServiceDiscoveryPublicationSerializer()._validate_offerings([validated])

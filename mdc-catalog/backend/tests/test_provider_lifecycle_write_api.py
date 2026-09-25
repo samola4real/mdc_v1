@@ -111,7 +111,7 @@ class ProviderLifecycleWriteApiTests(TestCase):
         self.assertEqual(list(publication.sync_events.values_list("entity_type", "entity_id")),
                          [("offering", offering.offering_id)])
 
-    def test_offering_create_rejects_body_identity_unknown_and_duplicate(self):
+    def test_offering_create_rejects_provider_identity_unknown_and_name_collision(self):
         payload = self.offering_payload()
         payload["provider_id"] = "other"
         self.assertEqual(self.client.post(
@@ -125,9 +125,17 @@ class ProviderLifecycleWriteApiTests(TestCase):
         response = self.client.post(
             "/api/providers/lifecycle_writer/offerings", duplicate, format="json"
         )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(
+            response.json()["offering_id"],
+            "lifecycle_writer_precision_gears_precision_gears",
+        )
+        response = self.client.post(
+            "/api/providers/lifecycle_writer/offerings", duplicate, format="json"
+        )
         self.assertEqual(response.status_code, status.HTTP_409_CONFLICT)
         self.assertEqual(response.json()["error"]["code"], "offering_already_exists")
-        self.assertEqual(Offering.objects.count(), 1)
+        self.assertEqual(Offering.objects.count(), 2)
 
     def test_offering_create_integrity_race_rolls_back_history(self):
         with patch.object(Offering.objects, "filter") as offering_filter, patch(

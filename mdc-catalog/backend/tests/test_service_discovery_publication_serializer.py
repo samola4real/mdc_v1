@@ -414,10 +414,26 @@ class ServiceDiscoveryPublicationSerializerTests(SimpleTestCase):
 
         self.assertFalse(is_valid(payload))
 
-    def test_external_offering_id_is_rejected(self):
+    def test_owned_explicit_offering_id_is_accepted_at_creation_location(self):
         payload = make_valid_family_level_gears_payload()
-        payload["offerings"][0]["offering_id"] = "tasowheel_precision_gears"
+        payload["offerings"][0]["offering_id"] = "tasowheel_northern_gear_line"
 
+        serializer = ServiceDiscoveryPublicationSerializer(data=payload)
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+        self.assertEqual(
+            serializer.validated_data["offerings"][0]["offering_id"],
+            "tasowheel_northern_gear_line",
+        )
+
+    def test_cross_provider_and_nested_offering_ids_are_rejected(self):
+        payload = make_valid_family_level_gears_payload()
+        payload["offerings"][0]["offering_id"] = "another_provider_gear_line"
+        self.assertFalse(is_valid(payload))
+
+        payload = make_valid_family_level_gears_payload()
+        payload["offerings"][0]["custom_offering_fields"] = {
+            "offering_id": "tasowheel_nested_identity"
+        }
         self.assertFalse(is_valid(payload))
 
     def test_facility_material_and_grade_ids_are_rejected(self):
@@ -442,11 +458,35 @@ class ServiceDiscoveryPublicationSerializerTests(SimpleTestCase):
 
             self.assertFalse(is_valid(payload), key)
 
-    def test_duplicate_service_categories_are_rejected(self):
+    def test_same_service_category_offerings_receive_distinct_ids(self):
         payload = make_valid_family_level_gears_payload()
-        payload["offerings"].append(deepcopy(payload["offerings"][0]))
+        second = deepcopy(payload["offerings"][0])
+        second["offering_name"] = "Northern gear line"
+        payload["offerings"].append(second)
 
-        self.assertFalse(is_valid(payload))
+        serializer = ServiceDiscoveryPublicationSerializer(data=payload)
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+        self.assertEqual(
+            [item["offering_id"] for item in serializer.validated_data["offerings"]],
+            [
+                "tasowheel_precision_gears",
+                "tasowheel_precision_gears_northern_gear_line",
+            ],
+        )
+
+    def test_same_category_and_name_collision_requires_explicit_id(self):
+        payload = make_valid_family_level_gears_payload()
+        payload["offerings"].extend(
+            [
+                deepcopy(payload["offerings"][0]),
+                deepcopy(payload["offerings"][0]),
+            ]
+        )
+
+        serializer = ServiceDiscoveryPublicationSerializer(data=payload)
+
+        self.assertFalse(serializer.is_valid())
+        self.assertIn("distinct explicit offering_id", str(serializer.errors))
 
     def test_service_category_and_part_family_mismatch_is_rejected(self):
         payload = make_valid_family_level_gears_payload()
