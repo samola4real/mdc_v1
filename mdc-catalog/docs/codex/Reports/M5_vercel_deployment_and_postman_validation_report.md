@@ -295,3 +295,39 @@ Full evidence is in
 
 **Fuseki / immediate consumer discovery was not tested; M5-B remains pending.**
 M6 was not started.
+
+---
+
+## M5-B follow-up — disposable Fuseki immediate discovery validation
+
+M5-B completed the deferred semantic acceptance on branch
+`phase4/m5b-semantic-validation`. Vercel Preview deployment
+`dpl_31NH8mVVxYGEqh5Ub19mNbDuH4ni` served commit
+`e8cbdb1676daf80cf8724603f5ec6f8f329293ca` at
+`https://maasai-mdc-v1-ffw4ztyxm-mdc19.vercel.app`. It used only Neon
+`mdc_validation` and a separate disposable Fuseki container, volume, and
+`mdc_validation` dataset reached through a temporary Quick Tunnel targeting
+`127.0.0.1:3031`.
+
+The definitive equivalent Postman run passed **39 requests / 88 assertions /
+0 failures**. It verified `completed/synced/succeeded` lifecycle writes,
+immediate authoritative Fuseki discovery after registration and updates,
+whole-map attribute removal behavior, sibling-safe offering deletion, provider
+deletion, and immediate semantic absence. A deliberate missing-revision probe
+returned the expected `503` rather than falling back. The final Fuseki revision
+exactly matched the PostgreSQL watermark; all 21 M5-B publications were
+`synced`, and all 27 M5-B events were `succeeded` on one attempt.
+
+Focused regression passed `133` tests; the full isolated suite passed `579`
+with `13` expected skips. System and migration checks passed.
+
+After evidence collection, the tunnel, disposable container, and disposable
+volume were removed. Future Preview sync flags were restored to `False`, and
+the temporary Preview Fuseki variables were removed. The real `mdc-fuseki`
+container retained the same ID and volume and the real `mdc` graph retained its
+read-only before/after count of `731` triples. Production remained unchanged on
+deployment `dpl_GmWLQStvb3qo551uYYUv4zLiW1XK`; no promotion occurred. M6 was
+not started.
+
+Full evidence is in
+`docs/codex/Reports/M5B_fuseki_immediate_discovery_validation_report.md`.

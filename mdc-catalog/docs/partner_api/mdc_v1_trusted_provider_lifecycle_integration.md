@@ -265,7 +265,7 @@ enabled automatic-publication mode, for example:
 ```json
 {
   "contract_version": "1.0",
-  "status": "accepted",
+  "status": "completed",
   "operation": "delete",
   "target": {
     "entity_type": "offering",
