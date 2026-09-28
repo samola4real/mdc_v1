@@ -228,3 +228,70 @@ this branch: configure Preview secrets/switches, apply migrations `0003` and
 only after Preview acceptance passes.
 
 M5 stops here awaiting review. M6 was not started.
+
+---
+
+## M5-A follow-up — PostgreSQL-only Vercel lifecycle
+
+M5-A accepted a narrower temporary deployment profile: lifecycle mutations are
+verified in PostgreSQL while catalogue sync and automatic sync remain disabled.
+This does not erase the original M5 blocker history above; it defers remote
+Fuseki publication and immediate semantic discovery to M5-B.
+
+### Deployment and configuration
+
+- Branch: `phase4/deployment-validation`.
+- Preview source commit: `e6f28fbfc604fcabfe8afd0904227a65b455a033`.
+- Preview: `https://maasai-mdc-v1-q9b60eu0x-mdc19.vercel.app`, Ready,
+  deployment `dpl_AhY8kZ8uvjLSKcRnoCJidT7xRvNX`.
+- Vercel build: Python 3.12 from `.python-version`.
+- Database: isolated Neon database `mdc_validation`; all migrations through
+  `providers.0004_cataloguesynclease` applied, zero pending migrations.
+- Preview flags: publication/validation/concurrency enabled; lifecycle auth and
+  actor requirements disabled for this approved pilot; catalogue sync,
+  automatic sync, and demo API disabled.
+- Preview contains no Fuseki endpoint/dataset/credential variables.
+- Production remained on Ready deployment
+  `dpl_GmWLQStvb3qo551uYYUv4zLiW1XK`; no promotion or Production configuration
+  change was made.
+
+### Live acceptance
+
+Separate M5-A Postman assets were added under `docs/Partner_API/`. The 35-request
+collection expects `accepted/sync_pending/pending`, uses PostgreSQL lifecycle
+GET/list as its mutation oracle, and makes only one pre-mutation canonical
+search readiness call.
+
+The definitive equivalent HTTP run used disposable provider
+`postman_m5a_20260928161236` and passed **35 requests / 81 assertions / 0
+failures**. It covered health, filters, validation, registration, provider-name
+PATCH, two same-category offerings, independent reads, capability PATCH,
+selected-map removal, duplicate/invalid/stale/missing-precondition negatives,
+offering deletion with sibling retention, provider deletion, and final 404s.
+
+Two earlier client-harness diagnostics (`postman_m5a_20260928160220` and
+`postman_m5a_20260928160841`) were inspected before recovery and fully deleted;
+both final provider GETs returned 404. They exposed only Windows wrapper/scripting
+issues, not deployed API failures.
+
+Final database inspection:
+
+```text
+active providers=0; active offerings=0
+pending migrations=0; sync leases=1
+publications=13, all sync_pending
+sync events=20, all pending, attempts=0
+```
+
+The operational provider/offering snapshot hash exactly matched its empty
+pre-run baseline. All publication history belongs to the documented disposable
+M5-A IDs; no unrelated provider was touched.
+
+Local regression remained clean: focused suite `133 passed`; full suite `579
+passed, 13 skipped`; Django system check and migration consistency passed.
+
+Full evidence is in
+`docs/codex/Reports/M5A_postgresql_lifecycle_vercel_postman_report.md`.
+
+**Fuseki / immediate consumer discovery was not tested; M5-B remains pending.**
+M6 was not started.

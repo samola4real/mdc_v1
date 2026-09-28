@@ -21,6 +21,7 @@
           "const caps = (lengthMax, vertical = true) => { const v = { bounding_box_mm: { length_mm: { max: lengthMax }, width_mm: { max: 100 }, height_mm: { max: 80 }, ...evidence }, horizontal_flange_length_mm: { max: 140, ...evidence } }; if (vertical) v.vertical_flange_length_mm = { max: 75, ...evidence }; return { bracket: v }; };",
           "const offering = (id, name, lengthMax) => ({ offering_id: id, service_category: 'precision_metal_parts', offering_name: name, part_family: 'metal_part', support_status: 'confirmed', supported_part_types: [{ part_type: 'bracket', support_status: 'confirmed', ...evidence }], part_type_capabilities: caps(lengthMax), custom_capability_fields: { remove_after_patch: { value: 1 }, retained_marker: { value: 2 } } });",
           "c.set('provider_payload', JSON.stringify({ provider_id: providerId, provider_name: 'M5-A Disposable Provider', country: 'Finland', offerings: [offering(firstId, 'M5-A baseline bracket cell', 180)] }));",
+          "c.set('provider_update_payload', JSON.stringify({ provider_name: 'M5-A Updated Disposable Provider' }));",
           "c.set('second_offering_payload', JSON.stringify(offering(secondId, 'M5-A flexible bracket cell', 220)));",
           "c.set('updated_offering_payload', JSON.stringify({ offering_name: 'M5-A updated flexible bracket cell', part_type_capabilities: caps(240), custom_capability_fields: { remove_after_patch: { value: 1 }, retained_marker: { value: 2 } } }));",
           "c.set('attribute_removal_payload', JSON.stringify({ part_type_capabilities: caps(240, false), custom_capability_fields: { retained_marker: { value: 2 } } }));"
@@ -36,6 +37,7 @@
     { "key": "offering_etag", "value": "" },
     { "key": "stale_offering_etag", "value": "" },
     { "key": "provider_payload", "value": "" },
+    { "key": "provider_update_payload", "value": "" },
     { "key": "second_offering_payload", "value": "" },
     { "key": "updated_offering_payload", "value": "" },
     { "key": "attribute_removal_payload", "value": "" }
@@ -97,7 +99,17 @@
         {
           "name": "GET provider proves PostgreSQL persistence",
           "request": { "method": "GET", "header": [], "url": "{{base_url}}/api/providers/{{provider_id}}" },
-          "event": [{ "listen": "test", "script": { "exec": ["const b=pm.response.json();", "pm.test('provider persisted with first offering', () => { pm.response.to.have.status(200); pm.expect(b.provider_id).to.eql(pm.collectionVariables.get('provider_id')); pm.expect(b.offerings.map(x=>x.offering_id)).to.include(pm.collectionVariables.get('offering_id')); pm.expect(pm.response.headers.get('ETag')).to.be.ok; });"] } }]
+          "event": [{ "listen": "test", "script": { "exec": ["const b=pm.response.json(); const e=pm.response.headers.get('ETag');", "pm.test('provider persisted with first offering', () => { pm.response.to.have.status(200); pm.expect(b.provider_id).to.eql(pm.collectionVariables.get('provider_id')); pm.expect(b.offerings.map(x=>x.offering_id)).to.include(pm.collectionVariables.get('offering_id')); pm.expect(e).to.be.ok; });", "pm.collectionVariables.set('provider_etag',e);"] } }]
+        },
+        {
+          "name": "PATCH provider name",
+          "request": { "method": "PATCH", "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "If-Match", "value": "{{provider_etag}}" }], "body": { "mode": "raw", "raw": "{{provider_update_payload}}" }, "url": "{{base_url}}/api/providers/{{provider_id}}" },
+          "event": [{ "listen": "test", "script": { "exec": ["const b=pm.response.json();", "pm.test('provider PATCH is accepted for pending sync', () => { pm.response.to.have.status(200); pm.expect(b.status).to.eql('accepted'); pm.expect(b.publication_status).to.eql('sync_pending'); pm.expect(b.sync_status).to.eql('pending'); });", "pm.collectionVariables.set('provider_etag',pm.response.headers.get('ETag'));"] } }]
+        },
+        {
+          "name": "GET confirms provider name persistence",
+          "request": { "method": "GET", "header": [], "url": "{{base_url}}/api/providers/{{provider_id}}" },
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test('provider name persisted in PostgreSQL', () => { pm.response.to.have.status(200); pm.expect(pm.response.json().provider_name).to.eql('M5-A Updated Disposable Provider'); });"] } }]
         },
         {
           "name": "List first offering proves PostgreSQL persistence",
