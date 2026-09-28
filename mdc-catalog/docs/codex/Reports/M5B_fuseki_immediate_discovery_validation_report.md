@@ -271,4 +271,3 @@ Production architecture. M6 was not started.
 - `docs/partner_api/mdc_v1_trusted_provider_lifecycle_integration.md`
 - `docs/codex/Reports/M5B_fuseki_immediate_discovery_validation_report.md`
 - `docs/codex/Reports/M5_vercel_deployment_and_postman_validation_report.md`
-
