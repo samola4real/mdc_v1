@@ -41,6 +41,46 @@ PATCH /api/offerings/{offering_id}
 DELETE /api/offerings/{offering_id}
 ```
 
+### M5 Postman acceptance assets
+
+The repository includes an ordered disposable lifecycle collection and a
+secret-free environment template:
+
+- `MaaSAI_MDC_M5_Lifecycle.postman_collection.json`
+- `MaaSAI_MDC_M5_Lifecycle.postman_environment.json`
+
+Set `base_url` only to the reviewed Preview or Production deployment approved
+for lifecycle mutation, then run the collection in order. It generates a unique
+`postman_m5_*` provider, captures strong ETags, exercises automatic publication
+and immediate canonical search, checks negative concurrency/validation cases,
+and deletes the disposable provider at the end. It intentionally sends no
+Bearer token or actor header because it targets only the approved temporary
+plenary no-auth profile. Do not use it against another environment without an
+explicit configuration review.
+
+### M5-A PostgreSQL-only acceptance assets
+
+M5-A uses a separate ordered collection and secret-free environment template:
+
+- `MaaSAI_MDC_M5A_PostgreSQL_Lifecycle.postman_collection.json`
+- `MaaSAI_MDC_M5A_PostgreSQL_Lifecycle.postman_environment.json`
+
+Use these assets only with the reviewed PostgreSQL-only Preview configuration.
+The collection generates one disposable `postman_m5a_*` provider, exercises
+validation, registration, same-category multi-offering management, optimistic
+concurrency, selected-map attribute removal, and permanent deletion, then
+confirms operational cleanup. It sends no bearer token or actor header because
+M5-A uses the explicitly approved temporary no-auth profile.
+
+In this profile, successful lifecycle mutations are expected to report
+`status: accepted`, `publication_status: sync_pending`, and
+`sync_status: pending`. Post-write assertions deliberately use provider and
+offering lifecycle GETs backed by PostgreSQL. The collection makes one
+pre-mutation canonical search call only as a readiness baseline; it does not
+assert immediate semantic discovery or removal. Pending publication and sync
+events must be inspected separately by the operator and are retained as durable
+outbox evidence after the disposable operational rows are deleted.
+
 ### Authentication
 
 When the trusted lifecycle boundary is enabled, send:
