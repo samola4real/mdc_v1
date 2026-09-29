@@ -91,7 +91,7 @@ Cross-check every material statement against current implementation/tests. Fix o
 
 ## M6-A Task 2 — Create a partner handoff package
 
-Create/update a clear partner-facing documentation package under `docs/Partner_API/` (respect existing case/path conventions already in the repo rather than creating duplicate trees).
+Create/update the new partner-facing handoff assets under `docs/Partner_API/`, because the current Postman partner assets live there. The repository also contains an existing `docs/partner_api/` directory with lifecycle prose. Do not create a third variant, do not duplicate the same document in both trees, and do not perform a broad directory rename in M6-A. Update an existing file in `docs/partner_api/` only when that exact file is the canonical current lifecycle guide; place all new M6 handoff/Postman assets in `docs/Partner_API/`.
 
 It should include:
 
