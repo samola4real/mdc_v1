@@ -41,6 +41,21 @@ PATCH /api/offerings/{offering_id}
 DELETE /api/offerings/{offering_id}
 ```
 
+### M6 Marketplace handoff assets
+
+The frozen Marketplace contract and current plenary package are under
+`docs/Partner_API/`:
+
+- `MaaSAI_MDC_M6_Marketplace_Integration_Guide.md`
+- `MaaSAI_MDC_M6_Marketplace_Integration.postman_collection.json`
+- `MaaSAI_MDC_M6_Marketplace_Integration.postman_environment.json`
+- `MaaSAI_MDC_M6_Plenary_Runbook.md`
+- `MaaSAI_MDC_M6_Production_Readiness_Checklist.md`
+- `MaaSAI_MDC_M6_Marketplace_Joint_Test_Checklist.md`
+
+The M6 collection is the partner handoff collection. The M5/M5-A collections
+below remain historical deployment evidence and are not removed or renamed.
+
 ### M5 Postman acceptance assets
 
 The repository includes an ordered disposable lifecycle collection and a
@@ -386,7 +401,7 @@ For production-like environments:
 - optimistic concurrency defaults to required for PATCH; DELETE always requires
   the current strong ETag.
 
-M5 deployment must apply the `CatalogueSyncLease` migration, configure both
+Any Production-like or plenary deployment must apply the `CatalogueSyncLease` migration, configure both
 opt-in flags, configure the same Fuseki dataset as
 `.../{dataset}/sparql` and `.../{dataset}/data?default`, provide write
 credentials only through `SERVICE_DISCOVERY_FUSEKI_USERNAME` and
