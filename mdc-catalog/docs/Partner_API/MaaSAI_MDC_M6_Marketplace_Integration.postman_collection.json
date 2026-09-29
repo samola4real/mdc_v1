@@ -1,0 +1,213 @@
+{
+  "info": {
+    "_postman_id": "4903ecf9-3ea1-4554-a95e-0c36c5562ca1",
+    "name": "MaaSAI MDC M6 Marketplace Integration",
+    "description": "Ordered, secret-free partner integration flow for an explicitly approved no-auth/no-actor plenary environment. It creates only a generated marketplace_m6_* provider. Automatic semantic search checks run only when automatic_sync_enabled=true. The final folder is destructive cleanup and must be completed.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "const c = pm.collectionVariables;",
+          "const providerId = pm.variables.get('provider_id') || 'marketplace_m6_uninitialized';",
+          "const firstId = pm.variables.get('offering_id') || `${providerId}_bracket_primary`;",
+          "const secondId = pm.variables.get('second_offering_id') || `${providerId}_bracket_flexible`;",
+          "c.set('offering_id', firstId); c.set('second_offering_id', secondId);",
+          "const evidence = { source_type: 'provider_confirmed', confidence: 'declared' };",
+          "const bracket = (horizontal, vertical) => { const value = { horizontal_flange_length_mm: { max: horizontal, ...evidence } }; if (vertical !== null) value.vertical_flange_length_mm = { max: vertical, ...evidence }; return { bracket: value }; };",
+          "const offering = (id, name, horizontal) => ({ offering_id: id, service_category: 'precision_metal_parts', offering_name: name, part_family: 'metal_part', support_status: 'confirmed', supported_part_types: [{ part_type: 'bracket', support_status: 'confirmed', ...evidence }], family_capabilities: {}, part_type_capabilities: bracket(horizontal, 75), generic_capabilities: {}, custom_offering_fields: {}, custom_capability_fields: { retained_marker: { value: 2 }, remove_after_patch: { value: 1 } } });",
+          "c.set('provider_payload', JSON.stringify({ contract_version: '1.0', provider_id: providerId, provider_name: 'Marketplace M6 Disposable Works', country: 'Finland', offerings: [offering(firstId, 'M6 primary bracket cell', 140)] }));",
+          "c.set('second_offering_payload', JSON.stringify(offering(secondId, 'M6 flexible bracket cell', 160)));",
+          "c.set('offering_patch_payload', JSON.stringify({ offering_name: 'M6 flexible bracket cell updated', part_type_capabilities: bracket(180, 90), custom_capability_fields: { retained_marker: { value: 2 }, remove_after_patch: { value: 1 } } }));",
+          "c.set('attribute_removal_payload', JSON.stringify({ part_type_capabilities: bracket(180, null), custom_capability_fields: { retained_marker: { value: 2 } } }));"
+        ]
+      }
+    }
+  ],
+  "variable": [
+    { "key": "base_url", "value": "" },
+    { "key": "automatic_sync_enabled", "value": "true" },
+    { "key": "concurrency_required", "value": "true" },
+    { "key": "provider_id", "value": "" },
+    { "key": "offering_id", "value": "" },
+    { "key": "second_offering_id", "value": "" },
+    { "key": "provider_etag", "value": "" },
+    { "key": "offering_etag", "value": "" },
+    { "key": "stale_offering_etag", "value": "" },
+    { "key": "provider_payload", "value": "" },
+    { "key": "second_offering_payload", "value": "" },
+    { "key": "offering_patch_payload", "value": "" },
+    { "key": "attribute_removal_payload", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "00 Preconditions",
+      "item": [
+        {
+          "name": "Health and initialize disposable IDs",
+          "event": [
+            { "listen": "prerequest", "script": { "exec": ["const suffix = `${Date.now()}_${Math.floor(Math.random()*9000+1000)}`;", "const p = `marketplace_m6_${suffix}`;", "pm.collectionVariables.set('provider_id', p);", "pm.collectionVariables.set('offering_id', `${p}_bracket_primary`);", "pm.collectionVariables.set('second_offering_id', `${p}_bracket_flexible`);", "['provider_etag','offering_etag','stale_offering_etag'].forEach(k => pm.collectionVariables.unset(k));"] } },
+            { "listen": "test", "script": { "exec": ["const b=pm.response.json();", "pm.test('health contract is ready', () => { pm.response.to.have.status(200); pm.expect(b.contract_version).to.eql('1.0'); pm.expect(b.status).to.eql('ok'); });"] } }
+          ],
+          "request": { "method": "GET", "header": [], "url": "{{base_url}}/api/health" }
+        },
+        {
+          "name": "Catalogue filters",
+          "request": { "method": "GET", "header": [], "url": "{{base_url}}/api/catalog/filters" },
+          "event": [{ "listen": "test", "script": { "exec": ["const b=pm.response.json();", "pm.test('controlled bracket taxonomy is available', () => { pm.response.to.have.status(200); pm.expect(b.contract_version).to.eql('1.0'); pm.expect(JSON.stringify(b)).to.include('precision_metal_parts'); pm.expect(JSON.stringify(b)).to.include('bracket'); });"] } }]
+        },
+        {
+          "name": "Canonical search baseline (automatic mode only)",
+          "event": [
+            { "listen": "prerequest", "script": { "exec": ["if (pm.variables.get('automatic_sync_enabled') !== 'true') pm.execution.skipRequest();"] } },
+            { "listen": "test", "script": { "exec": ["const rows=(pm.response.json().results||[]).filter(x=>x.provider_id===pm.variables.get('provider_id'));", "pm.test('semantic search healthy and disposable ID absent', () => { pm.response.to.have.status(200); pm.expect(rows).to.have.length(0); });"] } }
+          ],
+          "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\"contract_version\":\"1.0\",\"request_id\":\"{{$guid}}\",\"consumer_id\":\"maasai_marketplace\",\"service_category\":\"precision_metal_parts\",\"part_family\":\"metal_part\",\"part_type\":\"bracket\",\"requirements\":{}}" }, "url": "{{base_url}}/api/service-discovery/search" }
+        }
+      ]
+    },
+    {
+      "name": "01 Provider and offering lifecycle",
+      "item": [
+        {
+          "name": "Confirm disposable provider absent",
+          "request": { "method": "GET", "header": [], "url": "{{base_url}}/api/providers/{{provider_id}}" },
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test('provider starts absent', () => pm.response.to.have.status(404));"] } }]
+        },
+        {
+          "name": "Validate provider publication",
+          "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{{provider_payload}}" }, "url": "{{base_url}}/api/provider-publication/validation" },
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test('payload is valid without mutation', () => { pm.response.to.have.status(200); pm.expect(pm.response.json().valid).to.eql(true); });"] } }]
+        },
+        {
+          "name": "Register provider and first offering",
+          "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{{provider_payload}}" }, "url": "{{base_url}}/api/provider-publication" },
+          "event": [{ "listen": "test", "script": { "exec": ["const b=pm.response.json(); const auto=pm.variables.get('automatic_sync_enabled')==='true';", "pm.test('registration receipt matches deployment mode', () => { pm.response.to.have.status(201); pm.expect(b.provider_id).to.eql(pm.variables.get('provider_id')); if(auto){pm.expect(b.status).to.eql('completed');pm.expect(b.publication_status).to.eql('synced');pm.expect(b.sync_status).to.eql('succeeded');}else{pm.expect(b.status).to.eql('accepted');pm.expect(b.publication_status).to.eql('sync_pending');pm.expect(b.sync_status).to.eql('pending');} });", "const e=pm.response.headers.get('ETag'); if(e) pm.collectionVariables.set('provider_etag',e);"] } }]
+        },
+        {
+          "name": "Immediate search finds first offering (automatic mode only)",
+          "event": [{ "listen": "prerequest", "script": { "exec": ["if (pm.variables.get('automatic_sync_enabled') !== 'true') pm.execution.skipRequest();"] } }, { "listen": "test", "script": { "exec": ["const ids=(pm.response.json().results||[]).map(x=>x.offering_id);", "pm.test('first offering immediately visible', () => { pm.response.to.have.status(200); pm.expect(ids).to.include(pm.variables.get('offering_id')); });"] } }],
+          "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\"request_id\":\"{{$guid}}\",\"consumer_id\":\"maasai_marketplace\",\"service_category\":\"precision_metal_parts\",\"part_family\":\"metal_part\",\"part_type\":\"bracket\",\"requirements\":{}}" }, "url": "{{base_url}}/api/service-discovery/search" }
+        },
+        {
+          "name": "GET provider and capture ETag",
+          "request": { "method": "GET", "header": [], "url": "{{base_url}}/api/providers/{{provider_id}}" },
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test('provider exists with strong ETag', () => { pm.response.to.have.status(200); pm.expect(pm.response.headers.get('ETag')).to.match(/^\".+\"$/); });", "pm.collectionVariables.set('provider_etag',pm.response.headers.get('ETag'));"] } }]
+        },
+        {
+          "name": "Add second same-category offering",
+          "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{{second_offering_payload}}" }, "url": "{{base_url}}/api/providers/{{provider_id}}/offerings" },
+          "event": [{ "listen": "test", "script": { "exec": ["const b=pm.response.json(); const auto=pm.variables.get('automatic_sync_enabled')==='true';", "pm.test('second offering has distinct identity and correct receipt', () => { pm.response.to.have.status(201); pm.expect(b.offering_id).to.eql(pm.variables.get('second_offering_id')); if(auto){pm.expect(b.status).to.eql('completed');pm.expect(b.sync_status).to.eql('succeeded');}else{pm.expect(b.status).to.eql('accepted');pm.expect(b.sync_status).to.eql('pending');} });"] } }]
+        },
+        {
+          "name": "Immediate search finds both offerings (automatic mode only)",
+          "event": [{ "listen": "prerequest", "script": { "exec": ["if (pm.variables.get('automatic_sync_enabled') !== 'true') pm.execution.skipRequest();"] } }, { "listen": "test", "script": { "exec": ["const ids=(pm.response.json().results||[]).filter(x=>x.provider_id===pm.variables.get('provider_id')).map(x=>x.offering_id);", "pm.test('both same-category IDs visible', () => pm.expect(ids).to.include.members([pm.variables.get('offering_id'),pm.variables.get('second_offering_id')]));"] } }],
+          "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\"request_id\":\"{{$guid}}\",\"consumer_id\":\"maasai_marketplace\",\"service_category\":\"precision_metal_parts\",\"part_family\":\"metal_part\",\"part_type\":\"bracket\",\"requirements\":{}}" }, "url": "{{base_url}}/api/service-discovery/search" }
+        },
+        {
+          "name": "PATCH provider without ETag is rejected",
+          "event": [{ "listen": "prerequest", "script": { "exec": ["if (pm.variables.get('concurrency_required') !== 'true') pm.execution.skipRequest();"] } }, { "listen": "test", "script": { "exec": ["pm.test('missing PATCH ETag is 428', () => pm.response.to.have.status(428));"] } }],
+          "request": { "method": "PATCH", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\"provider_name\":\"must not persist\"}" }, "url": "{{base_url}}/api/providers/{{provider_id}}" }
+        },
+        {
+          "name": "PATCH provider with current ETag",
+          "request": { "method": "PATCH", "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "If-Match", "value": "{{provider_etag}}" }], "body": { "mode": "raw", "raw": "{\"provider_name\":\"Marketplace M6 Disposable Works Updated\",\"custom_provider_fields\":{\"marketplace_reference\":\"joint-test\"}}" }, "url": "{{base_url}}/api/providers/{{provider_id}}" },
+          "event": [{ "listen": "test", "script": { "exec": ["const b=pm.response.json(); const auto=pm.variables.get('automatic_sync_enabled')==='true';", "pm.test('provider PATCH accepted in configured mode', () => { pm.response.to.have.status(200); if(auto)pm.expect(b.sync_status).to.eql('succeeded'); else pm.expect(b.sync_status).to.eql('pending'); });", "pm.collectionVariables.set('provider_etag',pm.response.headers.get('ETag'));"] } }]
+        },
+        {
+          "name": "Immediate search reflects provider name (automatic mode only)",
+          "event": [{ "listen": "prerequest", "script": { "exec": ["if (pm.variables.get('automatic_sync_enabled') !== 'true') pm.execution.skipRequest();"] } }, { "listen": "test", "script": { "exec": ["const row=(pm.response.json().results||[]).find(x=>x.provider_id===pm.variables.get('provider_id'));", "pm.test('updated provider name visible', () => { pm.expect(row).to.be.ok; pm.expect(row.provider_name).to.eql('Marketplace M6 Disposable Works Updated'); });"] } }],
+          "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\"request_id\":\"{{$guid}}\",\"consumer_id\":\"maasai_marketplace\",\"service_category\":\"precision_metal_parts\",\"part_family\":\"metal_part\",\"part_type\":\"bracket\",\"requirements\":{}}" }, "url": "{{base_url}}/api/service-discovery/search" }
+        },
+        {
+          "name": "GET second offering and capture ETag",
+          "request": { "method": "GET", "header": [], "url": "{{base_url}}/api/offerings/{{second_offering_id}}" },
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test('offering has strong ETag', () => { pm.response.to.have.status(200); pm.expect(pm.response.headers.get('ETag')).to.match(/^\".+\"$/); });", "const e=pm.response.headers.get('ETag'); pm.collectionVariables.set('offering_etag',e); pm.collectionVariables.set('stale_offering_etag',e);"] } }]
+        },
+        {
+          "name": "PATCH offering name and capabilities",
+          "request": { "method": "PATCH", "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "If-Match", "value": "{{offering_etag}}" }], "body": { "mode": "raw", "raw": "{{offering_patch_payload}}" }, "url": "{{base_url}}/api/offerings/{{second_offering_id}}" },
+          "event": [{ "listen": "test", "script": { "exec": ["const b=pm.response.json(); const auto=pm.variables.get('automatic_sync_enabled')==='true';", "pm.test('offering PATCH receipt matches mode', () => { pm.response.to.have.status(200); if(auto)pm.expect(b.sync_status).to.eql('succeeded'); else pm.expect(b.sync_status).to.eql('pending'); });", "pm.collectionVariables.set('offering_etag',pm.response.headers.get('ETag'));"] } }]
+        },
+        {
+          "name": "Immediate search reflects offering update (automatic mode only)",
+          "event": [{ "listen": "prerequest", "script": { "exec": ["if (pm.variables.get('automatic_sync_enabled') !== 'true') pm.execution.skipRequest();"] } }, { "listen": "test", "script": { "exec": ["const row=(pm.response.json().results||[]).find(x=>x.offering_id===pm.variables.get('second_offering_id'));", "pm.test('updated offering visible', () => { pm.expect(row).to.be.ok; pm.expect(row.offering_name).to.eql('M6 flexible bracket cell updated'); });"] } }],
+          "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\"request_id\":\"{{$guid}}\",\"consumer_id\":\"maasai_marketplace\",\"service_category\":\"precision_metal_parts\",\"part_family\":\"metal_part\",\"part_type\":\"bracket\",\"requirements\":{}}" }, "url": "{{base_url}}/api/service-discovery/search" }
+        },
+        {
+          "name": "Stale offering PATCH is rejected",
+          "request": { "method": "PATCH", "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "If-Match", "value": "{{stale_offering_etag}}" }], "body": { "mode": "raw", "raw": "{\"offering_name\":\"must not persist\"}" }, "url": "{{base_url}}/api/offerings/{{second_offering_id}}" },
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test('stale ETag is 412', () => pm.response.to.have.status(412));"] } }]
+        },
+        {
+          "name": "PATCH whole selected map to remove optional attribute",
+          "request": { "method": "PATCH", "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "If-Match", "value": "{{offering_etag}}" }], "body": { "mode": "raw", "raw": "{{attribute_removal_payload}}" }, "url": "{{base_url}}/api/offerings/{{second_offering_id}}" },
+          "event": [{ "listen": "test", "script": { "exec": ["const b=pm.response.json(); const auto=pm.variables.get('automatic_sync_enabled')==='true';", "pm.test('attribute removal receipt matches mode', () => { pm.response.to.have.status(200); if(auto)pm.expect(b.sync_status).to.eql('succeeded'); else pm.expect(b.sync_status).to.eql('pending'); });", "pm.collectionVariables.set('offering_etag',pm.response.headers.get('ETag'));"] } }]
+        },
+        {
+          "name": "Immediate search proves retained and removed fields (automatic mode only)",
+          "event": [{ "listen": "prerequest", "script": { "exec": ["if (pm.variables.get('automatic_sync_enabled') !== 'true') pm.execution.skipRequest();"] } }, { "listen": "test", "script": { "exec": ["const row=(pm.response.json().results||[]).find(x=>x.offering_id===pm.variables.get('second_offering_id'));", "const matched=(row&&row.matched_capabilities||[]).map(x=>x.field); const unknown=(row&&row.unknown_capabilities||[]).map(x=>x.field);", "pm.test('retained horizontal field matches and removed vertical field is unknown', () => { pm.expect(row).to.be.ok; pm.expect(matched).to.include('horizontal_flange_length_mm'); pm.expect(unknown).to.include('vertical_flange_length_mm'); });"] } }],
+          "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\"request_id\":\"{{$guid}}\",\"consumer_id\":\"maasai_marketplace\",\"service_category\":\"precision_metal_parts\",\"part_family\":\"metal_part\",\"part_type\":\"bracket\",\"requirements\":{\"part_type_specifications\":{\"horizontal_flange_length_mm\":{\"max\":170},\"vertical_flange_length_mm\":{\"max\":70}}}}" }, "url": "{{base_url}}/api/service-discovery/search" }
+        }
+      ]
+    },
+    {
+      "name": "02 DESTRUCTIVE CLEANUP - complete this folder",
+      "item": [
+        {
+          "name": "DELETE offering without ETag is rejected",
+          "request": { "method": "DELETE", "header": [], "url": "{{base_url}}/api/offerings/{{second_offering_id}}" },
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test('DELETE requires ETag', () => pm.response.to.have.status(428));"] } }]
+        },
+        {
+          "name": "GET second offering and refresh ETag",
+          "request": { "method": "GET", "header": [], "url": "{{base_url}}/api/offerings/{{second_offering_id}}" },
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test('offering exists before cleanup', () => pm.response.to.have.status(200));", "pm.collectionVariables.set('offering_etag',pm.response.headers.get('ETag'));"] } }]
+        },
+        {
+          "name": "DELETE second offering",
+          "request": { "method": "DELETE", "header": [{ "key": "If-Match", "value": "{{offering_etag}}" }], "url": "{{base_url}}/api/offerings/{{second_offering_id}}" },
+          "event": [{ "listen": "test", "script": { "exec": ["const b=pm.response.json(); const auto=pm.variables.get('automatic_sync_enabled')==='true';", "pm.test('offering deletion receipt matches mode', () => { pm.response.to.have.status(200); if(auto)pm.expect(b.sync_status).to.eql('succeeded'); else pm.expect(b.sync_status).to.eql('pending'); });"] } }]
+        },
+        {
+          "name": "Immediate search retains sibling only (automatic mode only)",
+          "event": [{ "listen": "prerequest", "script": { "exec": ["if (pm.variables.get('automatic_sync_enabled') !== 'true') pm.execution.skipRequest();"] } }, { "listen": "test", "script": { "exec": ["const ids=(pm.response.json().results||[]).map(x=>x.offering_id);", "pm.test('deleted offering absent and sibling present', () => { pm.expect(ids).not.to.include(pm.variables.get('second_offering_id')); pm.expect(ids).to.include(pm.variables.get('offering_id')); });"] } }],
+          "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\"request_id\":\"{{$guid}}\",\"consumer_id\":\"maasai_marketplace\",\"service_category\":\"precision_metal_parts\",\"part_family\":\"metal_part\",\"part_type\":\"bracket\",\"requirements\":{}}" }, "url": "{{base_url}}/api/service-discovery/search" }
+        },
+        {
+          "name": "GET provider and refresh ETag",
+          "request": { "method": "GET", "header": [], "url": "{{base_url}}/api/providers/{{provider_id}}" },
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test('provider exists before cleanup', () => pm.response.to.have.status(200));", "pm.collectionVariables.set('provider_etag',pm.response.headers.get('ETag'));"] } }]
+        },
+        {
+          "name": "DELETE disposable provider",
+          "request": { "method": "DELETE", "header": [{ "key": "If-Match", "value": "{{provider_etag}}" }], "url": "{{base_url}}/api/providers/{{provider_id}}" },
+          "event": [{ "listen": "test", "script": { "exec": ["const b=pm.response.json(); const auto=pm.variables.get('automatic_sync_enabled')==='true';", "pm.test('provider deletion receipt matches mode', () => { pm.response.to.have.status(200); if(auto)pm.expect(b.sync_status).to.eql('succeeded'); else pm.expect(b.sync_status).to.eql('pending'); });"] } }]
+        },
+        {
+          "name": "Immediate search confirms complete absence (automatic mode only)",
+          "event": [{ "listen": "prerequest", "script": { "exec": ["if (pm.variables.get('automatic_sync_enabled') !== 'true') pm.execution.skipRequest();"] } }, { "listen": "test", "script": { "exec": ["const rows=(pm.response.json().results||[]).filter(x=>x.provider_id===pm.variables.get('provider_id'));", "pm.test('provider and offerings absent from discovery', () => { pm.response.to.have.status(200); pm.expect(rows).to.have.length(0); });"] } }],
+          "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\"request_id\":\"{{$guid}}\",\"consumer_id\":\"maasai_marketplace\",\"service_category\":\"precision_metal_parts\",\"part_family\":\"metal_part\",\"part_type\":\"bracket\",\"requirements\":{}}" }, "url": "{{base_url}}/api/service-discovery/search" }
+        },
+        {
+          "name": "Final provider GET is absent",
+          "request": { "method": "GET", "header": [], "url": "{{base_url}}/api/providers/{{provider_id}}" },
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test('provider operational row absent', () => pm.response.to.have.status(404));"] } }]
+        },
+        {
+          "name": "Final first offering GET is absent",
+          "request": { "method": "GET", "header": [], "url": "{{base_url}}/api/offerings/{{offering_id}}" },
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test('first offering operational row absent', () => pm.response.to.have.status(404));"] } }]
+        },
+        {
+          "name": "Final second offering GET is absent",
+          "request": { "method": "GET", "header": [], "url": "{{base_url}}/api/offerings/{{second_offering_id}}" },
+          "event": [{ "listen": "test", "script": { "exec": ["pm.test('second offering operational row absent', () => pm.response.to.have.status(404));"] } }]
+        }
+      ]
+    }
+  ]
+}

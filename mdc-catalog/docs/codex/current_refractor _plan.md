@@ -729,6 +729,19 @@ The complete provider lifecycle passes on the deployed backend, including immedi
 
 Goal: Deliver a stable MDC backend that the Marketplace team can use without additional API redesign.
 
+### Current status after M6-A
+
+- M1 through M5 are accepted. M5-A proved the deployed PostgreSQL lifecycle
+  (`35` requests / `81` assertions / `0` failures), and M5-B proved disposable
+  Fuseki synchronization plus immediate authoritative discovery
+  (`39` requests / `88` assertions / `0` failures).
+- M6-A completes the frozen partner contract, Marketplace Postman/examples,
+  plenary/recovery runbook, and release-readiness/joint-test package.
+- Final M6 remains open. Production/plenary enablement and a release tag are
+  gated by durable protected Fuseki hosting, an owned retry arrangement,
+  approved deployment configuration/migrations, and an actual joint
+  Marketplace-originated integration test.
+
 ### Development tasks
 
 |
