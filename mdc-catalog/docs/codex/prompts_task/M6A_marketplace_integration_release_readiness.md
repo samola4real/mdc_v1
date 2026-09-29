@@ -91,7 +91,7 @@ Cross-check every material statement against current implementation/tests. Fix o
 
 ## M6-A Task 2 — Create a partner handoff package
 
-Create/update the new partner-facing handoff assets under `docs/Partner_API/`, because the current Postman partner assets live there. The repository also contains an existing `docs/partner_api/` directory with lifecycle prose. Do not create a third variant, do not duplicate the same document in both trees, and do not perform a broad directory rename in M6-A. Update an existing file in `docs/partner_api/` only when that exact file is the canonical current lifecycle guide; place all new M6 handoff/Postman assets in `docs/Partner_API/`.
+Treat `docs/Partner_API/` as the single canonical partner-documentation directory. The remote Git history currently contains one lifecycle guide tracked under the case-variant path `docs/partner_api/mdc_v1_trusted_provider_lifecycle_integration.md`; on Windows this may appear physically inside the same `Partner_API` directory because the filesystem is case-insensitive. During M6-A, normalize that tracked path into `docs/Partner_API/mdc_v1_trusted_provider_lifecycle_integration.md` using a safe Git rename (use a temporary intermediate name/path if Windows requires it), preserving content/history and ensuring only one tracked copy remains. Place all new M6 handoff/Postman assets in `docs/Partner_API/`. Do not create any additional case variants.
 
 It should include:
 
