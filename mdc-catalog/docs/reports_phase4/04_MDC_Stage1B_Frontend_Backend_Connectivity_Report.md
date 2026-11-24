@@ -1,5 +1,49 @@
 # Stage 1B — Frontend-to-backend connectivity
 
+## Resumed verification on port 3000 · 2026-11-24
+
+**Verdict — BLOCKED.** The Stage 1B frontend is running at [http://localhost:3000/](http://localhost:3000/). The new origin reaches the real Keycloak sign-in form and passes the anonymous relay tests. The local Preview credential and the administrator-approved Keycloak audience and role source are still unavailable to this worktree. Actual signed-in relay acceptance is pending.
+
+| Reference | Resumed result |
+| --- | --- |
+| Fetched `origin/main` | `a17801f897774a116b58394053b9683f7c2bd4bb` |
+| Existing task branch and resume base | `phase4/stage1b-frontend-integration` at `d1e9686b7765f20a0fdbc2c598f6bf4430a7dc3d`, matching the fetched remote head |
+| Served frontend source and build | Frontend tree from `7006724a7d9762f80c5d870fc09f63804b283612` with existing relay `8252d2abaf8683a63e9b6c598fcd40cd50bdb7b6`. Served Next.js build `ipLk0-E6GacQvxqzZH7B2`, with CSS bytes matching that prepared build. |
+| Worktree and listener | `C:/Users/Elahi/AppData/Local/Temp/mdc-stage1b-20261124-4b9fc439/mdc-catalog/demo-frontend`. Port 3000 had no listener at preflight. The verified Stage 1B process is PID `3288` on `127.0.0.1:3000`. |
+| Change on this resume | This report is the only committed file. The running server uses the already prepared isolated production build. |
+
+Preflight also observed a separate listener on port 3001. The resumed test used port 3000 for Home, browser API requests and the Keycloak return URL.
+
+### Local configuration evidence
+
+The operator reported entering the existing protection bypass. The absolute Git-ignored file used by this worktree is `C:/Users/Elahi/AppData/Local/Temp/mdc-stage1b-20261124-4b9fc439/mdc-catalog/demo-frontend/.env.local`. It contained one `MDC_VERCEL_PROTECTION_BYPASS` assignment, which was empty on disk at the last check. Next.js parsed the file successfully and reported all three required settings absent. The other scoped worktree `.env.local` locations and Windows environment scopes yielded no alternate value. The protected Preview health check was gated on a nonempty local credential and did not send a request. The operator can save the approved value directly to the frontend file or identify the file they edited by path.
+
+### Keycloak configuration investigation
+
+The tracked runtime config and existing adapter identify the MAASAI issuer and `myClient`. Public discovery and JWKS each returned HTTP 200, with the expected endpoints and an RS256 signing key. The reviewed worktree references contained setup instructions and verification code without an approved client or realm mapper export. The UI merges realm and client role lists for presentation. The server requires an explicit approved authorization claim source. [Keycloak Server Administration Guide](https://www.keycloak.org/docs/latest/server_admin/)
+
+A MAASAI realm administrator needs to confirm these two items in **Clients → myClient → Client scopes**, including the dedicated scope and any effective linked scopes.
+
+1. **Intended audience.** Identify the exact MDC API audience configured by the effective protocol mapper and emitted in `aud` on access tokens issued to `myClient`. An existing Audience or Audience Resolve mapper and Client scopes → Evaluate for a permitted test user can provide supporting evidence. Enter the approved identifier in `MDC_KEYCLOAK_AUDIENCE`.
+2. **Role source.** Confirm the effective mapper and the authorized demo role assignments. Enter `client` in `MDC_KEYCLOAK_ROLE_SOURCE` if the permitted roles are carried in `resource_access.myClient.roles`, or `realm` if `realm_access.roles` is explicitly approved for MDC. Confirm which test users have Provider, Consumer-only and Admin access so each operation can be verified with the intended role.
+
+### Actual browser results on port 3000
+
+| Check | Observation |
+| --- | --- |
+| Frontend and runtime config | Home returned HTTP 200. The browser selected the relative `/api/mdc` relay. |
+| Keycloak sign-in challenge | The real MAASAI password form opened for `myClient` with S256 PKCE and a return origin of `http://localhost:3000`. A test session did not complete in this run. |
+| Anonymous health and filters | `GET /api/mdc/health` and `GET /api/mdc/catalog/filters` each returned HTTP 401 `keycloak_token_required`. |
+| Anonymous validation and write denial | `POST /api/mdc/provider-publication/validation` and `POST /api/mdc/provider-publication` each returned HTTP 401 `keycloak_token_required` with empty JSON probes. |
+| Credential exposure check | The served public config and static build had no Preview credential variable or header markers. All four anonymous responses used `Cache-Control: no-store` and exposed no bypass header. |
+| Authenticated acceptance | Pending actual signed-in browser results for health, canonical filters, non-mutating validation, spur-gear discovery and Consumer-only write denial. There were zero backend writes. |
+
+After the approved entries are saved, the identified Stage 1B listener needs an approved reload to consume them. Coordinate personal Keycloak sign-in and run the remaining tests on the same port 3000 origin. Keep the values in the local server environment file. [Vercel Protection Bypass for Automation](https://vercel.com/docs/deployment-protection/methods-to-bypass-deployment-protection/protection-bypass-automation)
+
+## Original Task 04 run · earlier port 3001 evidence
+
+The following records the first connectivity attempt and its startup context.
+
 **Verdict — BLOCKED on operator configuration.** The existing relay is present on the running frontend and rejected all four anonymous browser requests. The approved Keycloak audience, role source and Preview credential are still unavailable in the local server configuration. Actual signed-in frontend-to-Preview requests remain pending.
 
 | Reference | Verified or recorded value |
