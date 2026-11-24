@@ -12,6 +12,39 @@ Upgrade the existing application at `mdc-catalog/demo-frontend/` in place. Demon
 - No backend API, ontology, database schema, Django authentication, sync, Vercel project configuration or Production changes. No Stage 2 or GitLab release. Keep all actual testing isolated to the accepted validation database and disposable records. Do not simulate persistence, publication or search results.
 - Frontend may run locally (localhost:3000); no new remote frontend deployment required or authorized. No production-quality UI scope.
 
+
+## 1A. Mandatory MaaSAI brand alignment — supplied Brand.js reference
+
+The operator supplied the official MaaSAI template `Brand.js` on 2026-11-24. It explicitly identifies itself as the source of truth for MaaSAI brand identity. The relevant specification is transcribed here so Codex does not need access to the ChatGPT attachment.
+
+| Official colour | Exact hex | Intended usage |
+| --- | --- | --- |
+| Brand Navy | #223F61 | Headers, primary surfaces, sidebars, key UI accents |
+| Brand Orange | #E78C3A | CTAs, highlights, key actions, focus rings |
+| Warm Sand | #D8D1BE | Section dividers, neutral cards, supportive backgrounds |
+| Off-White | #F3F2EE | Page background, large neutral areas |
+| Ink | #262626 | Body copy, headings and line icons on light surfaces |
+
+Official CSS tokens from Brand.js:
+
+```css
+:root {
+  --brand-navy:   #223F61;
+  --brand-orange: #E78C3A;
+  --brand-sand:   #D8D1BE;
+  --brand-bg:     #F3F2EE;
+  --brand-ink:    #262626;
+}
+```
+
+Equivalent SCSS variables use the same names prefixed with $. Typography: Outfit (Google Fonts), weights 300, 400, 500, 600, 700, 800. Brand reference samples are Display 64/80 and Body 18/28 (font size/line height). Keep existing practical form/table/component sizing rather than imposing display sizes on all elements. Ensure readable contrast, including dark text on orange and white on navy as specified by the reference's contrast intent.
+
+First inspect current global styles, layout/theme assets, PrimeReact overrides and font loading. If already compliant, retain them; otherwise make the smallest necessary shared theme/token/font adjustments. Apply consistently to existing demo navigation, Provider/Consumer/Admin pages, forms, buttons and result/status components; retain the existing MaaSAI logo and layout. Preserve semantic warning/error/success cues and accessible keyboard focus. Reuse existing font-loading mechanism and approved existing assets; verify that Outfit actually loads (document any fallback or offline limitation).
+
+Do not add a new Brand page, swatches, copy-to-clipboard functions, design-system showcase, Tailwind, new UI libraries, new navigation, or visual-only components. Brand.js is a design reference, not a new runtime feature or a requirement to copy its React component. Do not restyle the Keycloak-hosted login theme or change the identity server. This limited brand alignment is explicitly authorized within Stage 1B and does not relax the maximum-reuse/minimum-modification constraint.
+
+Acceptance: record whether existing styles already matched; list any theme files changed; verify the exact palette, Outfit typography and retained layout in the running demo (screenshots or sanitized computed-style evidence where feasible). Brand alignment and Keycloak preservation are both required; do not mark unverified visual checks as passed.
+
 ## 2. Evidence and targets
 
 Repository: samola4real/mdc_v1; original checkout C:/Users/Elahi/Desktop/mdc_v1. Frontend path mdc-catalog/demo-frontend/. Latest committed frontend change 06df31c (final alignment). Prior audit baseline 39e4570cc7839806e1db2a03bf5a7f58437f4acf.
@@ -94,6 +127,6 @@ Commit only reviewed frontend implementation, necessary scoped tests/documentati
 Mandatory report (publish even PARTIAL/BLOCKED):
 `mdc-catalog/docs/reports_phase4/02_MDC_Stage1B_Existing_Frontend_Integration_Report.md`.
 
-Include verdict, baseline/implementation SHA, exact changed files and rationale, reused components, Keycloak and role evidence, protected transport design and secret-handling verification, endpoint/payload/ETag matrix, actual UI vs API tests and counts, lint/build/browser evidence, cleanup, Stage 1/Production preservation, screenshots or sanitized evidence if available without sensitive material, startup instructions and operator prerequisites, known limits/Stage 2 dependency, report link. Distinguish verified from inferred/not verified. Do not include credentials, tokens, sensitive exports or unnecessary generated artifacts.
+Include verdict, baseline/implementation SHA, exact changed files and rationale, reused components, MaaSAI Brand.js palette and typography compliance evidence, Keycloak and role evidence, protected transport design and secret-handling verification, endpoint/payload/ETag matrix, actual UI vs API tests and counts, lint/build/browser evidence, cleanup, Stage 1/Production preservation, screenshots or sanitized evidence if available without sensitive material, startup instructions and operator prerequisites, known limits/Stage 2 dependency, report link. Distinguish verified from inferred/not verified. Do not include credentials, tokens, sensitive exports or unnecessary generated artifacts.
 
 Final response: verdict, branch, implementation SHA, report SHA/link, minimal changed files, startup commands, confirmed Keycloak/browser evidence, core provider registration/update and real discovery results, optional lifecycle UI coverage, cleanup and blockers. Stop after Stage 1B. No Stage 2, remote frontend deployment, or Production promotion.
