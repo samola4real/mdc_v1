@@ -105,7 +105,7 @@ const Contact = () => {
             <section className="contact-page__header">
                 <div>
                     <h1>Contact Detail</h1>
-                    <p>Project team and participating organisations in MaaSAI.</p>
+                    <p>MDC development team and MaaSAI project contacts.</p>
                 </div>
             </section>
 
