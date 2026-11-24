@@ -2,7 +2,7 @@ import axios from 'axios';
 import { getMdcApiBaseUrl, getMdcSharedApiPrefix } from '@/config/runtimeConfig';
 import { getKeycloakAccessToken } from '@/services/keycloak/keycloak';
 
-const DEFAULT_TIMEOUT_MS = 15000;
+const DEFAULT_TIMEOUT_MS = 25000;
 const trimTrailingSlash = (value = '') => value.replace(/\/+$/, '');
 const trimLeadingSlash = (value = '') => value.replace(/^\/+/, '');
 

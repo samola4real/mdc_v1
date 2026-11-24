@@ -14,22 +14,23 @@ npm run dev -- --hostname 127.0.0.1 --port 3000
 ```
 
 Open `http://localhost:3000/demo` with the approved test account. The existing
-Keycloak client must permit that localhost redirect and web origin. The local
-Next.js server needs these environment variables through a secure operator
-process or a Git-ignored `.env.local`. The names below do not contain secrets.
+Keycloak client must permit that localhost redirect and web origin. Next.js
+loads the approved Preview credential from the server environment or the
+Git-ignored `.env.local`.
 
 ```dotenv
-MDC_KEYCLOAK_AUDIENCE=<approved-MDC-audience-in-myClient-access-tokens>
-MDC_KEYCLOAK_ROLE_SOURCE=<client-or-realm-as-confirmed-by-the-operator>
 MDC_VERCEL_PROTECTION_BYPASS=<approved-Stage-1-Preview-bypass>
 ```
 
-Set `client` when MaaSAI Provider, Consumer and Admin roles come from
-`resource_access.myClient.roles`. Set `realm` only when the operator confirms
-the existing realm-role mapping is authorized. Confirm the intended API audience
-in the actual access token. Token signature, issuer, expiry, audience, and
-authorized party remain required. Keep the bypass value server-side and out of
-browser config, exports and logs.
+The loopback session policy verifies the signed MAASAI Keycloak access token,
+expiry, subject, token type and `myClient` authorized party. It confirms the same
+subject through Keycloak UserInfo and recognizes signed demo roles from the realm
+and `myClient` claims. Keep the Preview credential in the server environment.
+
+An explicitly configured `MDC_KEYCLOAK_AUDIENCE` enables strict audience
+validation and requires `MDC_KEYCLOAK_ROLE_SOURCE` set to `client` or `realm`
+for the approved role claim. A role source alone restricts the loopback session
+policy to that claim. The relay is available on loopback only.
 
 The browser sends its Keycloak access token to `/api/mdc` on the same origin.
 The server checks the verified role and forwards only the canonical routes to

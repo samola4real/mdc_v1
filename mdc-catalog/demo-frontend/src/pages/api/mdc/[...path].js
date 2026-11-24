@@ -6,6 +6,7 @@ import { isDisposableMdcId, isDisposableOfferingId } from '../../../services/mdc
 const preview = 'https://maasai-mdc-v1-2ps4wdme5-mdc19.vercel.app';
 const { realmUrl: issuer, clientId } = getDefaultRuntimeConfig().keycloak;
 const issuerKeys = createRemoteJWKSet(new URL(issuer + '/protocol/openid-connect/certs'), { timeoutDuration: 5000 });
+const userInfoEndpoint = new URL(issuer + '/protocol/openid-connect/userinfo');
 const providerRoles = ['provider', 'admin'];
 const demoRoles = ['provider', 'consumer', 'admin'];
 const idSegment = /^[a-zA-Z0-9][a-zA-Z0-9_-]{0,511}$/;
@@ -49,18 +50,45 @@ export const allowsDisposableWrite = (route, body) => {
     return route.resource === 'offering' ? isDisposableOfferingId(route.id) : isDisposableMdcId(route.id);
 };
 
+const confirmKeycloakSession = async (token, subject) => {
+    try {
+        const response = await fetch(userInfoEndpoint, {
+            headers: { Accept: 'application/json', Authorization: 'Bearer ' + token },
+            cache: 'no-store',
+            redirect: 'error',
+            signal: AbortSignal.timeout(5000)
+        });
+        if (response.status === 401 || response.status === 403) return false;
+        if (!response.ok) throw new Error('UserInfo request failed.');
+        const identity = await response.json();
+        return identity?.sub === subject;
+    } catch {
+        throw Object.assign(new Error('The Keycloak session check is unavailable.'), { code: 'ERR_KEYCLOAK_USERINFO' });
+    }
+};
+
 export const verifyAccessRoles = async (token, audience, roleSource, keys = issuerKeys) => {
     const { payload } = await jwtVerify(token, keys, {
         algorithms: ['RS256'],
         issuer,
-        audience,
+        audience: audience || undefined,
         requiredClaims: ['exp', 'sub', 'azp', 'typ']
     });
     if (payload.azp !== clientId || payload.typ !== 'Bearer' || typeof payload.sub !== 'string' || !payload.sub) {
         return [];
     }
-    const list = roleSource === 'realm' ? payload.realm_access?.roles : payload.resource_access?.[clientId]?.roles;
-    return normalizeDemoRoles(Array.isArray(list) ? list : []);
+    // The loopback-only session mode uses the pinned issuer to confirm the existing client session.
+    if (!audience && !(await confirmKeycloakSession(token, payload.sub))) {
+        throw new Error('The Keycloak session could not be verified.');
+    }
+    const claims = {
+        realm: payload.realm_access?.roles,
+        client: payload.resource_access?.[clientId]?.roles
+    };
+    const sources = roleSource ? [claims[roleSource]] : [claims.realm, claims.client];
+    const signedRoles = sources.flatMap((roles) => Array.isArray(roles) ? roles : [])
+        .filter((role) => typeof role === 'string');
+    return normalizeDemoRoles(signedRoles).filter((role) => demoRoles.includes(role));
 };
 
 const fail = (res, status, code, message) => res.status(status).json({
@@ -92,16 +120,16 @@ export default async function stage1bMdc(req, res) {
     if (!match) return fail(res, 401, 'keycloak_token_required', 'Sign in with MaaSAI Keycloak to continue.');
 
     const audience = process.env.MDC_KEYCLOAK_AUDIENCE?.trim();
-    const roleSource = process.env.MDC_KEYCLOAK_ROLE_SOURCE;
-    if (!audience || !['client', 'realm'].includes(roleSource)) {
-        return fail(res, 503, 'identity_configuration_required', 'The local server needs the approved Keycloak audience and role source.');
+    const roleSource = process.env.MDC_KEYCLOAK_ROLE_SOURCE?.trim();
+    if ((audience || roleSource) && !['client', 'realm'].includes(roleSource)) {
+        return fail(res, 503, 'identity_configuration_required', 'Set a supported Keycloak role source for the configured identity policy.');
     }
     let roles;
     try {
         roles = await verifyAccessRoles(match[1], audience, roleSource);
     } catch (error) {
-        if (['ERR_JWKS_TIMEOUT', 'ERR_JWKS_INVALID'].includes(error?.code) || error instanceof TypeError) {
-            return fail(res, 503, 'keycloak_unavailable', 'The local server could not verify the Keycloak signing keys.');
+        if (['ERR_JWKS_TIMEOUT', 'ERR_JWKS_INVALID', 'ERR_KEYCLOAK_USERINFO'].includes(error?.code) || error instanceof TypeError) {
+            return fail(res, 503, 'keycloak_unavailable', 'The local server could not verify the Keycloak session.');
         }
         return fail(res, 401, 'invalid_keycloak_token', 'Sign in again with MaaSAI Keycloak.');
     }

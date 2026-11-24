@@ -88,13 +88,16 @@ test('server route and disposable scope deny legacy paths, traversal, mismatched
 
 const { privateKey, publicKey } = await generateKeyPair('RS256');
 const kid = 'stage1b-offline-test';
-const fixture = (claims = {}, options = {}) => new SignJWT({
-    azp: 'myClient', typ: 'Bearer',
-    resource_access: { myClient: { roles: ['mdc_provider'] }, unrelated: { roles: ['admin'] } },
-    ...claims
-}).setProtectedHeader({ alg: 'RS256', kid })
-    .setIssuer(options.issuer || issuer).setSubject('offline-user')
-    .setAudience(options.audience || audience).setExpirationTime(options.exp || '10m').sign(options.signer || privateKey);
+const fixture = (claims = {}, options = {}) => {
+    const token = new SignJWT({
+        azp: 'myClient', typ: 'Bearer',
+        resource_access: { myClient: { roles: ['mdc_provider'] }, unrelated: { roles: ['admin'] } },
+        ...claims
+    }).setProtectedHeader({ alg: 'RS256', kid })
+        .setIssuer(options.issuer || issuer).setSubject('offline-user').setExpirationTime(options.exp || '10m');
+    if (options.audience !== null) token.setAudience(options.audience || audience);
+    return token.sign(options.signer || privateKey);
+};
 
 test('offline signed fixtures enforce issuer, audience, expiry, signature, and authorized party', async () => {
     assert.deepEqual(await verifyAccessRoles(await fixture(), audience, 'client', publicKey), ['provider']);
@@ -104,6 +107,25 @@ test('offline signed fixtures enforce issuer, audience, expiry, signature, and a
     await assert.rejects(verifyAccessRoles(await fixture({}, { exp: 1 }), audience, 'client', publicKey));
     const other = await generateKeyPair('RS256');
     await assert.rejects(verifyAccessRoles(await fixture({}, { signer: other.privateKey }), audience, 'client', publicKey));
+});
+
+test('offline loopback session requires matching issuer UserInfo and uses only signed demo roles', async (t) => {
+    const token = await fixture({ realm_access: { roles: ['consumer', 'ordinary-realm-role'] } }, { audience: null });
+    const userInfo = t.mock.method(globalThis, 'fetch', async (url, options) => {
+        assert.equal(String(url), issuer + '/protocol/openid-connect/userinfo');
+        assert.equal(options.headers.Authorization === 'Bearer ' + token, true);
+        assert.equal(options.cache, 'no-store');
+        assert.equal(options.redirect, 'error');
+        return Response.json({ sub: 'offline-user', realm_access: { roles: ['admin'] } });
+    });
+    assert.deepEqual(await verifyAccessRoles(token, undefined, undefined, publicKey), ['consumer', 'provider']);
+    assert.deepEqual(await verifyAccessRoles(token, undefined, 'client', publicKey), ['provider']);
+    assert.deepEqual(await verifyAccessRoles(token, undefined, 'realm', publicKey), ['consumer']);
+    await assert.rejects(verifyAccessRoles(token, audience, 'client', publicKey));
+    assert.deepEqual(await verifyAccessRoles(await fixture({ azp: 'unrelated' }), undefined, undefined, publicKey), []);
+    assert.deepEqual(await verifyAccessRoles(await fixture({ typ: 'ID' }), undefined, undefined, publicKey), []);
+    await assert.rejects(verifyAccessRoles(await fixture({}, { exp: 1 }), undefined, undefined, publicKey));
+    assert.equal(userInfo.mock.callCount(), 3);
 });
 
 const invoke = async ({ method, path, authorization, body, extraHeaders, remoteAddress = '127.0.0.1' }) => {
@@ -174,4 +196,55 @@ test('offline transport preserves exact ETag and receipt, strips identity header
     assert.equal(options.headers.Authorization, undefined);
     assert.equal(options.headers['x-mdc-actor-id'], undefined);
     assert.equal(options.redirect, 'error');
+});
+
+test('offline default relay verifies session before forwarding and fails closed on issuer errors', async (t) => {
+    const jwk = { ...await exportJWK(publicKey), kid, alg: 'RS256' };
+    const keys = ['MDC_KEYCLOAK_AUDIENCE', 'MDC_KEYCLOAK_ROLE_SOURCE', 'MDC_VERCEL_PROTECTION_BYPASS'];
+    const previous = keys.map((name) => process.env[name]);
+    t.after(() => keys.forEach((name, i) => {
+        if (previous[i] === undefined) delete process.env[name];
+        else process.env[name] = previous[i];
+    }));
+    delete process.env.MDC_KEYCLOAK_AUDIENCE;
+    delete process.env.MDC_KEYCLOAK_ROLE_SOURCE;
+    process.env.MDC_VERCEL_PROTECTION_BYPASS = 'offline-fixture-only';
+    let userInfoStatus = 200;
+    let userInfoSubject = 'offline-user';
+    const forwarded = [];
+    t.mock.method(globalThis, 'fetch', async (url, options) => {
+        if (String(url) === issuer + '/protocol/openid-connect/certs') return Response.json({ keys: [jwk] });
+        if (String(url) === issuer + '/protocol/openid-connect/userinfo') {
+            return Response.json({ sub: userInfoSubject }, { status: userInfoStatus });
+        }
+        forwarded.push({ url, options });
+        return Response.json({ contract_version: '1.0', status: 'ok' });
+    });
+    const provider = 'Bearer ' + await fixture({}, { audience: null });
+    const health = { method: 'GET', path: ['health'], authorization: provider, extraHeaders: { 'x-mdc-actor-id': 'offline-actor' } };
+    assert.equal((await invoke(health)).statusCode, 200);
+    assert.equal(forwarded.length, 1);
+    assert.equal(forwarded[0].url, 'https://maasai-mdc-v1-2ps4wdme5-mdc19.vercel.app/api/health');
+    assert.equal(forwarded[0].options.headers.Authorization, undefined);
+    assert.equal(forwarded[0].options.headers['x-mdc-actor-id'], undefined);
+
+    const consumer = 'Bearer ' + await fixture({
+        realm_access: { roles: ['consumer'] },
+        resource_access: { unrelated: { roles: ['admin'] } }
+    }, { audience: null });
+    const denial = await invoke({
+        method: 'POST', path: ['provider-publication'], authorization: consumer, body: {},
+        extraHeaders: { 'x-mdc-role': 'admin' }
+    });
+    assert.equal(denial.statusCode, 403);
+    assert.equal(denial.data.error.code, 'mdc_role_forbidden');
+    assert.equal(forwarded.length, 1);
+
+    userInfoSubject = 'different-user';
+    assert.equal((await invoke(health)).statusCode, 401);
+    userInfoStatus = 401;
+    assert.equal((await invoke(health)).statusCode, 401);
+    userInfoStatus = 503;
+    assert.equal((await invoke(health)).statusCode, 503);
+    assert.equal(forwarded.length, 1);
 });
