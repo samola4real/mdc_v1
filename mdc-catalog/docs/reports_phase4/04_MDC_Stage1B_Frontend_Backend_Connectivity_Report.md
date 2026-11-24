@@ -1,5 +1,44 @@
 # Stage 1B — Frontend-to-backend connectivity
 
+## Operator-approved Preview access resume · 2026-11-24
+
+**Verdict — PARTIAL.** The Stage 1B server at [http://localhost:3000/](http://localhost:3000/) loads the saved Preview credential automatically. The restarted process reached the accepted protected Preview and received HTTP 200. Authenticated browser relay acceptance remains gated on the approved Keycloak audience and role source.
+
+| Reference | Current evidence |
+| --- | --- |
+| Updated prompt at `origin/main` | `9d7ff1abcbc5e8cf70380d491a7d5a8d1d84a651` |
+| Existing Stage 1B branch and starting head | `phase4/stage1b-frontend-integration` at `e3716b3cd8e11bda8a428be43099f9b186261cae`, matching GitHub |
+| Existing relay implementation | `8252d2abaf8683a63e9b6c598fcd40cd50bdb7b6` |
+| Served frontend | Source tree `7006724a7d9762f80c5d870fc09f63804b283612`, prepared Next.js build `ipLk0-E6GacQvxqzZH7B2` |
+| Worktree and restart | `C:/Users/Elahi/AppData/Local/Temp/mdc-stage1b-20261124-4b9fc439/mdc-catalog/demo-frontend`. The identified PID `3288` was restarted with operator approval on loopback port 3000. PID `41768` served the same reviewed build after the restart. |
+| Accepted protected target | Vercel Preview `dpl_Z2wq86NZk6wwd84XEKSLLkGR83Ea`. Pinned `GET /api/health` returned HTTP 200 with canonical liveness. |
+
+[Updated Task 04 prompt](https://github.com/samola4real/mdc_v1/blob/9d7ff1abcbc5e8cf70380d491a7d5a8d1d84a651/mdc-catalog/docs/prompts_phase4/04_MDC_Stage1B_Frontend_Backend_Connectivity_Prompt.md)
+
+### Automatic local configuration
+
+The authorized credential was saved as exactly one `MDC_VERCEL_PROTECTION_BYPASS` assignment in the existing frontend's `.env.local`, preserving the surrounding entries. Git verified the file is ignored and untracked. Separate Next.js loader checks in production and development modes matched the persisted value, and observation after the restarted server's native configuration load confirmed presence in that process. Normal Next.js launches from this worktree load the setting from the file.
+
+The configured value appeared zero times in a scan of 54 local files, including the served-build client assets, the public config and the restart logs, and in the live Home and `/config.js` response bodies. The browser kept the same-origin `/api/mdc` client. The existing relay builds the Preview header on the server and excludes the incoming Keycloak Bearer and actor headers from outbound requests. The updated prompt calls for rotation or revocation of previously disclosed credentials by the Vercel project owner.
+
+### Transport and browser checks
+
+| Check | Actual result |
+| --- | --- |
+| Server-side protected Preview transport | The saved server-only credential reached the fixed `/api/health` target. HTTP 200 and canonical API liveness were confirmed in the restarted process. This was a direct transport check. |
+| Anonymous browser relay | `GET /api/mdc/health`, `GET /api/mdc/catalog/filters`, `POST /api/mdc/provider-publication/validation` and `POST /api/mdc/provider-publication` returned HTTP 401 `keycloak_token_required`. The POST probes used empty JSON. |
+| Browser credential isolation | The four responses had `Cache-Control: no-store` and exposed no Preview bypass header. The public environment scan showed zero credential exposure. |
+| Existing login | The real MAASAI Keycloak form opened for `myClient` with S256 PKCE and a return origin of `http://localhost:3000`. |
+| Signed-in connectivity | Pending an approved audience and role source, followed by test sessions. Positive health and filters, provider validation, spur-gear discovery and Consumer-only write denial still need authenticated browser evidence. No backend writes occurred. |
+
+The restarted server reported `MDC_KEYCLOAK_AUDIENCE` and `MDC_KEYCLOAK_ROLE_SOURCE` absent. The operator was asked for the two non-secret administrator confirmations for `myClient`: the exact intended MDC access-token audience and the approved role source (`resource_access.myClient.roles` or explicitly approved `realm_access.roles`). Once those are confirmed, Codex can set the two entries and restart the identified local process. The operator can then sign in through Keycloak on port 3000 with the available authorized Provider, Consumer-only or Admin test sessions.
+
+The frontend code and accepted Preview were reused for the checks. The only tracked change in this resume is the Task 04 report.
+
+## Earlier port 3000 resume evidence
+
+The following records the previous resume before the operator-authorized Preview credential was applied.
+
 ## Resumed verification on port 3000 · 2026-11-24
 
 **Verdict — BLOCKED.** The Stage 1B frontend is running at [http://localhost:3000/](http://localhost:3000/). The new origin reaches the real Keycloak sign-in form and passes the anonymous relay tests. The local Preview credential and the administrator-approved Keycloak audience and role source are still unavailable to this worktree. Actual signed-in relay acceptance is pending.
