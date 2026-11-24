@@ -10,8 +10,7 @@ const AdminAudit = () => {
                 <div className="text-sm text-600 mb-2">MDC Demo Console</div>
                 <h1 className="mt-0 mb-2 text-900">Demo Admin Console</h1>
                 <p className="text-600 line-height-3 mb-0">
-                    Monitor the MDC demo status, registered demo provider state, and technical
-                    service-discovery checks.
+                    Check MDC API liveness and the current catalogue vocabulary.
                 </p>
             </Card>
             <DemoRoleGuard allowedRoles={['admin']} pageLabel="Admin">

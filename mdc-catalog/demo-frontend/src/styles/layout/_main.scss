@@ -2,28 +2,44 @@
     box-sizing: border-box;
 }
 
-:root,
-[data-theme='light'] {
-    --orange: #E8903E;
-    --orange-light: #F5A623;
-    --blue: #4A8FD9;
+:root {
+    --brand-navy: #223F61;
+    --brand-orange: #E78C3A;
+    --brand-sand: #D8D1BE;
+    --brand-bg: #F3F2EE;
+    --brand-ink: #262626;
+    --focus-ring: 0 0 0 2px var(--brand-navy), 0 0 0 4px var(--brand-orange);
+}
+
+:root, [data-theme='light'] {
+    --orange: var(--brand-orange);
+    --orange-light: var(--brand-orange);
+    --blue: var(--brand-navy);
     --green: #6B9E3A;
     --red-orange: #E06040;
     --purple: #8B5DAA;
-    --bg: #F0F0F0;
+    --bg: var(--brand-bg);
     --bg-card: #FFFFFF;
-    --sidebar-bg: #FFFFFF;
-    --topbar-bg: #FFFFFF;
-    --border: #E5E5E5;
-    --text-dark: #333333;
-    --text-medium: #666666;
-    --text-light: #999999;
+    --sidebar-bg: var(--brand-navy);
+    --topbar-bg: var(--brand-navy);
+    --border: var(--brand-sand);
+    --text-dark: var(--brand-ink);
+    --text-medium: #4A4439;
+    --text-light: #625B4E;
     --status-ok: #6B9E3A;
-    --status-warn: #E8903E;
+    --status-warn: var(--brand-orange);
     --status-error: #E06040;
     --sidebar-width: 230px;
     --topbar-height: 56px;
-    --font-family: 'Source Sans 3', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    --font-family: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    --primary-color: var(--brand-navy);
+    --primary-color-text: #FFFFFF;
+    --surface-ground: var(--brand-bg);
+    --surface-border: var(--brand-sand);
+    --surface-100: var(--brand-sand);
+    --surface-900: var(--brand-ink);
+    --text-color: var(--brand-ink);
+    --text-color-secondary: var(--text-medium);
 }
 
 /* -----------------------------------------------------------------
@@ -106,4 +122,39 @@ a {
 
 .p-component {
     font-family: var(--font-family);
+}
+
+.p-card {
+    background-color: var(--bg-card);
+    color: var(--text-dark);
+}
+
+.p-panel .p-panel-header {
+    background-color: var(--brand-navy);
+    color: #FFFFFF;
+    border-color: var(--border);
+}
+
+.p-panel .p-panel-header .p-panel-header-icon {
+    color: #FFFFFF;
+}
+
+.p-button:not(:where(.p-button-secondary, .p-button-success, .p-button-info, .p-button-warning, .p-button-help, .p-button-danger, .p-button-text, .p-button-link, .p-button-outlined)) {
+    background-color: var(--brand-orange);
+    border-color: var(--brand-orange);
+    color: var(--brand-ink);
+
+    &:enabled:hover {
+        background-color: var(--brand-sand);
+        border-color: var(--brand-sand);
+        color: var(--brand-ink);
+    }
+}
+
+.p-button:focus-visible,
+.p-inputtext:enabled:focus,
+.p-dropdown:not(.p-disabled).p-focus,
+.p-multiselect:not(.p-disabled).p-focus {
+    box-shadow: var(--focus-ring);
+    border-color: var(--brand-orange);
 }

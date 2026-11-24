@@ -79,3 +79,9 @@ export const initKeycloak = (initOptions = {}) => {
 
     return keycloakInitPromise;
 };
+
+export const getKeycloakAccessToken = async () => {
+    if (!keycloakInstance?.authenticated) return null;
+    await keycloakInstance.updateToken(30);
+    return keycloakInstance.token || null;
+};

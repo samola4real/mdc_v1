@@ -158,6 +158,36 @@
     }
 }
 
+:root:not([data-theme]), [data-theme='light'] {
+    .layout-menu {
+        .layout-root-menuitem > .layout-menuitem-root-text {
+            color: var(--brand-sand);
+        }
+
+        ul a {
+            color: var(--brand-bg);
+
+            &:hover, &.active-route {
+                color: #FFFFFF;
+                background-color: rgba(255, 255, 255, 0.1);
+            }
+
+            &.active-route {
+                border-left-color: var(--brand-orange);
+
+                .layout-menuitem-icon {
+                    color: var(--brand-bg);
+                }
+            }
+
+            &:focus-visible {
+                outline: 2px solid var(--brand-orange);
+                outline-offset: -4px;
+            }
+        }
+    }
+}
+
 .layout-submenu-enter-active {
     max-height: 1000px !important;
     transition: max-height 1s ease-in-out;

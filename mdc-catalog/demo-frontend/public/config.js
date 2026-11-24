@@ -1,5 +1,5 @@
 // Public browser runtime configuration only. Never place lifecycle tokens or
-// other secrets here. Override baseUrl with the deployed HTTPS MDC API URL.
+// other secrets here. Stage 1 MDC uses the local same-origin API.
 window.MAASAI_CONFIG = {
     keycloak: {
         enabled: true,
@@ -8,8 +8,7 @@ window.MAASAI_CONFIG = {
         onLoad: 'check-sso'
     },
     mdcApi: {
-        baseUrl: 'http://localhost:8000',
-        sharedApiPrefix: '/api',
-        demoApiPrefix: '/api/demo'
+        baseUrl: '',
+        sharedApiPrefix: '/api/mdc'
     }
 };
