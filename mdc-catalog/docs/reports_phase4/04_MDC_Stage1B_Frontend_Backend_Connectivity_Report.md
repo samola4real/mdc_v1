@@ -1,5 +1,28 @@
 # Stage 1B — Frontend-to-backend connectivity
 
+## Provider Area follow-up · 2026-11-24
+
+**Verdict — PARTIAL.** The operator reported that normal MaaSAI Keycloak sign-in reached Provider Area and the red error ribbon was gone. The accepted deployed MDC backend independently returned the catalogue filters, a successful non-mutating validation, and the two expected spur-gear matches. This verification window captured zero signed-in requests through the browser relay.
+
+The checks used the existing Stage 1B worktree, implementation `90dcc20a715d8bd0beda30a54696df2823e02d29`, running build `ysT1CIKHxAaUnJnJZc-wu` and existing observer on PID `42432`. The Stage 1B branch matched GitHub at the starting report commit `a07d381c9a7d88e3534c187cb9a43bb4a5c7ec9f`. [Provider Area on the confirmed local origin](http://localhost:3000/demo/provider)
+
+| Endpoint or check | Verified evidence |
+| --- | --- |
+| Deployed `GET /api/catalog/filters` | Direct server-side request to the fixed protected Preview with its approved credential returned HTTP 200 and contract `1.0`. The catalogue contained 3 part families, 6 materials, 15 processes and 6 certifications. |
+| Deployed `POST /api/provider-publication/validation` | Direct server-side request with one disposable validation payload returned HTTP 200 and `valid: true`. The operation was validation only. |
+| Deployed `POST /api/service-discovery/search` | Direct search for spur gears returned HTTP 200, contract `1.0` and two results. The IDs were `precipart` (Precipart) and `tasowheel` (Tasowheel Oy). |
+| Local evidence collection | The running observer captured a fresh anonymous `GET /api/mdc/catalog/filters` with HTTP 401 and `keycloak_token_required`. This confirms the route and observer were active during the follow-up. |
+| Live signed-in browser filters | Pending an observed authenticated `GET /api/mdc/catalog/filters` on the confirmed origin. The operator’s Provider Area observation is recorded above. |
+| Remaining signed-in checks | Signed-in health, Provider validation and authorized Consumer or Admin discovery still require browser responses. The Consumer-only write-denial check requires an actual Consumer-only session. |
+
+The operator was asked to reload Provider Area on the same local origin with the existing Keycloak session. A sanitized browser Network status and vocabulary summary can also establish the browser result if the local observer does not see the request. Credentials and authorization headers stay in the browser.
+
+Zero provider records were registered, edited or deleted. The only tracked change in this follow-up is this report.
+
+## Earlier existing MaaSAI session resume
+
+The previous resume below documents the relay implementation and its original verification.
+
 ## Existing MaaSAI session resume · 2026-11-24
 
 **Verdict — PARTIAL.** The updated relay is running at [http://localhost:3000/](http://localhost:3000/). The approved loopback session policy removes the mandatory audience and role-source setup for the local demo. Protected Preview transport and the anonymous browser checks passed. The live listener received zero signed-in relay requests during the verification window, so signed-in acceptance is pending.
