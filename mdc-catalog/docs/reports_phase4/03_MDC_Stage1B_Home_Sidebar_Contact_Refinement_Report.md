@@ -1,5 +1,43 @@
 # Stage 1B — Home, sidebar and Contact refinement
 
+## Locked-specification follow-up · 2026-11-24
+
+**Status — PARTIAL.** The operator rejected the previous delivery. The differing localhost runtimes were reproduced. The corrected build is ready for an approved restart, and the actual signed-in checks and operator visual acceptance are pending.
+
+The locked prompt was read from `origin/main` at `7cb577135ba8d01205a3ba37585a416d798a1184`. The existing `phase4/stage1b-frontend-integration` branch and worktree started clean at the fetched remote tip `de60b44212c8e7f42b51460d65f67aec9ae977ca`. [Locked prompt](https://github.com/samola4real/mdc_v1/blob/7cb577135ba8d01205a3ba37585a416d798a1184/mdc-catalog/docs/prompts_phase4/03_MDC_Stage1B_Home_Sidebar_Contact_Refinement_Prompt.md)
+
+### Runtime discrepancy
+
+| Listener | Identified process and build | Actual response |
+| --- | --- | --- |
+| Port 3000 | Next.js development worker PID `8044` from the original checkout `C:/Users/Elahi/Desktop/mdc_v1/mdc-catalog/demo-frontend`. Build ID `development`. | The old template welcome, Brand and public Dashboard links, four public cards, and two Contact records with filters reproduced the reported anonymous screen. |
+| Port 3001 | Loopback Next.js start PID `38508`, previously started from the existing Stage 1B worktree. Build `l_V5qaqm9olxY4KqIkH8c` matches that worktree's previous build ID and CSS bytes. Its frontend source is `ca3853cfb1d273eb4a10efa908ac11d452e37863`. | The Stage 1B welcome, Home/Contact/Help, two cards, and four Contact records were served. Contact still showed the introduction from the previous specification. |
+
+The inspection reproduced the original template at one listener and the reviewed refinement at the other. It did not establish which browser URL the operator originally used. The single confirmed inspection origin is [MaaSAI Home](http://localhost:3001/). It currently serves the previous Stage 1B build while restart approval is pending.
+
+### Locked source correction and build
+
+The sole implementation delta is `mdc-catalog/demo-frontend/src/pages/home/Contact.js`. The introduction now reads “MDC development team and MaaSAI project contacts.” The previous implementation already contains the locked sidebar, Home variants, cards, contact order, shared styling and route protection in source. [Implementation commit](https://github.com/samola4real/mdc_v1/commit/7006724a7d9762f80c5d870fc09f63804b283612)
+
+The corrected source is `7006724a7d9762f80c5d870fc09f63804b283612` in `C:/Users/Elahi/AppData/Local/Temp/mdc-stage1b-20261124-4b9fc439/mdc-catalog/demo-frontend`. The optimized build `ipLk0-E6GacQvxqzZH7B2` is prepared in `.next/locked-7006724` under that same worktree. Its generated Contact page contains the corrected text. The isolated build kept the currently served build ID intact. Lint, all eight existing scoped regressions and the optimized build passed. The build and lint reported the existing hook, stylesheet and Browserslist warnings.
+
+### Actual browser observations on the confirmed origin
+
+| Check | Observation |
+| --- | --- |
+| Anonymous Home and sidebar | The exact MaaSAI welcome and More info link, Contact and Project Website cards with their expected links, and only Home, Contact and Help were visible. The topbar showed Login. |
+| Anonymous navigation and Contact | Home → Contact → Home and Home → Help → Home passed through the existing links. Contact displayed Jose Martinez Lastra, Samuel Afolaranmi, Miguel Angel Mateo-Casali and Georgia Apostolou in that order with the expected emails, existing logos and TAU initials. The earlier introduction was still served. Search, filtering and count controls were absent. |
+| Visual and responsive | Sidebar and welcome backgrounds computed to white. The page was Off-White, the active menu Warm Sand, and the CTA Orange with Ink text. Outfit loaded, the More info keyboard ring appeared, and both card grids fit a 390 px viewport in one column. The theme selector cycled through dark, HMI and light. |
+| Anonymous route protection | Direct visits to `/demo` and all three role pages returned to Home, with no protected content observed during the redirects. |
+| Keycloak challenge | Topbar Login reached the actual MAASAI form with client `myClient`, S256 PKCE and a return URL on the confirmed origin. No authenticated session was established by this check. |
+| Signed-in flow and review | Actual signed-in Home and Contact, role changes and page access, Dashboard → Home, logout and operator inspection are pending. The revised prompt requires the operator's personal sign-in and visual acceptance. |
+
+Operator approval was requested to restart the positively identified Stage 1B process on port 3001. The corrected artifact can then be served and rechecked on the same origin. No live MDC lifecycle calls were needed for this UI verification.
+
+## Previous delivery evidence
+
+This historical record describes the earlier delivery that the operator rejected.
+
 **Verdict — PARTIAL.** The approved light-theme refinement is implemented. Home, Contact, Help and the four anonymous MDC redirects passed in a local browser. The live Keycloak login form opened. A signed-in session was unavailable, so the authenticated Home, role-specific navigation and logout checks are pending.
 
 | Reference | Value |
