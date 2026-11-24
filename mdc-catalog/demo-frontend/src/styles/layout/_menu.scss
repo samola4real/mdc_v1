@@ -161,23 +161,16 @@
 :root:not([data-theme]), [data-theme='light'] {
     .layout-menu {
         .layout-root-menuitem > .layout-menuitem-root-text {
-            color: var(--brand-sand);
+            color: var(--brand-ink);
         }
 
         ul a {
-            color: var(--brand-bg);
-
-            &:hover, &.active-route {
-                color: #FFFFFF;
-                background-color: rgba(255, 255, 255, 0.1);
-            }
+            color: var(--brand-ink);
 
             &.active-route {
+                color: var(--brand-navy);
+                background-color: var(--brand-sand);
                 border-left-color: var(--brand-orange);
-
-                .layout-menuitem-icon {
-                    color: var(--brand-bg);
-                }
             }
 
             &:focus-visible {
