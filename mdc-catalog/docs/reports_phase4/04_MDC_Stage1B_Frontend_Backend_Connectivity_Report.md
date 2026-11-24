@@ -1,5 +1,44 @@
 # Stage 1B — Frontend-to-backend connectivity
 
+## Existing MaaSAI session resume · 2026-11-24
+
+**Verdict — PARTIAL.** The updated relay is running at [http://localhost:3000/](http://localhost:3000/). The approved loopback session policy removes the mandatory audience and role-source setup for the local demo. Protected Preview transport and the anonymous browser checks passed. The live listener received zero signed-in relay requests during the verification window, so signed-in acceptance is pending.
+
+| Reference | Current evidence |
+| --- | --- |
+| Updated prompt at `origin/main` | `21ea860933951a62d545044cb0451415458dc2e0` |
+| Existing Stage 1B branch and starting head | `phase4/stage1b-frontend-integration` at `41b882047a6a90163da15ea29e825c4f78ad6a09`, matching GitHub |
+| Scoped implementation | [`90dcc20a715d8bd0beda30a54696df2823e02d29`](https://github.com/samola4real/mdc_v1/commit/90dcc20a715d8bd0beda30a54696df2823e02d29) |
+| Served build | `ysT1CIKHxAaUnJnJZc-wu` from `C:/Users/Elahi/AppData/Local/Temp/mdc-stage1b-20261124-4b9fc439/mdc-catalog/demo-frontend` |
+| Local restart | The previously identified PID `41768` was restarted under the existing operator authorization. PID `42432` served the updated build on loopback port 3000. |
+| Fixed Preview target | Accepted Vercel deployment `dpl_Z2wq86NZk6wwd84XEKSLLkGR83Ea` |
+
+[Updated Task 04 prompt](https://github.com/samola4real/mdc_v1/blob/21ea860933951a62d545044cb0451415458dc2e0/mdc-catalog/docs/prompts_phase4/04_MDC_Stage1B_Frontend_Backend_Connectivity_Prompt.md)
+
+### Local trust policy
+
+The browser continues to send the access token from the existing `myClient` Keycloak adapter to the same-origin relay. The server verifies the pinned MAASAI issuer and JWKS, the RS256 signature, expiration, token type, subject, and `myClient` authorized party. The loopback policy confirms that Keycloak UserInfo accepts that access token and returns the same subject. The server requests that endpoint without caching or redirects. It uses only recognized demo roles in the signed realm and `myClient` claims. A failed issuer check or a mismatched UserInfo subject stops forwarding. [Keycloak UserInfo and certificate endpoints](https://www.keycloak.org/securing-apps/oidc-layers), [OpenID Connect UserInfo](https://openid.net/specs/openid-connect-core-1_0.html#UserInfo)
+
+A configured `MDC_KEYCLOAK_AUDIENCE` retains strict audience validation and requires an approved `MDC_KEYCLOAK_ROLE_SOURCE`. A configured role source alone can restrict the loopback session policy to its chosen claim. In this local run, both settings were absent and the already saved `MDC_VERCEL_PROTECTION_BYPASS` loaded from the Git-ignored environment file. The relay still enforces loopback access, fixed Preview routing, role restrictions, disposable identities and ETag handling. The browser timeout now covers the added UserInfo request as well as signing-key and Preview requests.
+
+The implementation touched the relay, MDC client timeout, existing scoped tests and the frontend setup README. A later hosted resource-server policy requires an explicit approved audience and role source, with deployment and access reviewed separately. The current relay applies its loopback checks in both modes.
+
+### Verification
+
+| Check | Observed result |
+| --- | --- |
+| Keycloak public discovery | HTTP 200. The advertised issuer, signing-key URL and UserInfo URL matched the pinned endpoints. |
+| Offline regression, lint and build | Ten tests passed. They exercised the no-audience session path, subject matching, issuer failure, expired and wrong-client tokens, role-source restrictions, Consumer denial, strict audience enforcement, exact ETags and credential forwarding boundaries. Lint and build passed with existing warnings. These tests used offline signing fixtures. |
+| Restart and protected Preview | Local Home returned HTTP 200 from the updated build. The native startup loaded the saved Preview credential. A direct health request from the restarted server to the protected Preview returned HTTP 200 with canonical liveness. |
+| Anonymous browser relay | Real fresh-browser requests to health, filters, validation and provider publication returned HTTP 401 `keycloak_token_required` with `no-store`. The two POST inputs were empty JSON. |
+| Existing Keycloak sign-in | The browser reached the normal MAASAI `myClient` password form with S256 PKCE and a return URL on localhost:3000. |
+| Authenticated browser relay | Live health, vocabulary, Provider validation, authorized spur-gear discovery, and a Consumer-only denial are pending. The operator was asked to refresh the existing signed-in Provider tab. No signed-in role claims were observed in this run. |
+| Credential isolation | An exact-value scan of 54 relevant local files and two served responses found zero occurrences. The anonymous responses exposed no bypass header. There were zero backend writes. |
+
+## Earlier operator-approved Preview access evidence
+
+The previous resume below established persistent Preview access before the existing-client session policy was implemented.
+
 ## Operator-approved Preview access resume · 2026-11-24
 
 **Verdict — PARTIAL.** The Stage 1B server at [http://localhost:3000/](http://localhost:3000/) loads the saved Preview credential automatically. The restarted process reached the accepted protected Preview and received HTTP 200. Authenticated browser relay acceptance remains gated on the approved Keycloak audience and role source.
