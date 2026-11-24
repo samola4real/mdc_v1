@@ -60,3 +60,17 @@ Inspect any remote URL locally; redact credentials before sharing. A later fetch
 
 ## Estimate and disposition
 Approx. one focused engineering day (5–9 hours indicative, not measured) if build, Keycloak and safe connectivity are operational; more if dependency fixes or identity/proxy work is needed. Biggest risks are legacy payload shape and static update defaults, missing ETag headers, and protected transport; not visual layout. No implementation now. After Stage 1 acceptance create the numbered 02 Stage 1B prompt in prompts_phase4/ and report in reports_phase4/. Preserve all existing UI and Keycloak. This report is a remote source audit, not a local repo or deployment readiness certificate.
+
+
+## Local Git inspection addendum — 2026-11-24
+
+Evidence: operator-provided PowerShell output of read-only Git commands in C:/Users/Elahi/Desktop/mdc_v1/mdc-catalog. This is a recorded local observation, not direct remote access to the Windows filesystem.
+
+- Original repository root C:/Users/Elahi/Desktop/mdc_v1; branch main at `004fef8f0db73ef3e12c1035ec470c131dcb99a6`; locally cached origin/main at `39e4570cc7839806e1db2a03bf5a7f58437f4acf` (three commits ahead, documentation changes). Only origin GitHub fetch/push remote; no GitLab remote.
+- Frontend history: `e411e73` sanitized snapshot import, `b207022` API alignment, `06df31c` final demo frontend alignment. Current tracked frontend file count 132 (the historical import count of 134 was a snapshot count, not the current tree).
+- `git diff --stat origin/main HEAD -- demo-frontend` empty; no local-only or remote-only frontend commits in the compared refs. The committed frontend trees match. No staged or non-ignored untracked frontend files reported. Ignored local files and runtime configuration have not been inventoried.
+- Only uncommitted frontend change: `src/pages/demo/index.js`, one line replaces Provider role description 'Register providers and manage manufacturing capabilities.' with 'REMOVED'. This is presentation text, not functional integration logic. Do not incorporate placeholder by default; keep the original checkout untouched.
+- Separate root .gitignore change adds `mdc-catalog/demo-frontend/src/pages/demo/index.js` and a blank line. Because index.js is tracked, the ignore rule does not suppress modifications or prevent staging. Neither change is needed in the Stage 1B implementation branch; do not commit, discard or restore either in the original checkout without operator approval.
+- Stage 1 Codex accepted-source and report worktrees are separate; leave them untouched.
+
+**Disposition:** Local-versus-cached-remote committed frontend comparison PASS. Use the existing committed frontend (last frontend commit 06df31c) in a clean linked worktree based on latest reviewed origin/main at Stage 1B start; verify no later frontend changes after fetching then. No local application changes need importing based on the provided diff. No synchronization, cleanup, or reset of original main is necessary now. Local runtime/build, Keycloak login, protected transport, and actual Stage 1 deployment acceptance remain pending. Retain all reuse/Keycloak constraints above.
