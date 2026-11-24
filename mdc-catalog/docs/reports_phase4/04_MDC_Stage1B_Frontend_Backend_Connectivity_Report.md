@@ -1,6 +1,24 @@
 # Stage 1B — Frontend-to-backend connectivity
 
-## Provider Area follow-up · 2026-11-24
+## Operator acceptance of core connectivity · 2026-11-24
+
+**Core connectivity — ACCEPTED.** The operator verified the frontend-to-backend request in the browser Network panel after signing in with MaaSAI Keycloak.
+
+| Evidence | Operator observation |
+| --- | --- |
+| Authenticated request | `GET http://localhost:3000/api/mdc/catalog/filters` |
+| Response | HTTP `200 OK` with `application/json` |
+| Provider Area | Loaded successfully with the existing session. The previous red error was absent. |
+
+This acceptance covers the signed-in catalogue-filter retrieval and Provider Area load. The earlier sections preserve the direct Preview results and the evidence available before this operator verification.
+
+### Functional testing carry-forward
+
+- Verify non-mutating provider validation through the signed-in Provider relay.
+- Verify spur-gear discovery through an authorized Consumer or Admin browser session.
+- Verify provider-write denial through an authenticated Consumer-only session.
+
+## Earlier Provider Area follow-up · 2026-11-24
 
 **Verdict — PARTIAL.** The operator reported that normal MaaSAI Keycloak sign-in reached Provider Area and the red error ribbon was gone. The accepted deployed MDC backend independently returned the catalogue filters, a successful non-mutating validation, and the two expected spur-gear matches. This verification window captured zero signed-in requests through the browser relay.
 
