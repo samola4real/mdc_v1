@@ -1,6 +1,6 @@
 # Task 05 — Stage 1B permanent checkout consolidation
 
-**Partial · 2026-11-25.** The reviewed Stage 1B frontend is merged into `main` and running from the permanent checkout at `http://localhost:3000/`. Protected Preview health passed. Signed-in catalogue filters are pending, and the temporary worktree is stopped and available for rollback.
+**PASS · 2026-11-25.** The operator accepted Task 05 after checking the Stage 1B frontend on `http://localhost:3000/`. The permanent development checkout is `C:/Users/Elahi/Desktop/mdc_v1`.
 
 ## Integration and local changes
 
@@ -17,11 +17,13 @@
 | Local process and browser | PID `32440` on `127.0.0.1:3000` resolved to the permanent Next.js installation. Edge rendered the updated MaaSAI Home and Home, Contact, and Help sidebar. The Provider route compiled and redirected the anonymous session to Home. The MaaSAI login form opened for `myClient` with S256 PKCE and a `localhost:3000` return origin. |
 | Anonymous relay | Browser requests to `/api/mdc/health` and `/api/mdc/catalog/filters` each returned HTTP `401` with `keycloak_token_required` and `Cache-Control: no-store`. Neither response exposed the Preview bypass header. |
 | Protected Preview health | After the operator approved HTTPS use of the saved bypass at the fixed Preview host, `GET /api/health` returned HTTP `200` with JSON contract `1.0`, status `ok`, and service `maasai-mdc`. The request used the ignored configuration in the permanent frontend. |
-| Signed-in Provider Area | Pending an operator browser check of `GET /api/mdc/catalog/filters` from `localhost:3000`. |
+| Provider Area functional acceptance | The operator confirmed that the permanent frontend loaded correctly, all three part families were available, and the service category and capability fields updated dynamically. |
 
 Verification used read-only requests. Provider registration and the remaining validation, discovery, and Consumer-only authorization checks are reserved for functional testing. The previously disclosed bypass remains flagged for rotation by the Vercel project owner. [Task 04 report](04_MDC_Stage1B_Frontend_Backend_Connectivity_Report.md)
 
-The stopped rollback checkout is `C:/Users/Elahi/AppData/Local/Temp/mdc-stage1b-20261124-4b9fc439`. Its reviewed tip is reachable from `main`, and its ignored paths contain the source configuration, generated dependencies, and build output.
+## Worktree retirement
+
+After operator acceptance, `git worktree remove` retired `C:/Users/Elahi/AppData/Local/Temp/mdc-stage1b-20261124-4b9fc439`. Before removal, the stopped checkout was clean and held only generated dependencies and build output plus a byte-identical copy of the permanent `.env.local`. The retained branch `phase4/stage1b-frontend-integration` at `4c2d2b344f717d8cb8ed9ff7bf90c656ea703986` provides the rollback reference. The working configuration is in the permanent frontend.
 
 ## Startup
 
