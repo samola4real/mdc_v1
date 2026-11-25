@@ -14,23 +14,22 @@ import { Toast } from 'primereact/toast';
 import { getCatalogFilters, normalizeCatalogFilters } from '@/services/mdc/catalog.service';
 import {
     createOffering, deleteOffering, deleteProvider, getOffering, getProvider, listProviderOfferings,
-    registerProvider, updateOffering, updateProvider, validateProviderPublication
+    updateOffering, updateProvider
 } from '@/services/mdc/provider.service';
 import { DISPOSABLE_PROVIDER_PREFIX, isDisposableMdcId, isDisposableOfferingId } from '@/services/mdc/stage1bScope';
 import ProviderActionResult from './ProviderActionResult';
 import ProviderPayloadPreview from './ProviderPayloadPreview';
+import ProviderRegistration, { RegistrationOutcome } from './ProviderRegistration';
 import StatusTag from './StatusTag';
 import {
     BOX_PART_TYPES, ROUND_PART_TYPES, buildOfferingCreation, buildProviderPatches,
-    buildProviderPreviewPayload, emptyProviderForm, hydrateProviderForm
+    emptyProviderForm, hydrateProviderForm
 } from './providerPayloadBuilder';
+import {
+    QUALITY_STANDARDS as qualityStandards, SUPPORT_STATUSES as supportStatuses, emptyRegistrationForm, hasRegistrationDraft
+} from './providerRegistrationPayload';
+import { readBackRegistration } from './providerRegistrationFlow';
 
-const qualityStandards = ['DIN', 'ISO', 'AGMA'];
-const supportStatuses = [
-    { label: 'Confirmed', value: 'confirmed' },
-    { label: 'Requires confirmation', value: 'candidate_requiring_confirmation' },
-    { label: 'Unknown', value: 'unknown' }
-];
 const textArea = { rows: 3, autoResize: true, className: 'w-full' };
 const providerInputs = ['providerName', 'country', 'description', 'certifications'];
 const strong = (etag) => /^"[^"\r\n]+"$/.test(etag || '');
@@ -52,9 +51,13 @@ const ProviderDemoPanel = () => {
     const toast = useRef(null);
     const inFlight = useRef(false);
     const [mode, setMode] = useState('register');
+    const [registrationForm, setRegistrationForm] = useState(emptyRegistrationForm);
+    const [registrationBusy, setRegistrationBusy] = useState(false);
+    const [registrationOutcome, setRegistrationOutcome] = useState(null);
     const [form, setForm] = useState(emptyProviderForm);
     const [filters, setFilters] = useState(null);
     const [filterError, setFilterError] = useState(null);
+    const [catalogueAttempt, setCatalogueAttempt] = useState(0);
     const [lookupId, setLookupId] = useState('');
     const [snapshot, setSnapshot] = useState(null);
     const [loadingAction, setLoadingAction] = useState(null);
@@ -65,12 +68,12 @@ const ProviderDemoPanel = () => {
     const rows = provider ? displayRows(snapshot.list.offerings, provider) : [];
     const selectedRow = rows.find((item) => item.id === offering?.offering_id);
     const patches = buildProviderPatches(form, provider, offering);
-    const payload = mode === 'update' ? patches : mode === 'add' ? buildOfferingCreation(form) : buildProviderPreviewPayload(form);
+    const payload = mode === 'add' ? buildOfferingCreation(form) : patches;
     const manageable = isDisposableMdcId(provider?.provider_id);
     const providerEtag = strong(snapshot?.provider.etag);
     const offeringEtag = strong(snapshot?.offering?.etag);
     const editing = mode === 'update';
-    const busy = Boolean(loadingAction);
+    const busy = Boolean(loadingAction) || registrationBusy;
     const currentType = form.partTypes.length === 1 ? form.partTypes[0] : null;
     const boxEnabled = BOX_PART_TYPES.includes(currentType);
     const roundEnabled = ROUND_PART_TYPES.includes(currentType);
@@ -83,7 +86,12 @@ const ProviderDemoPanel = () => {
             .then((data) => { if (active) setFilters(data); })
             .catch((error) => { if (active) setFilterError(error.message); });
         return () => { active = false; };
-    }, []);
+    }, [catalogueAttempt]);
+
+    const retryCatalogue = () => {
+        setFilterError(null);
+        setCatalogueAttempt((attempt) => attempt + 1);
+    };
 
     const setField = (field, value) => setForm((current) => ({ ...current, [field]: value }));
 
@@ -118,11 +126,12 @@ const ProviderDemoPanel = () => {
         setLookupId(id);
     };
 
-    const runAction = async (action, operation, inspect) => {
+    const runAction = async (action, operation, inspect, { keepReceipt = false } = {}) => {
         if (inFlight.current) return;
         inFlight.current = true;
         setLoadingAction(action);
         setActionResult(null);
+        if (!keepReceipt) setRegistrationOutcome(null);
         setStateLoadWarning(null);
         let response;
         let error;
@@ -132,7 +141,7 @@ const ProviderDemoPanel = () => {
             } catch (failure) {
                 error = failure;
             }
-            setActionResult({ action, response: response?.data || response, error });
+            if (!keepReceipt || error) setActionResult({ action, response: response?.data || response, error });
             if (error) {
                 toast.current?.show({ severity: 'warn', summary: action, detail: error.message, life: 3500 });
             }
@@ -158,8 +167,40 @@ const ProviderDemoPanel = () => {
         await refresh(id, selectedId, preservedEntity);
     };
 
+    const acceptRegistration = (result) => {
+        const loaded = result.readBack.kind === 'matching' ? result.readBack.snapshot : null;
+        setMode('update');
+        setLookupId(result.identity.providerId);
+        setSnapshot(loaded);
+        setForm(loaded ? hydrateProviderForm(loaded.provider.data, loaded.offering.data) : emptyProviderForm());
+        setRegistrationForm(emptyRegistrationForm());
+        setRegistrationOutcome(result);
+        setActionResult(null);
+        setStateLoadWarning(null);
+    };
+
+    const loadProvider = () => {
+        const id = lookupId.trim();
+        setSnapshot(null);
+        setForm(emptyProviderForm());
+        if (registrationOutcome?.identity.providerId === id && registrationOutcome.readBack.kind !== 'matching') {
+            runAction('Load provider', async () => {
+                const readBack = await readBackRegistration(registrationOutcome.identity, { getProvider, listProviderOfferings, getOffering });
+                acceptRegistration({ ...registrationOutcome, readBack });
+            }, undefined, { keepReceipt: true });
+            return;
+        }
+        runAction('Load provider', () => refresh(id));
+    };
+
     const switchMode = (nextMode) => {
+        if (mode === 'register') {
+            if (nextMode === 'register') return;
+            if (hasRegistrationDraft(registrationForm) && !window.confirm('Discard this registration draft?')) return;
+        }
         setMode(nextMode);
+        setRegistrationForm(emptyRegistrationForm());
+        setRegistrationOutcome(null);
         setActionResult(null);
         setStateLoadWarning(null);
         setSnapshot(null);
@@ -169,6 +210,7 @@ const ProviderDemoPanel = () => {
     const startOffering = () => {
         setMode('add');
         setActionResult(null);
+        setRegistrationOutcome(null);
         setForm({
             ...hydrateProviderForm(provider),
             partFamily: offering?.part_family || '',
@@ -550,11 +592,7 @@ const ProviderDemoPanel = () => {
                         <InputText id="providerLookup" value={lookupId} disabled={busy} onChange={(event) => setLookupId(event.target.value)} />
                     </div>
                     <Button label="Load provider" icon="pi pi-search" outlined disabled={busy || !lookupId.trim()}
-                        onClick={() => {
-                            setSnapshot(null);
-                            setForm(emptyProviderForm());
-                            runAction('Load provider', () => refresh(lookupId.trim()));
-                        }} />
+                    onClick={loadProvider} />
                     {manageable && <Button label="Add offering" icon="pi pi-plus" outlined disabled={busy || !filters} onClick={startOffering} />}
                 </div>
                 {provider && !manageable && <Message severity="info" text="This provider is read-only in the Stage 1B demo." className="w-full mb-3" />}
@@ -583,7 +621,7 @@ const ProviderDemoPanel = () => {
             <Toast ref={toast} />
             <Message severity="info" text={'Provider and offering writes are limited to disposable IDs starting with ' + DISPOSABLE_PROVIDER_PREFIX + '.'}
                 className="w-full justify-content-start" />
-            {filterError && <Message severity="error" text={'Current catalogue filters are unavailable. ' + filterError} className="w-full" />}
+            {mode !== 'register' && filterError && <Message severity="error" text={'Current catalogue filters are unavailable. ' + filterError} className="w-full" />}
             {stateLoadWarning && <Message severity="warn" text={stateLoadWarning} className="w-full" />}
             <div className="flex flex-wrap gap-2">
                 <Button label="Register New Provider" icon="pi pi-plus" outlined={mode !== 'register'}
@@ -591,52 +629,48 @@ const ProviderDemoPanel = () => {
                 <Button label="Update Existing Provider" icon="pi pi-pencil" outlined={!editing}
                     disabled={busy} onClick={() => switchMode('update')} />
             </div>
-            <fieldset disabled={busy} className="flex flex-column gap-4 border-none p-0 m-0">
-                {editing ? renderUpdateMode() : (
-                    <>
-                        {mode === 'register' && renderProviderInformation()}
-                        {renderOfferingInformation()}
-                        {renderAdditionalOfferingInformation()}
-                        {renderCapabilityInformation()}
-                    </>
-                )}
-            </fieldset>
-            <div className="flex flex-wrap gap-2">
-                {mode === 'register' && (
-                    <>
-                        <Button label="Validate publication" icon="pi pi-eye"
-                            disabled={busy || !creationReady || !form.providerName.trim() || !form.country.trim()}
-                            onClick={() => runAction('Validate publication', () => validateProviderPublication(payload))} />
-                        <Button label="Register provider" icon="pi pi-plus" outlined
-                            disabled={busy || !creationReady || !form.providerName.trim() || !form.country.trim()}
-                            onClick={() => runAction('Register provider', () => registerProvider(payload),
-                                inspectWrite(payload.provider_id, payload.offerings[0].offering_id))} />
-                    </>
-                )}
-                {mode === 'add' && <Button label="Create offering" icon="pi pi-plus"
-                    disabled={busy || !creationReady || !manageable}
-                    onClick={() => runAction('Create offering', () => createOffering(provider.provider_id, payload),
-                        inspectWrite(provider.provider_id, payload.offering_id))} />}
-                {editing && provider && (
-                    <>
-                        <Button label="Save provider" icon="pi pi-save" disabled={busy || !manageable || !providerEtag || !Object.keys(patches.provider).length}
-                            onClick={() => runAction('Save provider', () => updateProvider(provider.provider_id, patches.provider, snapshot.provider.etag),
-                                inspectWrite(provider.provider_id, offering?.offering_id, 'offering'))} />
-                        {offering && <Button label="Save offering" icon="pi pi-save" outlined
-                            disabled={busy || !manageable || !offeringEtag || !Object.keys(patches.offering).length}
-                            onClick={() => runAction('Save offering', () => updateOffering(offering.offering_id, patches.offering, snapshot.offering.etag),
-                                inspectWrite(provider.provider_id, offering.offering_id, 'provider'))} />}
-                        {offering && <Button label="Delete offering" icon="pi pi-trash" severity="danger" outlined
-                            disabled={busy || !manageable || !offeringEtag || !isDisposableOfferingId(offering.offering_id, provider.provider_id)}
-                            onClick={() => removeRecord('offering')} />}
-                        <Button label="Delete provider" icon="pi pi-trash" severity="danger" outlined
-                            disabled={busy || !manageable || !providerEtag} onClick={() => removeRecord('provider')} />
-                    </>
-                )}
-            </div>
-
-            <ProviderPayloadPreview payload={payload} />
-            <ProviderActionResult result={actionResult} />
+            {mode === 'register' ? (
+                <ProviderRegistration form={registrationForm} onChange={setRegistrationForm} filters={filters}
+                    filterError={filterError} retryFilters={retryCatalogue} onBusyChange={setRegistrationBusy}
+                    onAccepted={acceptRegistration} />
+            ) : (
+                <>
+                    <fieldset disabled={busy} className="flex flex-column gap-4 border-none p-0 m-0">
+                        {editing ? renderUpdateMode() : (
+                            <>
+                                {renderOfferingInformation()}
+                                {renderAdditionalOfferingInformation()}
+                                {renderCapabilityInformation()}
+                            </>
+                        )}
+                    </fieldset>
+                    <div className="flex flex-wrap gap-2">
+                        {mode === 'add' && <Button label="Create offering" icon="pi pi-plus"
+                            disabled={busy || !creationReady || !manageable}
+                            onClick={() => runAction('Create offering', () => createOffering(provider.provider_id, payload),
+                                inspectWrite(provider.provider_id, payload.offering_id))} />}
+                        {editing && provider && (
+                            <>
+                                <Button label="Save provider" icon="pi pi-save" disabled={busy || !manageable || !providerEtag || !Object.keys(patches.provider).length}
+                                    onClick={() => runAction('Save provider', () => updateProvider(provider.provider_id, patches.provider, snapshot.provider.etag),
+                                        inspectWrite(provider.provider_id, offering?.offering_id, 'offering'))} />
+                                {offering && <Button label="Save offering" icon="pi pi-save" outlined
+                                    disabled={busy || !manageable || !offeringEtag || !Object.keys(patches.offering).length}
+                                    onClick={() => runAction('Save offering', () => updateOffering(offering.offering_id, patches.offering, snapshot.offering.etag),
+                                        inspectWrite(provider.provider_id, offering.offering_id, 'provider'))} />}
+                                {offering && <Button label="Delete offering" icon="pi pi-trash" severity="danger" outlined
+                                    disabled={busy || !manageable || !offeringEtag || !isDisposableOfferingId(offering.offering_id, provider.provider_id)}
+                                    onClick={() => removeRecord('offering')} />}
+                                <Button label="Delete provider" icon="pi pi-trash" severity="danger" outlined
+                                    disabled={busy || !manageable || !providerEtag} onClick={() => removeRecord('provider')} />
+                            </>
+                        )}
+                    </div>
+                    <ProviderPayloadPreview payload={payload} />
+                    <ProviderActionResult result={actionResult} />
+                    <RegistrationOutcome result={registrationOutcome} />
+                </>
+            )}
         </div>
     );
 };
