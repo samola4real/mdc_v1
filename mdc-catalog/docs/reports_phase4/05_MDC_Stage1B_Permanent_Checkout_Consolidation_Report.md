@@ -1,6 +1,6 @@
 # Task 05 — Stage 1B permanent checkout consolidation
 
-**Partial · 2026-11-25.** The reviewed Stage 1B frontend is merged into `main` and running from the permanent checkout at `http://localhost:3000/`. Protected Preview health and signed-in catalogue filters are pending. The temporary worktree is stopped and available for rollback.
+**Partial · 2026-11-25.** The reviewed Stage 1B frontend is merged into `main` and running from the permanent checkout at `http://localhost:3000/`. Protected Preview health passed. Signed-in catalogue filters are pending, and the temporary worktree is stopped and available for rollback.
 
 ## Integration and local changes
 
@@ -16,7 +16,8 @@
 | Regression, lint, and build | 10 of 10 Stage 1B tests passed. Lint and production build passed with existing React hook, stylesheet, and Browserslist warnings. The build included `/demo/provider` and `/api/mdc/[...path]`. |
 | Local process and browser | PID `32440` on `127.0.0.1:3000` resolved to the permanent Next.js installation. Edge rendered the updated MaaSAI Home and Home, Contact, and Help sidebar. The Provider route compiled and redirected the anonymous session to Home. The MaaSAI login form opened for `myClient` with S256 PKCE and a `localhost:3000` return origin. |
 | Anonymous relay | Browser requests to `/api/mdc/health` and `/api/mdc/catalog/filters` each returned HTTP `401` with `keycloak_token_required` and `Cache-Control: no-store`. Neither response exposed the Preview bypass header. |
-| Protected Preview and signed-in Provider Area | Pending. Automatic approval review blocked the protected health request because it would send the saved bypass to the fixed Preview host. Explicit operator authorization for that host and a normal Provider or Admin browser session are needed to confirm HTTP `200` for `/api/mdc/catalog/filters`. |
+| Protected Preview health | After the operator approved HTTPS use of the saved bypass at the fixed Preview host, `GET /api/health` returned HTTP `200` with JSON contract `1.0`, status `ok`, and service `maasai-mdc`. The request used the ignored configuration in the permanent frontend. |
+| Signed-in Provider Area | Pending an operator browser check of `GET /api/mdc/catalog/filters` from `localhost:3000`. |
 
 Verification used read-only requests. Provider registration and the remaining validation, discovery, and Consumer-only authorization checks are reserved for functional testing. The previously disclosed bypass remains flagged for rotation by the Vercel project owner. [Task 04 report](04_MDC_Stage1B_Frontend_Backend_Connectivity_Report.md)
 
