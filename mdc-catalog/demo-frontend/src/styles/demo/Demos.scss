@@ -39,4 +39,11 @@
         color: var(--text-dark);
         font-size: 1rem;
     }
+
+    .mdc-provider-saved-value {
+        color: var(--text-dark);
+        margin-top: 0.25rem;
+        overflow-wrap: anywhere;
+        white-space: pre-wrap;
+    }
 }

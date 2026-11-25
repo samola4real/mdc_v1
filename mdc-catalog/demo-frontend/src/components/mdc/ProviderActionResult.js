@@ -1,50 +1,58 @@
 import React from 'react';
 import { Card } from 'primereact/card';
 import { Message } from 'primereact/message';
-import { Panel } from 'primereact/panel';
-import { Tag } from 'primereact/tag';
+import { readableCode } from './providerManagementDraft';
+import { observedWrite } from './providerManagementFlow';
 
-const errorDetails = {
-    400: 'Review the rejected fields and submit a valid payload.',
+const rejectionHelp = {
+    400: 'Review the highlighted information and correct the rejected fields.',
     401: 'Sign in with MaaSAI Keycloak.',
     403: 'Check your verified role and the disposable ID scope.',
-    404: 'The requested resource is absent.',
-    409: 'Load the existing record before deciding what to change.',
-    412: 'A newer revision exists. Reload the resource and review your changes.',
-    428: 'Load the resource again to get its current strong ETag.',
-    503: 'Service or publication is unavailable. Read the resource and receipt before retrying a write.'
+    404: 'The requested record could not be found.',
+    409: 'Choose a different offering ID or load the existing offering to review it.'
 };
 
-const ProviderActionResult = ({ result }) => {
+export default function ProviderActionResult({ result }) {
     if (!result) return null;
-    const { action, response, error } = result;
-    const publicationId = response?.publication_id || error?.publicationId;
-    const publicationStatus = response?.publication_status || error?.publicationStatus;
-    const syncStatus = response?.sync_status || error?.syncStatus;
-    const success = publicationId ? action + ' accepted' : action + ' completed';
-    const description = error && (errorDetails[error.status] || (error.status == null || error.status >= 500
-        ? 'Check current state before retrying a write.' : ''));
-    const message = error ? [action + ' failed.', error.message, description].filter(Boolean).join(' ') : success;
-
+    const { request, receipt } = result;
+    let severity = 'info';
+    let message = result.message;
+    if (request) {
+        const entity = request.entity;
+        if (result.kind === 'conflict') {
+            severity = 'warn';
+            message = 'The ' + entity + ' revision changed. Review the latest record before trying again.';
+        } else if (result.kind === 'accepted') {
+            severity = observedWrite(request, result.observed) ? 'success' : 'warn';
+            const action = { save: 'saved', create: 'created', delete: 'deleted' }[request.operation];
+            message = severity === 'success' ? readableCode(entity) + ' ' + action + '.'
+                : 'The write was accepted. Check the current ' + entity + ' before making another change.';
+        } else if (result.kind === 'uncertain') {
+            severity = 'warn';
+            message = observedWrite(request, result.observed)
+                ? request.operation === 'delete' ? 'The record is absent on read-back. A write receipt could not be verified.'
+                    : 'The submitted values are present on read-back. A write receipt could not be verified.'
+                : 'The write outcome could not be confirmed. Check the current record before retrying.';
+        } else {
+            severity = 'error';
+            message = [result.message || 'The request was rejected.', rejectionHelp[result.status]].filter(Boolean).join(' ');
+        }
+    } else if (result.kind === 'readError') {
+        severity = 'error';
+        message = 'The record could not be loaded.' + (message ? ' ' + message : '');
+    }
     return (
-        <Card>
-            <div className="flex flex-column gap-3">
-                <Message severity={error ? 'error' : 'success'} text={message} className="w-full justify-content-start" />
-                {publicationId && (
-                    <div className="flex gap-2 flex-wrap align-items-center">
-                        <span>Publication {publicationId}</span>
-                        {publicationStatus && <Tag value={publicationStatus} severity={syncStatus === 'pending' ? 'warning' : 'info'} />}
-                        {syncStatus === 'pending' && <span>Semantic synchronization pending</span>}
-                    </div>
-                )}
-                {(response || error?.details) && (
-                    <Panel header="MDC response details" toggleable collapsed>
-                        <pre className="m-0 white-space-pre-wrap">{JSON.stringify(response || error.details, null, 2)}</pre>
-                    </Panel>
+        <Card className="mdc-provider-feedback">
+            <div className="flex flex-column gap-2" aria-live="polite">
+                <Message severity={severity} text={message} className="w-full justify-content-start" />
+                {result.messages?.map((value) => <div key={value}>{value}</div>)}
+                {receipt?.publicationId && <div>Publication receipt {receipt.publicationId}</div>}
+                {receipt?.publicationStatus && <div>Publication status: {readableCode(receipt.publicationStatus)}</div>}
+                {receipt?.syncStatus && <div>Synchronization status: {readableCode(receipt.syncStatus)}</div>}
+                {receipt?.syncStatus === 'pending' && (
+                    <Message severity="warn" text="Semantic synchronization pending. Search availability is not yet confirmed." />
                 )}
             </div>
         </Card>
     );
-};
-
-export default ProviderActionResult;
+}

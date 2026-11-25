@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { Button } from 'primereact/button';
 import { Card } from 'primereact/card';
 import { Message } from 'primereact/message';
-import { Panel } from 'primereact/panel';
 import {
     getOffering, getProvider, listProviderOfferings, registerProvider, validateProviderPublication
 } from '@/services/mdc/provider.service';
@@ -14,15 +13,6 @@ import {
 } from './providerRegistrationFlow';
 
 const services = { getOffering, getProvider, listProviderOfferings, registerProvider };
-
-function ResponseDetails({ details }) {
-    if (!details) return null;
-    return (
-        <Panel header="MDC response details" toggleable collapsed>
-            <pre className="m-0 white-space-pre-wrap">{JSON.stringify(details, null, 2)}</pre>
-        </Panel>
-    );
-}
 
 function ValidationFeedback({ result, locallyInvalid }) {
     if (!result && !locallyInvalid) return null;
@@ -43,7 +33,6 @@ function ValidationFeedback({ result, locallyInvalid }) {
                 <Message severity={severity} text={message} className="w-full justify-content-start" />
                 {result?.message && <div>{result.message}</div>}
                 {result?.messages?.map((text) => <div key={text}>{text}</div>)}
-                <ResponseDetails details={result?.details} />
             </div>
         </Card>
     );
@@ -102,7 +91,6 @@ export function RegistrationOutcome({ result, onCheck, busy }) {
                         <div><Button label="Check provider again" type="button" outlined disabled={busy} onClick={onCheck} /></div>
                     </>
                 )}
-                <ResponseDetails details={result.details} />
             </div>
         </Card>
     );

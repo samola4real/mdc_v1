@@ -31,7 +31,7 @@ const boxRanges = [
 const roundRanges = [{ key: 'outer_diameter_mm', label: 'Outer diameter', max: 'maxDiameterMm', suffix: ' mm' }];
 const splineRanges = [{ key: 'spline_module', label: 'Spline module', value: 'splineModule', decimal: true }];
 const bounds = ['min', 'max', 'value'];
-const evidence = { source_type: 'provider_confirmed', confidence: 'declared' };
+export const evidence = { source_type: 'provider_confirmed', confidence: 'declared' };
 
 export const registrationPartRanges = (family, type) => {
     if (family === 'shaft' && type === 'splined_shaft') return splineRanges;
@@ -47,7 +47,7 @@ export const measurementFields = (ranges) => ranges.flatMap((range) => (
     }))
 ));
 
-const clean = (value) => String(value ?? '').trim();
+export const clean = (value) => String(value ?? '').trim();
 const compareName = (value) => clean(value).toLowerCase();
 const entered = (value) => value !== undefined && value !== null && value !== '';
 const positive = (value) => typeof value === 'number' && Number.isFinite(value) && value > 0;
@@ -77,19 +77,19 @@ export const selectRegistrationFamily = (form, family, confirmChange) => {
     return { ...form, partFamily: family, partTypes: [], familyDetails: {}, partMeasurements: {} };
 };
 
-const requiredText = (errors, field, value, label, max) => {
+export const requiredText = (errors, field, value, label, max) => {
     if (!clean(value)) errors[field] = 'Enter ' + label + '.';
     else if (clean(value).length > max) errors[field] = 'Use at most ' + max + ' characters.';
 };
 
-const controlledSelection = (values, options, field, errors) => {
+export const controlledSelection = (values, options, field, errors) => {
     const known = new Set((options || []).map((option) => option.value));
     const selected = [...new Set(values)].filter((value) => known.has(value));
     if (values.some((value) => !known.has(value))) errors[field] = 'Select only values from the current catalogue.';
     return selected;
 };
 
-const splitUnique = (value, separator, key = (item) => item) => {
+export const splitUnique = (value, separator, key = (item) => item) => {
     const seen = new Set();
     return value.split(separator).map(clean).filter((item) => {
         if (!item || seen.has(key(item))) return false;
@@ -116,7 +116,9 @@ const reservedNames = new Set([
     'refresh_token', 'secret', 'token', '__proto__', 'constructor', 'prototype'
 ]);
 
-function readNamedRows(rows, field, errors, options = []) {
+export const isReservedCustomName = (name) => reservedNames.has(compareName(name).replace(/[\s/-]+/g, '_'));
+
+export function readNamedRows(rows, field, errors, options = []) {
     const known = new Set(options.flatMap(({ label, value }) => [compareName(label), compareName(value)]));
     const seen = new Set();
     const accepted = [];
@@ -134,13 +136,13 @@ function readNamedRows(rows, field, errors, options = []) {
     return accepted;
 }
 
-function readCustomMap(rows, field, errors, technical = false) {
+export function readCustomMap(rows, field, errors, technical = false, preservedKeys = []) {
     const entries = [];
+    const preserved = new Set(preservedKeys.map(compareName));
     for (const row of readNamedRows(rows, field, errors)) {
         const control = field + '.' + row.id;
-        const reserved = compareName(row.name).replace(/[\s/-]+/g, '_');
         const value = clean(row.value);
-        if (reservedNames.has(reserved)) {
+        if (isReservedCustomName(row.name) || preserved.has(compareName(row.name))) {
             errors[control + '.name'] = 'Use a name outside the standard fields and reserved keys.';
             continue;
         }
@@ -155,7 +157,7 @@ function readCustomMap(rows, field, errors, technical = false) {
     return Object.fromEntries(entries);
 }
 
-function validateRanges(ranges, values, prefix, errors) {
+export function validateRanges(ranges, values, prefix, errors) {
     for (const range of ranges) {
         for (const bound of bounds) {
             const field = range[bound];
@@ -166,6 +168,16 @@ function validateRanges(ranges, values, prefix, errors) {
         if (positive(values[range.min]) && positive(values[range.max]) && values[range.min] > values[range.max]) {
             errors[prefix + '.' + range.min] = 'Minimum must be less than or equal to maximum.';
         }
+    }
+}
+
+export function validateGearQuality(familyDetails, errors) {
+    const qualityClass = clean(familyDetails.qualityClass);
+    if (qualityClass && !Number.isNaN(Number(qualityClass)) && !positive(Number(qualityClass))) {
+        errors['familyDetails.qualityClass'] = 'Enter a positive numeric class or a nonnumeric class designation.';
+    }
+    if (familyDetails.qualityStandard && !QUALITY_STANDARDS.includes(familyDetails.qualityStandard)) {
+        errors['familyDetails.qualityStandard'] = 'Select DIN, ISO or AGMA.';
     }
 }
 
@@ -215,15 +227,7 @@ export function buildRegistrationPayload(form, filters) {
 
     validateRanges(FAMILY_RANGES[form.partFamily] || [], familyDetails, 'familyDetails', errors);
     validateRanges(GENERAL_RANGES, form.general, 'general', errors);
-    if (form.partFamily === 'gear') {
-        const qualityClass = clean(familyDetails.qualityClass);
-        if (qualityClass && !Number.isNaN(Number(qualityClass)) && !positive(Number(qualityClass))) {
-            errors['familyDetails.qualityClass'] = 'Enter a positive numeric class or a nonnumeric class designation.';
-        }
-        if (familyDetails.qualityStandard && !QUALITY_STANDARDS.includes(familyDetails.qualityStandard)) {
-            errors['familyDetails.qualityStandard'] = 'Select DIN, ISO or AGMA.';
-        }
-    }
+    if (form.partFamily === 'gear') validateGearQuality(familyDetails, errors);
 
     const extraCertifications = readNamedRows(form.otherCertifications, 'otherCertifications', errors, filters?.certifications);
     const extraMaterials = readNamedRows(form.additionalMaterials, 'additionalMaterials', errors, filters?.materials);

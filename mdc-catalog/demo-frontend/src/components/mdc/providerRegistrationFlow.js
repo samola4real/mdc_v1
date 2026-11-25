@@ -25,7 +25,7 @@ export function createRegistrationRequestGuard() {
 
 const privateKey = /^(?:authorization|cookie|credentials?|password|(?:access_|refresh_)?token|api_key|database_url|private_key|secret|stack(?:trace)?|traceback|x-vercel-protection-bypass)$/i;
 const unsafeMessage = /Traceback \(most recent call last\)|\n\s*at\s+|Bearer\s+\S+|\beyJ[\w-]+\.[\w-]+\.[\w-]+|(?:password|token|secret|api.key|x-vercel-protection-bypass)\s*[:=]\s*\S+/i;
-const safeText = (value) => typeof value === 'string' && !unsafeMessage.test(value) ? value : '';
+export const safeText = (value) => typeof value === 'string' && !unsafeMessage.test(value) ? value : '';
 
 function safeDetails(value) {
     if (typeof value === 'string') return safeText(value) || '[redacted]';
@@ -51,12 +51,18 @@ function rangeField(ranges, path, prefix) {
     return field && prefix + '.' + field;
 }
 
-function controlFor(path, payload) {
+function controlFor(path, payload, showSupportStatus) {
     const canonical = path.replace(/^\$\.?/, '').replace(/^offerings\[0\]\./, '');
     const [head, ...rest] = canonical.split('.');
     const direct = head.replace(/\[\d+\]/g, '');
+    const [offering = {}] = payload.offerings;
+    if (showSupportStatus && direct === 'support_status') return 'supportStatus';
+    if (showSupportStatus && direct === 'supported_part_types' && rest[0] === 'support_status') {
+        const index = head.match(/\[(\d+)\]/)?.[1];
+        const part = offering.supported_part_types?.[index]?.part_type;
+        if (part) return 'partTypeStatuses.' + part;
+    }
     if (Object.hasOwn(directFields, direct)) return directFields[direct];
-    const [offering] = payload.offerings;
     const tail = rest.join('.');
     if (head === 'family_capabilities') {
         if (tail.startsWith('gear_quality')) {
@@ -72,7 +78,7 @@ function controlFor(path, payload) {
     if (head === 'generic_capabilities') {
         if (tail.startsWith('materials')) {
             const index = tail.match(/^materials\[(\d+)\]/)?.[1];
-            const material = offering.generic_capabilities.materials?.[index]?.material;
+            const material = offering.generic_capabilities?.materials?.[index]?.material;
             return material && tail.includes('.available_grades') ? 'materialGrades.' + material : 'materials';
         }
         if (tail.startsWith('processes')) return 'processes';
@@ -94,7 +100,7 @@ function controlFor(path, payload) {
     return undefined;
 }
 
-export function registrationValidationFeedback(details, payload) {
+export function registrationValidationFeedback(details, payload, showSupportStatus = false) {
     const errors = {};
     const messages = [];
     const visit = (value, path) => {
@@ -103,7 +109,7 @@ export function registrationValidationFeedback(details, payload) {
             if (!message) return;
             const embedded = message.match(/(?:\$\.)?\bofferings\[0\](?:\.[\w]+(?:\[\d+\])?)+/)?.[0]
                 || message.match(/\b(?:provider_id|offering_id|provider_name|country)\b/)?.[0];
-            const field = controlFor(path, payload) || controlFor(embedded || '', payload);
+            const field = controlFor(path, payload, showSupportStatus) || controlFor(embedded || '', payload, showSupportStatus);
             if (field) errors[field] ||= message;
             else messages.push(message);
         } else if (Array.isArray(value)) {
@@ -149,7 +155,7 @@ export async function readBackRegistration({ providerId, offeringId }, services)
     try {
         provider = await services.getProvider(providerId);
     } catch (error) {
-        return { kind: error?.status === 404 && error?.code === 'not_found' ? 'absent' : 'unknown' };
+        return { kind: error?.status === 404 && ['not_found', 'provider_not_found'].includes(error.code) ? 'absent' : 'unknown' };
     }
     if (provider?.data?.provider_id !== providerId) return { kind: 'unknown' };
     try {
