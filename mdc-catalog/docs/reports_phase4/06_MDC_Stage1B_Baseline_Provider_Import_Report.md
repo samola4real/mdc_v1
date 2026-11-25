@@ -1,6 +1,6 @@
 # Task 06 — Stage 1 baseline provider import
 
-**Import complete · Protected Preview verification pending · 2026-11-25.** Tasowheel and Precipart are in `mdc_validation`. The canonical Django lifecycle routes returned HTTP 200 for both providers and all three offerings against that database. The final protected Preview check is pending.
+**PASS · 2026-11-25.** Tasowheel and Precipart are in `mdc_validation`. Both providers and all three source offerings are retrievable through the protected Stage 1 Preview.
 
 ## Target and sources
 
@@ -30,12 +30,14 @@ The pre-import point on the validation branch is `2026-11-25T09:48:51.057818Z` a
 
 ## Lifecycle retrieval
 
-| Canonical GET | Result from Django against `mdc_validation` |
+| Canonical GET | Protected Stage 1 Preview result |
 | --- | --- |
-| `/api/providers/precipart` and `/api/providers/tasowheel` | HTTP 200 for both providers with canonical identities, certifications, and publication metadata |
+| `/api/providers/precipart` and `/api/providers/tasowheel` | HTTP 200 for both providers with canonical identities, certifications, publication metadata, and strong ETags |
 | `/api/providers/precipart/offerings` and `/api/providers/tasowheel/offerings` | HTTP 200 with one Precipart offering and two Tasowheel offerings, all matching the source |
-| `/api/offerings/{offering_id}` for each of the three source IDs | HTTP 200 with the original capability maps and support status |
+| `/api/offerings/precipart_precision_gears`, `/api/offerings/tasowheel_precision_gears`, and `/api/offerings/tasowheel_precision_shafts` | HTTP 200 for all three details with the original capability maps, support status, and strong ETags |
 
-The Django test client exercised the existing routes in a PostgreSQL read-only transaction. Automatic approval review blocked the protected Preview requests because they require sending the saved bypass for Task 06. The protected Preview lifecycle and discovery checks await operator approval for use of that credential at the pinned host.
+All seven Preview responses matched the curated records under contract `1.0`. The in-process Django checks also returned HTTP 200 for the same paths in a PostgreSQL read-only transaction. The live spur-gear search returned HTTP 200 and the same two matches documented in Stage 1, `precipart_precision_gears` and `tasowheel_precision_gears`. [Stage 1 acceptance report](https://github.com/samola4real/mdc_v1/blob/3f9c8e1441f1bb581f09388b33e482eb98dcf059/mdc-catalog/docs/reports_phase4/01_MDC_Stage1_Provider_Lifecycle_Demo_Report.md)
+
+The operator granted standing authorization to use the saved Vercel bypass over HTTPS at `maasai-mdc-v1-2ps4wdme5-mdc19.vercel.app` for approved MDC development and functional testing. Subsequent tasks can load it automatically from the existing server-side, Git-ignored `.env.local` in the permanent frontend. Keep the value out of logs, responses, and commits.
 
 Browser verification can use the read-only lookups for `tasowheel` and `precipart` in Provider Area. The frontend continues to restrict writes to disposable `mdc_stage1b_` identities. The operator will separately test registration, updates, and offering management with demo providers.
