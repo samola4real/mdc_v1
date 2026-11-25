@@ -1,13 +1,11 @@
-import React, { useRef } from 'react';
+import React from 'react';
 import { Accordion, AccordionTab } from 'primereact/accordion';
-import { Button } from 'primereact/button';
 import { Card } from 'primereact/card';
 import { Column } from 'primereact/column';
 import { DataTable } from 'primereact/datatable';
 import { Message } from 'primereact/message';
 import { Panel } from 'primereact/panel';
 import { Tag } from 'primereact/tag';
-import { Toast } from 'primereact/toast';
 import {
     asArray,
     formatCapabilityRange,
@@ -175,27 +173,6 @@ const getUnknownItems = (result) => (
     }))
 );
 
-const formatDemoValue = (value) => {
-    if (value == null || value === '') return 'Not provided';
-    if (Array.isArray(value)) return value.map(formatDemoValue).join(', ');
-    if (typeof value === 'object') return formatCapabilityRange(value);
-    return String(value);
-};
-
-const DemoFieldTable = ({ rows }) => {
-    if (!rows || rows.length === 0) {
-        return <span className="text-600">Not provided</span>;
-    }
-
-    return (
-        <DataTable value={rows} dataKey="id" responsiveLayout="scroll" stripedRows>
-            <Column field="name" header="Field" />
-            <Column field="value" header="Value" body={(row) => formatDemoValue(row.value)} />
-            <Column field="notes" header="Notes" body={(row) => formatDemoValue(row.notes)} />
-        </DataTable>
-    );
-};
-
 const Tags = ({ values, severity }) => {
     const unique = Array.from(new Set(values.filter(Boolean)));
 
@@ -219,13 +196,10 @@ const Header = ({ result }) => {
             <div>
                 <div className="font-semibold text-900">{getProviderName(result)}</div>
                 <div className="text-sm text-600">
-                    {getOfferingName(result)} | Requested part type: {getPartTypeLabel(result)}
+                    {getOfferingName(result)} ({getOfferingId(result)}) | Requested part type: {getPartTypeLabel(result)}
                 </div>
             </div>
             <div className="flex flex-wrap gap-2">
-                {result.demo_overlay ? (
-                    <Tag value="Demo registered provider" severity="info" rounded />
-                ) : null}
                 <Tag value={suitability} severity={getSeverity(suitability)} rounded />
             </div>
         </div>
@@ -233,7 +207,6 @@ const Header = ({ result }) => {
 };
 
 const ProviderResultPanel = ({ result }) => {
-    const toast = useRef(null);
     const suitability = getSuitability(result);
     const supportStatus = getSupportStatus(result);
     const suitabilityRows = makeSuitabilityRows(result);
@@ -243,18 +216,8 @@ const ProviderResultPanel = ({ result }) => {
     ];
     const unknownItems = getUnknownItems(result);
 
-    const demoAction = (label) => {
-        toast.current?.show({
-            severity: 'info',
-            summary: label,
-            detail: 'Demo action only - this will be connected to the Marketplace workflow later.',
-            life: 2500
-        });
-    };
-
     return (
         <div className="flex flex-column gap-4">
-            <Toast ref={toast} />
             <Card>
                 <div className="grid">
                     <div className="col-12 md:col-6">
@@ -277,43 +240,6 @@ const ProviderResultPanel = ({ result }) => {
                     </div>
                 </div>
             </Card>
-
-            {result.demo_overlay ? (
-                <>
-                    <Card title="Provider summary">
-                        <div className="grid">
-                            <div className="col-12 md:col-6">
-                                <div className="text-sm text-600">Country</div>
-                                <div className="font-medium text-900">
-                                    {result.demo_overlay.country || 'Not provided'}
-                                </div>
-                            </div>
-                            <div className="col-12 md:col-6">
-                                <div className="text-sm text-600">Source</div>
-                                <Tag value={result.demo_overlay.source} severity="info" rounded />
-                            </div>
-                            <div className="col-12">
-                                <div className="text-sm text-600">Description</div>
-                                <div className="font-medium text-900">
-                                    {result.demo_overlay.description || 'Registered through the demo provider workflow.'}
-                                </div>
-                            </div>
-                        </div>
-                    </Card>
-
-                    <Card title="Why this appears">
-                        <p className="m-0 line-height-3 text-700">{result.demo_overlay.reason}</p>
-                    </Card>
-
-                    <Card title="Demo offering fields">
-                        <DemoFieldTable rows={result.demo_overlay.customOfferingFields} />
-                    </Card>
-
-                    <Card title="Demo capability fields">
-                        <DemoFieldTable rows={result.demo_overlay.customCapabilityFields} />
-                    </Card>
-                </>
-            ) : null}
 
             <Card title="Capability comparison">
                 <DataTable value={suitabilityRows} dataKey="id" responsiveLayout="scroll" stripedRows>
@@ -376,15 +302,10 @@ const ProviderResultPanel = ({ result }) => {
                 />
             ) : null}
 
-            <div className="flex flex-wrap gap-2">
-                <Button label="Request quotation" icon="pi pi-send" onClick={() => demoAction('Request quotation')} />
-                <Button label="View provider details" icon="pi pi-building" outlined onClick={() => demoAction('View provider details')} />
-                <Button label="Save result" icon="pi pi-bookmark" outlined onClick={() => demoAction('Save result')} />
-            </div>
-
             <Panel header="Advanced/debug response JSON" toggleable collapsed>
                 <div className="text-sm text-600 mb-2">
                     Provider ID: {getProviderId(result)} | Offering ID: {getOfferingId(result)} | Family: {snakeToTitle(getPartFamily(result))}
+                    {typeof getMatch(result).score === 'number' && <> | Match score: {getMatch(result).score}</>}
                 </div>
                 <pre className="m-0 white-space-pre-wrap">{JSON.stringify(result, null, 2)}</pre>
             </Panel>

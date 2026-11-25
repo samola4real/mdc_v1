@@ -158,6 +158,29 @@
     }
 }
 
+:root:not([data-theme]), [data-theme='light'] {
+    .layout-menu {
+        .layout-root-menuitem > .layout-menuitem-root-text {
+            color: var(--brand-ink);
+        }
+
+        ul a {
+            color: var(--brand-ink);
+
+            &.active-route {
+                color: var(--brand-navy);
+                background-color: var(--brand-sand);
+                border-left-color: var(--brand-orange);
+            }
+
+            &:focus-visible {
+                outline: 2px solid var(--brand-orange);
+                outline-offset: -4px;
+            }
+        }
+    }
+}
+
 .layout-submenu-enter-active {
     max-height: 1000px !important;
     transition: max-height 1s ease-in-out;

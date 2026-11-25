@@ -11,21 +11,7 @@ const MENU_MODEL = [
         items: [
             { label: 'Home', icon: 'pi pi-fw pi-home', to: '/' },
             { label: 'Contact', icon: 'pi pi-fw pi-envelope', to: '/home/Contact' },
-            { label: 'Help', icon: 'pi pi-fw pi-question-circle', to: '/home/Help' },
-            { label: 'Brand', icon: 'pi pi-fw pi-palette', to: '/home/Brand' }
-        ]
-    },
-    {
-        label: 'Workspace',
-        items: [
-            { label: 'Config',     icon: 'pi pi-fw pi-cog',         to: '/home/EmptyPage' },
-            { label: 'Charts',     icon: 'pi pi-fw pi-chart-bar',   to: '/workspace/charts' },
-            { label: 'Table',      icon: 'pi pi-fw pi-table',       to: '/workspace/crud' },
-            { label: 'Agents',     icon: 'pi pi-fw pi-th-large',    to: '/workspace/agents' },
-            { label: 'Monitor',    icon: 'pi pi-fw pi-desktop',     to: '/workspace/monitor' },
-            { label: 'Scheduler',  icon: 'pi pi-fw pi-calendar',    to: '/workspace/scheduler' },
-            { label: 'Analytics',  icon: 'pi pi-fw pi-chart-line',  to: '/workspace/analytics' },
-            { label: 'Designer',   icon: 'pi pi-fw pi-sitemap',     to: '/workspace/designer' }
+            { label: 'Help', icon: 'pi pi-fw pi-question-circle', to: '/home/Help' }
         ]
     },
     {
@@ -40,37 +26,20 @@ const MENU_MODEL = [
 ];
 
 const AppMenu = () => {
-    const { authenticated, keycloak, roles } = useAuth();
+    const { authenticated, isInitialized, isLoading, keycloak, roles } = useAuth();
+    const signedIn = isInitialized && !isLoading && authenticated;
     const demoRoles = getDemoRolesFromKeycloak(keycloak, roles);
     const selectedDemoRole = useSelectedDemoRole();
-
-    const demoUser = authenticated && demoRoles.length > 0;
-    const visibleSections = demoUser
-        ? MENU_MODEL.filter((section) => section.label === 'MaaS Dynamic Catalogue')
-        : MENU_MODEL;
-
-    const canSeeDemoItem = (item) => {
-        if (!item.demoRoles) {
-            return true;
-        }
-        if (!authenticated) {
-            return false;
-        }
-        if (!selectedDemoRole) {
-            return false;
-        }
-
-        const canUseSelectedRole = demoRoles.includes(selectedDemoRole) || demoRoles.includes('admin');
-        return canUseSelectedRole && item.demoRoles.includes(selectedDemoRole);
-    };
+    const canUseSelectedRole = demoRoles.includes(selectedDemoRole) || demoRoles.includes('admin');
 
     // Filter each section: drop items the current user cannot access,
     // then drop empty sections.
-    const model = visibleSections
+    const model = MENU_MODEL
         .map((section) => ({
             ...section,
-            items: (section.items || []).filter((item) =>
-                canAccessRoute(item.to, { authenticated, roles }) && canSeeDemoItem(item)
+            items: section.items.filter((item) =>
+                canAccessRoute(item.to, { authenticated: signedIn, roles })
+                && (!item.demoRoles || (canUseSelectedRole && item.demoRoles.includes(selectedDemoRole)))
             )
         }))
         .filter((section) => section.items.length > 0);
@@ -88,7 +57,7 @@ const AppMenu = () => {
                             root={true}
                             index={i}
                             key={item.label}
-                            authenticated={authenticated}
+                            authenticated={signedIn}
                         />
                     );
                 })}

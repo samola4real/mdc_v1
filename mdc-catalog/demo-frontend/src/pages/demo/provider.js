@@ -10,9 +10,7 @@ const ProviderDemo = () => {
                 <div className="text-sm text-600 mb-2">MDC Demo Console</div>
                 <h1 className="mt-0 mb-0 text-900">Provider Dashboard</h1>
                 <p className="text-600 line-height-3 mb-0 mt-2">
-                    Demo persistence illustrates a future Marketplace-mediated provider lifecycle.
-                    These controls are not the production trusted lifecycle and may be unavailable
-                    when the backend demo API is disabled.
+                    Register and edit disposable providers and offerings on the accepted MDC Preview.
                 </p>
             </Card>
             <DemoRoleGuard allowedRoles={['provider', 'admin']} pageLabel="Provider or Admin">

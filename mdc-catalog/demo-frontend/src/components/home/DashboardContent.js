@@ -2,52 +2,24 @@ import React from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/layout/context/AuthContext';
 
-const privateQuickActions = [
-    {
-        title: 'Create a Project',
-        description: 'Create a project from scratch',
-        href: '/home/Help',
-        tone: 'green',
-        delay: '0.08s',
-        icon: (
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-                <rect x="4" y="5" width="16" height="14" rx="2" />
-                <path d="M8 9h8M8 13h5" />
-            </svg>
-        )
+const welcomeContent = {
+    maasai: {
+        heading: 'Welcome to MaaSAI',
+        description: 'MaaSAI advances Manufacturing as a Service by enabling connected, intelligent and collaborative manufacturing ecosystems. The project supports digital manufacturing services, interoperability and collaboration between manufacturing providers and consumers.',
+        href: 'https://documentation.maasai-srv.cigip.upv.es/'
     },
-    {
-        title: 'View your Projects',
-        description: 'View the projects that you have created',
-        href: '/workspace/crud',
-        tone: 'blue',
-        delay: '0.14s',
-        icon: (
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-                <path d="m12 4 2.3 4.66 5.14.75-3.72 3.63.88 5.13L12 15.9l-4.6 2.41.88-5.13-3.72-3.63 5.14-.75L12 4Z" />
-            </svg>
-        )
-    },
-    {
-        title: 'Register a Resource',
-        description: 'Register an Algorithm or Dataset',
-        href: '/workspace/charts',
-        tone: 'red',
-        delay: '0.2s',
-        icon: (
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-                <path d="M8 17 16 7M10 7H16V13" />
-            </svg>
-        )
+    mdc: {
+        heading: 'Welcome to MaaS Dynamic Catalogue',
+        description: 'The MaaS Dynamic Catalogue (MDC) enables manufacturing providers to publish, manage and update their manufacturing services and capabilities. Through ontology-based data harmonization and semantic service discovery, MDC supports the identification of suitable manufacturing services based on consumer requirements.',
+        href: 'https://documentation.maasai-srv.cigip.upv.es/solutions/mdc/'
     }
-];
+};
 
-const publicQuickActions = [
+const informationCards = [
     {
         title: 'Contact',
-        description: 'Reach the MaaSAI team for support and onboarding',
+        description: 'Contact the MDC development team for technical information and enquiries.',
         href: '/home/Contact',
-        tone: 'blue',
         delay: '0.08s',
         icon: (
             <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -57,40 +29,11 @@ const publicQuickActions = [
         )
     },
     {
-        title: 'Help',
-        description: 'Read the project overview and usage context',
-        href: '/home/Help',
-        tone: 'green',
-        delay: '0.14s',
-        icon: (
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-                <path d="M12 17h.01" />
-                <path d="M9.1 9a3 3 0 1 1 4.73 2.46c-.9.62-1.33 1.08-1.33 2.04" />
-                <circle cx="12" cy="12" r="9" />
-            </svg>
-        )
-    },
-    {
-        title: 'Sign In',
-        description: 'Authenticate with Keycloak to unlock the workspace',
-        tone: 'red',
-        delay: '0.2s',
-        action: 'login',
-        icon: (
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-                <path d="M10 17l5-5-5-5" />
-                <path d="M15 12H4" />
-                <path d="M13 4h4a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-4" />
-            </svg>
-        )
-    },
-    {
         title: 'Project Website',
-        description: 'Visit the official MaaSAI project website',
+        description: 'Explore the MaaSAI project, its objectives, activities and results.',
         href: 'https://maasai-project.eu/',
         external: true,
-        tone: 'purple',
-        delay: '0.26s',
+        delay: '0.14s',
         icon: (
             <svg viewBox="0 0 24 24" aria-hidden="true">
                 <path d="M12 3c4.97 0 9 4.03 9 9s-4.03 9-9 9-9-4.03-9-9 4.03-9 9-9Z" />
@@ -101,56 +44,39 @@ const publicQuickActions = [
 ];
 
 const DashboardContent = () => {
-    const { authenticated, login } = useAuth();
-    const quickActions = authenticated ? privateQuickActions : publicQuickActions;
-
-    const handleActionClick = (action, event) => {
-        if (action.action !== 'login') {
-            return;
-        }
-
-        event.preventDefault();
-        login().catch((error) => {
-            console.error('Error during login:', error);
-        });
-    };
+    const { authenticated, isInitialized, isLoading } = useAuth();
+    const welcome = isInitialized && !isLoading && authenticated ? welcomeContent.mdc : welcomeContent.maasai;
 
     return (
         <div className="dashboard-page">
             <section className="dashboard-banner">
                 <div className="dashboard-banner__copy">
-                    <h1>Welcome to the MaaSAI template</h1>
-                    <p>
-                        Empowering the manufacturing process through autonomous AI. Manage projects, register
-                        algorithms and datasets, and monitor your industrial AI resources.
-                    </p>
+                    <h1>{welcome.heading}</h1>
+                    <p>{welcome.description}</p>
                 </div>
-                <Link href="https://documentation.maasai-srv.cigip.upv.es/" className="dashboard-banner__button" target="_blank" rel="noreferrer">
-                    <span className="dashboard-banner__button-icon" aria-hidden="true">
-                        +
-                    </span>
+                <Link href={welcome.href} className="dashboard-banner__button" target="_blank" rel="noreferrer">
+                    <span className="dashboard-banner__button-icon pi pi-info-circle" aria-hidden="true" />
                     <span>More info</span>
                 </Link>
             </section>
 
             <section className="dashboard-actions">
-                <div className="dashboard-section-label">Quick Actions</div>
+                <div className="dashboard-section-label">Project information</div>
                 <div className="dashboard-actions__grid">
-                    {quickActions.map((action) => (
+                    {informationCards.map((card) => (
                         <Link
-                            key={action.title}
-                            href={action.href || '#'}
-                            className={`dashboard-action-card dashboard-action-card--${action.tone}`}
-                            style={{ animationDelay: action.delay }}
-                            onClick={(event) => handleActionClick(action, event)}
-                            target={action.external ? '_blank' : undefined}
-                            rel={action.external ? 'noreferrer' : undefined}
+                            key={card.title}
+                            href={card.href}
+                            className="dashboard-action-card"
+                            style={{ animationDelay: card.delay }}
+                            target={card.external ? '_blank' : undefined}
+                            rel={card.external ? 'noreferrer' : undefined}
                         >
                             <span className="dashboard-action-card__icon" aria-hidden="true">
-                                {action.icon}
+                                {card.icon}
                             </span>
-                            <h2>{action.title}</h2>
-                            <p>{action.description}</p>
+                            <h2>{card.title}</h2>
+                            <p>{card.description}</p>
                         </Link>
                     ))}
                 </div>

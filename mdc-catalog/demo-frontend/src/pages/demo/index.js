@@ -50,7 +50,7 @@ const WORKFLOW_CARDS = [
         key: 'consumer',
         title: 'Service Discovery',
         icon: 'pi pi-search',
-        description: 'Search for suitable providers and view catalogue or demo-overlay results.',
+        description: 'Search the catalogue for suitable providers.',
         action: 'Open Service Discovery',
         href: '/demo/consumer-search',
         roles: ['consumer', 'admin']

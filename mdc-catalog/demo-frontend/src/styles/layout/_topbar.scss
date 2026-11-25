@@ -23,6 +23,8 @@
             display: block;
             width: auto;
             height: 32px;
+            background-color: var(--brand-bg);
+            border-radius: 4px;
         }
 
         &:focus {
@@ -38,7 +40,7 @@
         width: 40px;
         height: 40px;
         padding: 0;
-        color: var(--text-medium);
+        color: #FFFFFF;
         background: transparent;
         border: none;
         border-radius: 10px;
@@ -59,7 +61,7 @@
         }
 
         &:focus-visible {
-            box-shadow: 0 0 0 2px rgba(232, 144, 62, 0.45);
+            box-shadow: 0 0 0 2px var(--brand-orange);
         }
 
         svg {
@@ -89,7 +91,7 @@
     }
 
     .layout-topbar-theme {
-        color: var(--text-medium);
+        color: #FFFFFF;
 
         svg path,
         svg circle {
@@ -119,7 +121,7 @@
         &:hover {
             transform: translateY(-1px);
             border-color: rgba(232, 144, 62, 0.3);
-            background-color: rgba(232, 144, 62, 0.06);
+            background-color: var(--bg-card);
             box-shadow: 0 8px 18px rgba(15, 23, 42, 0.1);
         }
 
@@ -144,8 +146,8 @@
         justify-content: center;
         width: 22px;
         height: 22px;
-        color: #FFFFFF;
-        background: linear-gradient(135deg, var(--orange), var(--orange-light));
+        color: var(--brand-ink);
+        background: var(--brand-orange);
         border-radius: 50%;
         box-shadow: 0 4px 10px rgba(232, 144, 62, 0.24);
         flex-shrink: 0;

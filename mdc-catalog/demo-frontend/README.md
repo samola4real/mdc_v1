@@ -1,60 +1,61 @@
 # MDC Demo Frontend
 
-This Next.js application is an illustrative frontend for the MaaS Dynamic Catalogue (MDC). It demonstrates how provider, consumer, and administrator interactions could look before full Marketplace integration. It is **not the real Cloud MaaS Marketplace (CMM)**.
+This existing Next.js Pages Router application uses the MaaSAI Keycloak login and
+Provider, Consumer and Admin pages to exercise the accepted Stage 1 MDC Preview.
 
-## Demo roles and API boundaries
+## Local Stage 1B setup
 
-- Consumer search uses the current public MDC API: `GET /api/catalog/filters` and `POST /api/service-discovery/search`.
-- Shared health status uses `GET /api/health`.
-- Provider registration/update and administrator controls use `/api/demo/...` endpoints and demo persistence. These endpoints may be disabled in normal production environments.
-- Provider, consumer, and admin role guards are client-side presentation controls. Backend authorization remains a separate responsibility.
-
-The browser does not call trusted provider lifecycle write APIs. Those APIs require a server-to-server service-token, actor, and ETag boundary that must eventually sit behind the Marketplace/CMM or another backend-for-frontend. Never place lifecycle tokens or other secrets in source, `NEXT_PUBLIC_*`, `public/config.js`, `window.MAASAI_CONFIG`, local storage, or session storage.
-
-## Local development
-
-The Docker build uses Node.js 20.18.0. Use Node.js 20.18 or another compatible Node 20 release and an npm version that supports the committed lockfile version 2.
+The Docker runtime is Node.js 20.18.0. Use a compatible Node runtime and npm that
+supports the existing lockfile. Start the server on loopback.
 
 ```bash
 npm ci
-npm run dev
+npm run dev -- --hostname 127.0.0.1 --port 3000
 ```
 
-The frontend runs at `http://localhost:3000`. By local convention, its default MDC API is `http://localhost:8000`.
+Open `http://localhost:3000/demo` with the approved test account. The existing
+Keycloak client must permit that localhost redirect and web origin. Next.js
+loads the approved Preview credential from the server environment or the
+Git-ignored `.env.local`.
 
-Validation and production-style startup commands are:
+```dotenv
+MDC_VERCEL_PROTECTION_BYPASS=<approved-Stage-1-Preview-bypass>
+```
+
+The loopback session policy verifies the signed MAASAI Keycloak access token,
+expiry, subject, token type and `myClient` authorized party. It confirms the same
+subject through Keycloak UserInfo and recognizes signed demo roles from the realm
+and `myClient` claims. Keep the Preview credential in the server environment.
+
+An explicitly configured `MDC_KEYCLOAK_AUDIENCE` enables strict audience
+validation and requires `MDC_KEYCLOAK_ROLE_SOURCE` set to `client` or `realm`
+for the approved role claim. A role source alone restricts the loopback session
+policy to that claim. The relay is available on loopback only.
+
+The browser sends its Keycloak access token to `/api/mdc` on the same origin.
+The server checks the verified role and forwards only the canonical routes to
+the pinned protected Preview. Writes use disposable provider IDs starting with
+`mdc_stage1b_` and offering IDs prefixed by their provider ID. The client uses
+canonical `If-Match` with the current resource ETag. The server uses the
+Stage 1 Vercel header alias upstream. Registration and editing leave semantic
+publication pending while catalogue sync is disabled.
+
+## Verification
 
 ```bash
+node --experimental-default-type=module tests/stage1b.test.mjs
 npm run lint
 npm run build
-npm run start
 ```
 
-## Browser runtime configuration
-
-The application loads `/config.js`, which defines `window.MAASAI_CONFIG`. Override it for each deployed environment; browser runtime configuration is public and must never contain credentials.
-
-```js
-window.MAASAI_CONFIG = {
-    keycloak: {
-        enabled: true,
-        realmUrl: 'https://identity.example.org/realms/example',
-        clientId: 'mdc-demo-frontend',
-        onLoad: 'check-sso'
-    },
-    mdcApi: {
-        baseUrl: 'https://mdc-api.example.org',
-        sharedApiPrefix: '/api',
-        demoApiPrefix: '/api/demo'
-    }
-};
-```
-
-Deployed browser-to-backend traffic should use an appropriate HTTPS endpoint. The backend CORS/origin policy must permit the deployed frontend origin. The accepted current MDC production deployment normally has the demo API disabled, so provider/admin demo actions require a deliberately demo-enabled backend environment.
+Use unique disposable IDs, confirm each persisted change, and delete the test
+records with fresh ETags. The Consumer page uses current catalogue filters and
+canonical results. Admin health checks API liveness.
 
 ## Repository and release boundary
 
-GitHub is the controlled development source after the sanitized snapshot import. GitLab remains the historical and official release repository; approved releases use a fresh checkout and reviewed file synchronization rather than importing GitLab history or retaining a GitLab remote here.
+GitHub is the controlled development source after the sanitized snapshot import.
+GitLab remains the historical and official release repository.
 
 - [Sanitized snapshot provenance](../docs/Demo_Frontend/00_frontend_sanitized_snapshot_import_provenance.md)
 - [GitHub-to-GitLab release mapping](../docs/Demo_Frontend/01_frontend_github_to_gitlab_release_mapping.md)

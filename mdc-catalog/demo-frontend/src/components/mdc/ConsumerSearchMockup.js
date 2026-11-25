@@ -8,90 +8,15 @@ import { Message } from "primereact/message";
 import { MultiSelect } from "primereact/multiselect";
 import { Panel } from "primereact/panel";
 import { Toast } from "primereact/toast";
-import { getProviderDemoState } from "@/services/mdc/demoAdmin.service";
-import { getCatalogFilters } from "@/services/mdc/catalog.service";
+import { getCatalogFilters, normalizeCatalogFilters } from "@/services/mdc/catalog.service";
 import { searchServiceDiscovery } from "@/services/mdc/search.service";
 import SearchErrorMessage from "./SearchErrorMessage";
 import SearchPayloadPreview from "./SearchPayloadPreview";
 import SearchResultsList from "./SearchResultsList";
-import {
-  certifications as fallbackCertifications,
-  materials as fallbackMaterials,
-  metalPartTypeOptions as fallbackMetalPartTypes,
-  partFamilies as fallbackPartFamilies,
-  partTypes as fallbackPartTypes,
-  processes as fallbackProcesses,
-} from "./mockData";
 
-const normalizeFamily = (family) => {
-  if (family === "gear") return "gear";
-  if (family === "shaft") return "shaft";
-  if (family === "metal_part") return "metal_part";
-  return family;
-};
-
-const toBackendFamily = (family) => normalizeFamily(family);
-
-const serviceCategoryByFamily = {
-  gear: "precision_gears",
-  shaft: "precision_shafts",
-  metal_part: "precision_metal_parts",
-};
-
-const getServiceCategoryForFamily = (family, categoryMap = serviceCategoryByFamily) =>
-  categoryMap[normalizeFamily(family)] || serviceCategoryByFamily[normalizeFamily(family)];
-
-const getPartTypeForFamily = (_family, partType) => partType;
-
-const toOptions = (items = []) => items.map((item) => (
-  typeof item === "string"
-    ? { value: item, label: item.replace(/_/g, " ").replace(/\b\w/g, (char) => char.toUpperCase()) }
-    : { ...item, value: item.value, label: item.label || item.value }
-));
-
-const fallbackCatalogFilters = {
-  partFamilies: toOptions(fallbackPartFamilies),
-  partTypes: {
-    gear: toOptions(fallbackPartTypes.gears),
-    shaft: toOptions(fallbackPartTypes.shafts),
-    metal_part: toOptions(fallbackMetalPartTypes),
-  },
-  materials: toOptions(fallbackMaterials),
-  processes: toOptions(fallbackProcesses),
-  certifications: toOptions(fallbackCertifications),
-  serviceCategoryByFamily,
-};
-
-const normalizeCatalogFilters = (data) => {
-  if (
-    data?.contract_version !== "1.0"
-    || !Array.isArray(data.service_categories)
-    || !Array.isArray(data.part_families)
-    || !data.part_types
-    || !Array.isArray(data.materials)
-    || !Array.isArray(data.processes)
-    || !Array.isArray(data.certifications)
-  ) {
-    throw new Error("The catalogue-filter response does not match contract version 1.0.");
-  }
-
-  const categories = toOptions(data.service_categories);
-  const families = toOptions(data.part_families);
-  const categoryMap = Object.fromEntries([
-    ...categories.filter((item) => item.part_family).map((item) => [item.part_family, item.value]),
-    ...families.filter((item) => item.service_category).map((item) => [item.value, item.service_category]),
-  ]);
-
-  return {
-    partFamilies: families,
-    partTypes: Object.fromEntries(
-      Object.entries(data.part_types).map(([family, items]) => [family, toOptions(items)])
-    ),
-    materials: toOptions(data.materials),
-    processes: toOptions(data.processes),
-    certifications: toOptions(data.certifications),
-    serviceCategoryByFamily: categoryMap,
-  };
+const emptyCatalog = {
+  partFamilies: [], partTypes: {}, materials: [], processes: [],
+  certifications: [], serviceCategoryByFamily: {},
 };
 
 const exactNumber = (value) => (value == null ? undefined : { exact: value });
@@ -122,300 +47,6 @@ const buildGenericRequirements = (form, extraRequirements = {}) =>
     certifications: form.certification ? [form.certification] : undefined,
     ...extraRequirements,
   });
-
-const toArray = (value) => {
-  if (Array.isArray(value)) return value;
-  if (value && typeof value === "object") return Object.values(value);
-  return value == null || value === "" ? [] : [value];
-};
-
-const normalizeSearchText = (value) =>
-  String(value || "")
-    .toLowerCase()
-    .replace(/_/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
-
-const getResultsArray = (response) => {
-  if (Array.isArray(response)) return response;
-  if (Array.isArray(response?.results)) return response.results;
-  if (Array.isArray(response?.data?.results)) return response.data.results;
-  return [];
-};
-
-const getProviderStateEntries = (state) => {
-  const providers =
-    state?.providers ||
-    state?.state?.providers ||
-    state?.demo_state?.providers ||
-    state?.data?.providers;
-
-  return providers ? toArray(providers) : toArray(state);
-};
-
-const getCustomFieldValue = (fields, names) => {
-  const targets = toArray(names).map(normalizeSearchText);
-  return toArray(fields).find((field) =>
-    targets.includes(normalizeSearchText(field?.name))
-  )?.value;
-};
-
-const customFieldRows = (fields) =>
-  toArray(fields)
-    .map((field, index) => ({
-      id: `${field?.name || "field"}-${index}`,
-      name: field?.name || "Field",
-      value: [field?.value, field?.unit].filter(Boolean).join(" "),
-      notes: field?.notes || "",
-    }))
-    .filter((field) => field.value || field.notes);
-
-const getPayloadTerms = (payload) => {
-  const generic = payload?.requirements?.generic_requirements || {};
-  const terms = [
-    payload?.service_category,
-    payload?.part_family,
-    payload?.part_type,
-    ...toArray(generic.materials),
-    ...toArray(generic.processes),
-    ...toArray(generic.certifications),
-  ];
-
-  if (payload?.part_family === "metal_part") {
-    terms.push("metal", "metal part", "precision metal");
-  }
-
-  return Array.from(new Set(terms.map(normalizeSearchText).filter(Boolean)));
-};
-
-const getPayloadDomainTerms = (payload) => {
-  const terms = [payload?.service_category, payload?.part_family, payload?.part_type];
-
-  if (payload?.part_family === "metal_part") {
-    terms.push("metal", "metal part", "precision metal");
-  }
-
-  return Array.from(new Set(terms.map(normalizeSearchText).filter(Boolean)));
-};
-
-const extractOfferingValue = (offering, keys, customNames, customFields) => {
-  const direct = toArray(keys).map((key) => offering?.[key]).find(Boolean);
-  return direct || getCustomFieldValue(customFields, customNames);
-};
-
-const extractSupportedPartTypes = (offering, capabilityFields) => {
-  const direct = [
-    ...toArray(offering?.supported_part_types),
-    ...toArray(offering?.supportedPartTypes),
-    ...toArray(offering?.part_types),
-  ];
-  const custom = toArray(
-    getCustomFieldValue(capabilityFields, [
-      "Supported part type",
-      "Supported part types",
-      "Part type",
-      "Part types",
-    ])
-  )
-    .flatMap((value) => String(value).split(/[,;/]/))
-    .map((value) => value.trim());
-
-  return [...direct, ...custom].filter(Boolean);
-};
-
-const normalizeProviderId = (result) =>
-  String(
-    result?.provider_id ||
-      result?.providerId ||
-      result?.provider?.provider_id ||
-      result?.provider?.id ||
-      ""
-  ).toLowerCase();
-
-const buildDemoResult = ({
-  provider,
-  providerPayload,
-  offering,
-  payload,
-  matchedFields,
-  customOfferingFields,
-  customCapabilityFields,
-}) => {
-  const capabilities = offering?.capabilities || {};
-  const providerId =
-    providerPayload?.provider_id ||
-    providerPayload?.providerId ||
-    providerPayload?.id ||
-    provider?.provider_id ||
-    provider?.id ||
-    "demo_provider";
-  const providerName =
-    providerPayload?.provider_name ||
-    providerPayload?.providerName ||
-    providerPayload?.name ||
-    providerId;
-  const offeringId =
-    offering?.offering_id ||
-    offering?.offeringId ||
-    offering?.id ||
-    `${providerId}_demo_offering`;
-  const offeringName =
-    offering?.offering_name ||
-    offering?.offeringName ||
-    offering?.name ||
-    offeringId;
-  const generic = payload?.requirements?.generic_requirements || {};
-  const materials = [
-    ...toArray(capabilities?.materials),
-    ...toArray(getCustomFieldValue(customCapabilityFields, "Material")),
-  ].filter(Boolean);
-  const processes = [
-    ...toArray(capabilities?.processes),
-    ...toArray(getCustomFieldValue(customCapabilityFields, "Process")),
-  ].filter(Boolean);
-  const certifications = [
-    ...toArray(providerPayload?.certifications),
-    ...toArray(capabilities?.certifications),
-    ...toArray(getCustomFieldValue(customCapabilityFields, "Certification")),
-  ].filter(Boolean);
-
-  return {
-    provider_id: providerId,
-    provider_name: providerName,
-    offering_id: offeringId,
-    offering_name: offeringName,
-    part_type: payload?.part_type,
-    status: "matched",
-    match: { status: "matched" },
-    matched_attributes: [
-      {
-        field: "part_type",
-        requested: payload?.part_type,
-        provided: { support_status: "confirmed" },
-        status: "confirmed",
-      },
-      ...matchedFields.map((field) => ({
-        field: "demo_field",
-        requested: field,
-        provided: "Demo registration",
-        status: "confirmed",
-      })),
-    ],
-    evidence: {
-      materials,
-      certifications,
-      generic_capabilities: {
-        materials,
-        processes,
-      },
-      family_capabilities: {},
-    },
-    demo_overlay: {
-      source: "Demo registered provider",
-      country: providerPayload?.country || provider?.country || "",
-      description: providerPayload?.description || provider?.description || "",
-      reason:
-        matchedFields.length > 0
-          ? `Matched demo fields: ${matchedFields.join(", ")}`
-          : "This provider was registered in the demo provider workflow and matches the current search terms.",
-      customOfferingFields: customFieldRows(customOfferingFields),
-      customCapabilityFields: customFieldRows(customCapabilityFields),
-    },
-  };
-};
-
-const buildDemoOverlayResults = (state, payload, backendResults) => {
-  const existingProviderIds = new Set(backendResults.map(normalizeProviderId).filter(Boolean));
-  const searchTerms = getPayloadTerms(payload);
-  const domainTerms = getPayloadDomainTerms(payload);
-  const providers = getProviderStateEntries(state);
-
-  return providers.flatMap((provider) => {
-    const providerPayload = provider?.payload || provider?.provider || provider;
-    const providerId =
-      providerPayload?.provider_id ||
-      providerPayload?.providerId ||
-      providerPayload?.id ||
-      provider?.provider_id ||
-      provider?.id ||
-      "";
-
-    if (providerId && existingProviderIds.has(String(providerId).toLowerCase())) {
-      return [];
-    }
-
-    return toArray(providerPayload?.offerings).flatMap((offering) => {
-      const customOfferingFields = offering?.custom_offering_fields || [];
-      const capabilities = offering?.capabilities || {};
-      const customCapabilityFields = capabilities?.custom_capability_fields || [];
-      const serviceCategory = extractOfferingValue(
-        offering,
-        ["service_category", "serviceCategory"],
-        ["Service category", "service_category"],
-        customOfferingFields
-      );
-      const partFamily = extractOfferingValue(
-        offering,
-        ["part_family", "partFamily"],
-        ["Part family", "Supported part family", "part_family"],
-        customOfferingFields
-      );
-      const supportedPartTypes = extractSupportedPartTypes(offering, customCapabilityFields);
-      const controlledMatches = [
-        normalizeSearchText(serviceCategory) === normalizeSearchText(payload?.service_category)
-          ? payload?.service_category
-          : null,
-        normalizeSearchText(partFamily) === normalizeSearchText(payload?.part_family)
-          ? payload?.part_family
-          : null,
-        supportedPartTypes.map(normalizeSearchText).includes(normalizeSearchText(payload?.part_type))
-          ? payload?.part_type
-          : null,
-      ].filter(Boolean);
-      const textBlob = normalizeSearchText([
-        providerPayload?.provider_name,
-        providerPayload?.providerName,
-        providerPayload?.name,
-        providerPayload?.description,
-        offering?.offering_name,
-        offering?.offeringName,
-        offering?.name,
-        offering?.description,
-        ...customOfferingFields.flatMap((field) => [field?.name, field?.value]),
-        ...customCapabilityFields.flatMap((field) => [
-          field?.name,
-          field?.value,
-          field?.unit,
-          field?.notes,
-        ]),
-      ].filter(Boolean).join(" "));
-      const domainTextMatches = domainTerms.filter((term) => textBlob.includes(term));
-      const textMatches =
-        controlledMatches.length > 0 || domainTextMatches.length > 0
-          ? searchTerms.filter((term) => textBlob.includes(term))
-          : [];
-      const matchedFields = Array.from(
-        new Set([...controlledMatches, ...domainTextMatches, ...textMatches])
-      );
-
-      if (matchedFields.length === 0) {
-        return [];
-      }
-
-      return [
-        buildDemoResult({
-          provider,
-          providerPayload,
-          offering,
-          payload,
-          matchedFields,
-          customOfferingFields,
-          customCapabilityFields,
-        }),
-      ];
-    });
-  });
-};
 
 const metalPartTypeLabels = {
   block: "Block technical fields",
@@ -452,7 +83,7 @@ const buildBoundingBox = (form, heightValue = form.metalHeightMm) =>
   });
 
 const buildMetalPartRequirements = (form) => {
-  const partType = getPartTypeForFamily("metal_part", form.partType);
+  const { partType } = form;
   const genericRequirements = buildGenericRequirements(form, {
     weight_kg: positiveNumber(form.metalWeightKg),
     surface_finish_ra_um: positiveMaxNumber(form.surfaceFinish),
@@ -547,9 +178,8 @@ const buildMetalPartRequirements = (form) => {
   };
 };
 
-const buildSearchPayload = (form, categoryMap = serviceCategoryByFamily) => {
-  const partFamily = toBackendFamily(form.partFamily);
-  const partType = getPartTypeForFamily(partFamily, form.partType);
+const buildSearchPayload = (form, categoryMap = {}) => {
+  const { partFamily, partType } = form;
   const isShaft = partFamily === "shaft";
   const isGear = partFamily === "gear";
   const isMetalPart = partFamily === "metal_part";
@@ -605,7 +235,7 @@ const buildSearchPayload = (form, categoryMap = serviceCategoryByFamily) => {
   return cleanObject({
     request_id: form.requestId,
     consumer_id: form.consumerId,
-    service_category: getServiceCategoryForFamily(partFamily, categoryMap),
+    service_category: categoryMap[partFamily],
     part_family: partFamily,
     part_type: partType || undefined,
     requirements: {
@@ -626,46 +256,45 @@ const ConsumerSearchMockup = () => {
   const [loading, setLoading] = useState(false);
   const [response, setResponse] = useState(null);
   const [error, setError] = useState(null);
-  const [demoProviderWarning, setDemoProviderWarning] = useState(null);
-  const [catalogFilters, setCatalogFilters] = useState(fallbackCatalogFilters);
+  const [catalogFilters, setCatalogFilters] = useState(emptyCatalog);
   const [filterSource, setFilterSource] = useState("loading");
   const [form, setForm] = useState({
     consumerId: "consumer_demo_001",
     requestId: `req-demo-${Date.now()}`,
     partFamily: "gear",
     partType: "spur_gear",
-    material: "alloyed_carburizing_steel",
-    processes: ["hobbing", "turn_mill"],
-    certification: "ISO9001_2015",
-    requirement: "Evidence-backed supplier for precision gear manufacturing",
-    module: 2.0,
-    diametralPitch: 10,
-    outsideDiameterMm: 100,
-    gearQuality: "DIN 6",
-    faceWidthMm: 25,
-    lengthMm: 220,
-    outerDiameterMm: 35,
-    splineModule: 1.5,
-    internalDiameterMm: 12,
-    wallThicknessMm: 6,
-    metalLengthMm: 150,
-    metalWidthMm: 80,
-    metalHeightMm: 20,
-    metalThicknessMm: 8,
-    metalDiameterMm: 50,
-    metalInnerDiameterMm: 20,
-    metalOuterDiameterMm: 50,
-    metalWallThicknessMm: 5,
-    metalWeightKg: 2.5,
-    flangeLengthMm: 40,
-    horizontalFlangeLengthMm: 40,
-    flangeDiameterMm: 60,
-    mountingHolesCount: 4,
-    holeDiameterMm: 8,
-    shaftOrBoreDiameterMm: 15,
-    boreDiameterMm: 20,
-    materialGrade: "Customer specified",
-    surfaceFinish: "Customer specified",
+    material: "",
+    processes: [],
+    certification: "",
+    requirement: "",
+    module: null,
+    diametralPitch: null,
+    outsideDiameterMm: null,
+    gearQuality: "",
+    faceWidthMm: null,
+    lengthMm: null,
+    outerDiameterMm: null,
+    splineModule: null,
+    internalDiameterMm: null,
+    wallThicknessMm: null,
+    metalLengthMm: null,
+    metalWidthMm: null,
+    metalHeightMm: null,
+    metalThicknessMm: null,
+    metalDiameterMm: null,
+    metalInnerDiameterMm: null,
+    metalOuterDiameterMm: null,
+    metalWallThicknessMm: null,
+    metalWeightKg: null,
+    flangeLengthMm: null,
+    horizontalFlangeLengthMm: null,
+    flangeDiameterMm: null,
+    mountingHolesCount: null,
+    holeDiameterMm: null,
+    shaftOrBoreDiameterMm: null,
+    boreDiameterMm: null,
+    materialGrade: "",
+    surfaceFinish: "",
     holesOrCutouts: "",
     holesOrBores: "",
     pocketsOrSlots: "",
@@ -678,10 +307,10 @@ const ConsumerSearchMockup = () => {
     customProcess: "",
     drawingAvailable: "",
     additionalRequirements: "",
-    toleranceMm: 0.02,
+    toleranceMm: null,
   });
 
-  const normalizedPartFamily = normalizeFamily(form.partFamily);
+  const normalizedPartFamily = form.partFamily;
   const isMetalPart = normalizedPartFamily === "metal_part";
   const availablePartTypes = catalogFilters.partTypes[normalizedPartFamily] || [];
   const payload = useMemo(
@@ -700,8 +329,8 @@ const ConsumerSearchMockup = () => {
       })
       .catch(() => {
         if (!active) return;
-        setCatalogFilters(fallbackCatalogFilters);
-        setFilterSource("fallback");
+        setCatalogFilters(emptyCatalog);
+        setFilterSource("unavailable");
       });
 
     return () => {
@@ -713,7 +342,7 @@ const ConsumerSearchMockup = () => {
     setForm((current) => ({ ...current, [field]: value }));
 
   const handlePartFamilyChange = (value) => {
-    const family = normalizeFamily(value);
+    const family = value;
     const nextPartType = catalogFilters.partTypes[family]?.[0]?.value;
 
     setForm((current) => ({
@@ -726,32 +355,15 @@ const ConsumerSearchMockup = () => {
   const search = async () => {
     setError(null);
     setResponse(null);
-    setDemoProviderWarning(null);
     setLoading(true);
 
     try {
       const result = await searchServiceDiscovery(payload);
-      const backendResults = getResultsArray(result);
-      let demoResults = [];
-      let nextDemoWarning = null;
-
-      try {
-        const demoState = await getProviderDemoState();
-        demoResults = buildDemoOverlayResults(demoState, payload, backendResults);
-      } catch (demoError) {
-        nextDemoWarning = "Demo registered providers could not be loaded.";
+      if (result?.contract_version !== "1.0" || !Array.isArray(result.results)
+        || !Number.isInteger(result.result_count)) {
+        throw new Error("The MDC search response does not match contract version 1.0.");
       }
-
-      setDemoProviderWarning(nextDemoWarning);
-      setResponse({
-        ...(Array.isArray(result) ? { results: result } : result),
-        results: [...backendResults, ...demoResults],
-        demo_overlay: {
-          backend_count: backendResults.length,
-          demo_count: demoResults.length,
-          warning: nextDemoWarning,
-        },
-      });
+      setResponse(result);
       toast.current?.show({
         severity: "success",
         summary: "Search completed",
@@ -894,10 +506,10 @@ const ConsumerSearchMockup = () => {
     <div className="flex flex-column gap-4">
       <Toast ref={toast} />
       <Card title="Consumer search request">
-        {filterSource === "fallback" ? (
+        {filterSource === "unavailable" ? (
           <Message
             severity="warn"
-            text="Catalogue filters could not be loaded; explicit demo fallback vocabulary is in use."
+            text="Current catalogue filters are unavailable. Search requires the live vocabulary."
             className="w-full justify-content-start mb-3"
           />
         ) : null}
@@ -1189,7 +801,8 @@ const ConsumerSearchMockup = () => {
             icon="pi pi-search"
             onClick={search}
             loading={loading}
-            disabled={loading}
+            disabled={loading || filterSource !== "canonical" || !payload.service_category
+              || !availablePartTypes.some((item) => item.value === form.partType)}
           />
           {loading ? <Message severity="info" text="Searching MDC..." /> : null}
         </div>
@@ -1199,7 +812,7 @@ const ConsumerSearchMockup = () => {
 
       {error ? <SearchErrorMessage error={error} /> : null}
 
-      <SearchResultsList response={response} demoProviderWarning={demoProviderWarning} />
+      <SearchResultsList response={response} />
     </div>
   );
 };

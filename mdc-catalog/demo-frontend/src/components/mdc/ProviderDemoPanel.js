@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Button } from 'primereact/button';
 import { Card } from 'primereact/card';
 import { Column } from 'primereact/column';
@@ -11,416 +11,200 @@ import { Message } from 'primereact/message';
 import { MultiSelect } from 'primereact/multiselect';
 import { Panel } from 'primereact/panel';
 import { Toast } from 'primereact/toast';
-import { getProviderDemoState, previewProviderPublication, simulateProviderUpdate } from '@/services/mdc/demoAdmin.service';
+import { getCatalogFilters, normalizeCatalogFilters } from '@/services/mdc/catalog.service';
+import {
+    createOffering, deleteOffering, deleteProvider, getOffering, getProvider, listProviderOfferings,
+    registerProvider, updateOffering, updateProvider, validateProviderPublication
+} from '@/services/mdc/provider.service';
+import { DISPOSABLE_PROVIDER_PREFIX, isDisposableMdcId, isDisposableOfferingId } from '@/services/mdc/stage1bScope';
 import ProviderActionResult from './ProviderActionResult';
 import ProviderPayloadPreview from './ProviderPayloadPreview';
 import StatusTag from './StatusTag';
-import { buildProviderPreviewPayload } from './providerPayloadBuilder';
 import {
-    capabilityTemplates,
-    certifications,
-    materials,
-    partTypes,
-    processes
-} from './mockData';
+    BOX_PART_TYPES, ROUND_PART_TYPES, buildOfferingCreation, buildProviderPatches,
+    buildProviderPreviewPayload, emptyProviderForm, hydrateProviderForm
+} from './providerPayloadBuilder';
 
 const qualityStandards = ['DIN', 'ISO', 'AGMA'];
-const availableGrades = ['18CrNiMo7-6', '16MnCr5', '20MnCr5'];
-
-const templateDefaults = {
-    gear_manufacturing: {
-        serviceCategory: 'precision_gears',
-        partFamily: 'gear',
-        partTypes: ['spur_gear', 'helical_gear']
-    },
-    shaft_manufacturing: {
-        serviceCategory: 'precision_shafts',
-        partFamily: 'shaft',
-        partTypes: ['splined_shaft', 'plain_shaft']
-    },
-    metal_part_manufacturing: {
-        serviceCategory: 'precision_metal_parts',
-        partFamily: 'metal_part',
-        partTypes: ['block', 'plate', 'bracket', 'bushing', 'roller', 'collar']
-    }
-};
-
-const baseCapabilityForm = {
-    supportStatus: 'confirmed',
-    partTypes: templateDefaults.gear_manufacturing.partTypes,
-    moduleMin: 1,
-    moduleMax: 8,
-    diameterMinMm: 20,
-    diameterMaxMm: 300,
-    qualityStandard: 'ISO',
-    qualityClass: 'Customer specified',
-    lengthMaxMm: 500,
-    outerDiameterMinMm: 10,
-    outerDiameterMaxMm: 120,
-    splineModule: 2,
-    maxLengthMm: 600,
-    maxWidthMm: 400,
-    maxHeightMm: 150,
-    maxDiameterMm: 300,
-    tolerance: 'Customer specified',
-    surfaceFinish: 'Customer specified',
-    batchSizeMin: 1,
-    batchSizeMax: 1000,
-    leadTimeMinWeeks: 2,
-    leadTimeMaxWeeks: 12,
-    weightMaxKg: 200,
-    materials: ['alloyed_carburizing_steel'],
-    availableGrades: ['16MnCr5', '20MnCr5'],
-    processes: ['machining'],
-    certifications: ['ISO9001_2015'],
-    capabilityNotes: ''
-};
-
-const registerForm = {
-    action: 'register_provider',
-    providerId: '',
-    providerName: '',
-    country: '',
-    description: '',
-    offeringId: '',
-    offeringName: '',
-    customOfferingFields: [],
-    customCapabilityFields: []
-};
-
-const updateForm = {
-    ...baseCapabilityForm,
-    action: 'update_existing_provider',
-    providerId: 'tasowheel',
-    providerName: 'Tasowheel Oy',
-    country: 'Finland',
-    description: 'Existing provider capability update for the demo.',
-    certifications: ['ISO9001_2015', 'ISO14001_2015', 'ISO_TS_16949_partial', 'APQP'],
-    offeringId: 'tasowheel_precision_gears',
-    offeringName: 'Precision gears',
-    capabilityTemplate: 'gear_manufacturing',
-    serviceCategory: 'precision_gears',
-    partFamily: 'gear',
-    partTypes: ['spur_gear', 'helical_gear', 'bevel_gear', 'worm_gear'],
-    moduleMin: 0.3,
-    moduleMax: 10,
-    diameterMinMm: 10,
-    diameterMaxMm: 500,
-    qualityStandard: 'DIN',
-    qualityClass: '4',
-    processes: ['machining', 'hobbing', 'gear_grinding', 'gear_cutting'],
-    materials: ['alloyed_carburizing_steel'],
-    availableGrades
-};
-
-const staticOfferingRows = [
-    {
-        id: 'tasowheel_precision_gears',
-        providerId: 'tasowheel',
-        providerName: 'Tasowheel Oy',
-        country: 'Finland',
-        description: 'Existing provider capability update for the demo.',
-        offering: 'Precision gears',
-        serviceCategory: 'precision_gears',
-        partFamily: 'gear',
-        capabilityTemplate: 'gear_manufacturing',
-        supportedPartTypes: ['spur_gear', 'helical_gear', 'bevel_gear', 'worm_gear'],
-        materials: ['alloyed_carburizing_steel'],
-        processes: ['hobbing', 'gear_grinding', 'turn_mill', 'gear_cutting'],
-        certifications: ['ISO9001_2015', 'ISO14001_2015', 'ISO_TS_16949_partial', 'APQP'],
-        status: 'ready'
-    },
-    {
-        id: 'tasowheel_precision_shafts',
-        providerId: 'tasowheel',
-        providerName: 'Tasowheel Oy',
-        country: 'Finland',
-        description: 'Existing provider capability update for the demo.',
-        offering: 'Precision shafts',
-        serviceCategory: 'precision_shafts',
-        partFamily: 'shaft',
-        capabilityTemplate: 'shaft_manufacturing',
-        supportedPartTypes: ['splined_shaft', 'plain_shaft', 'hollow_shaft'],
-        materials: ['alloyed_carburizing_steel'],
-        processes: ['hard_turning', 'grinding', 'milling', 'turn_mill'],
-        certifications: ['ISO9001_2015'],
-        status: 'ready'
-    }
+const supportStatuses = [
+    { label: 'Confirmed', value: 'confirmed' },
+    { label: 'Requires confirmation', value: 'candidate_requiring_confirmation' },
+    { label: 'Unknown', value: 'unknown' }
 ];
+const textArea = { rows: 3, autoResize: true, className: 'w-full' };
+const providerInputs = ['providerName', 'country', 'description', 'certifications'];
+const strong = (etag) => /^"[^"\r\n]+"$/.test(etag || '');
+const listBody = (field) => (row) => (row[field] || []).join(', ');
 
-const textArea = {
-    rows: 3,
-    autoResize: true,
-    className: 'w-full'
-};
-
-const createRegisterForm = () => ({
-    ...registerForm,
-    customOfferingFields: [],
-    customCapabilityFields: []
-});
-
-const asArray = (value) => {
-    if (Array.isArray(value)) return value;
-    if (value && typeof value === 'object') return Object.values(value);
-    return [];
-};
-
-const getControlledTemplate = (offering) => Object.entries(templateDefaults).find(
-    ([template, defaults]) => (
-        offering?.service_category === defaults.serviceCategory
-        && offering?.part_family === defaults.partFamily
-        && (!offering?.capability_template || offering.capability_template === template)
-    )
-);
-
-const getProviderStateEntries = (state) => {
-    const providers = state?.providers || state?.state?.providers || state?.demo_state?.providers || state?.data?.providers;
-
-    if (providers) {
-        return asArray(providers);
-    }
-
-    return asArray(state);
-};
-
-const mapSavedProviderRows = (state) => getProviderStateEntries(state).flatMap((provider) => {
-    const payload = provider?.payload || provider?.provider || provider;
-    const providerId = payload?.provider_id || payload?.providerId || payload?.id || '';
-    const providerName = payload?.provider_name || payload?.providerName || payload?.name || providerId || 'Saved demo provider';
-    const country = payload?.country || '';
-    const description = payload?.description || '';
-
-    return asArray(payload?.offerings).map((offering, index) => {
-        const capabilities = offering?.capabilities || {};
-        const offeringId = offering?.offering_id || offering?.offeringId || offering?.id || `${providerId || 'saved_provider'}_${index}`;
-        const controlledTemplate = getControlledTemplate(offering);
-        const [capabilityTemplate, controlledDefaults] = controlledTemplate || [null, null];
-        const supportedPartTypes = controlledDefaults
-            ? asArray(offering?.supported_part_types).filter((partType) => controlledDefaults.partTypes.includes(partType))
-            : [];
-
-        return {
-            id: offeringId,
-            providerId,
-            providerName,
-            country,
-            description,
-            offering: offering?.offering_name || offering?.offeringName || offering?.name || offeringId,
-            serviceCategory: controlledDefaults?.serviceCategory || '',
-            partFamily: controlledDefaults?.partFamily || '',
-            capabilityTemplate,
-            supportedPartTypes,
-            materials: capabilities?.materials || [],
-            processes: capabilities?.processes || [],
-            certifications: payload?.certifications || capabilities?.certifications || [],
-            status: controlledTemplate ? 'saved' : 'mapping-required',
-            requiresControlledMapping: !controlledTemplate
-        };
-    });
-});
-
-const mergeOfferingRows = (staticRows, savedRows) => {
-    const rowsById = new Map();
-    [...staticRows, ...savedRows].forEach((row) => {
-        if (row?.id) {
-            rowsById.set(row.id, row);
-        }
-    });
-    return Array.from(rowsById.values());
-};
+const displayRows = (rows, provider) => rows.map((offering) => ({
+    id: offering.offering_id,
+    providerName: provider.provider_name,
+    offering: offering.offering_name,
+    serviceCategory: offering.service_category,
+    partFamily: offering.part_family,
+    supportedPartTypes: (offering.supported_part_types || []).map((item) => item.part_type),
+    materials: (offering.generic_capabilities?.materials || []).map((item) => item.material),
+    processes: (offering.generic_capabilities?.processes || []).map((item) => item.process),
+    status: offering.support_status
+}));
 
 const ProviderDemoPanel = () => {
     const toast = useRef(null);
+    const inFlight = useRef(false);
     const [mode, setMode] = useState('register');
-    const [updateRows, setUpdateRows] = useState(staticOfferingRows);
-    const [selectedOffering, setSelectedOffering] = useState(staticOfferingRows[0]);
-    const [form, setForm] = useState(createRegisterForm);
+    const [form, setForm] = useState(emptyProviderForm);
+    const [filters, setFilters] = useState(null);
+    const [filterError, setFilterError] = useState(null);
+    const [lookupId, setLookupId] = useState('');
+    const [snapshot, setSnapshot] = useState(null);
     const [loadingAction, setLoadingAction] = useState(null);
     const [actionResult, setActionResult] = useState(null);
     const [stateLoadWarning, setStateLoadWarning] = useState(null);
+    const provider = snapshot?.provider.data;
+    const offering = snapshot?.offering?.data;
+    const rows = provider ? displayRows(snapshot.list.offerings, provider) : [];
+    const selectedRow = rows.find((item) => item.id === offering?.offering_id);
+    const patches = buildProviderPatches(form, provider, offering);
+    const payload = mode === 'update' ? patches : mode === 'add' ? buildOfferingCreation(form) : buildProviderPreviewPayload(form);
+    const manageable = isDisposableMdcId(provider?.provider_id);
+    const providerEtag = strong(snapshot?.provider.etag);
+    const offeringEtag = strong(snapshot?.offering?.etag);
+    const editing = mode === 'update';
+    const busy = Boolean(loadingAction);
+    const currentType = form.partTypes.length === 1 ? form.partTypes[0] : null;
+    const boxEnabled = BOX_PART_TYPES.includes(currentType);
+    const roundEnabled = ROUND_PART_TYPES.includes(currentType);
+    const creationReady = Boolean(filters && form.offeringName.trim() && form.partFamily && form.serviceCategory
+        && isDisposableOfferingId(form.offeringId.trim(), form.providerId.trim()));
 
-    const payload = useMemo(() => buildProviderPreviewPayload(form), [form]);
-    const selectedTemplate = templateDefaults[form.capabilityTemplate];
-    const hasValidControlledMapping = mode !== 'update' || Boolean(
-        selectedTemplate
-        && form.serviceCategory === selectedTemplate.serviceCategory
-        && form.partFamily === selectedTemplate.partFamily
-    );
+    useEffect(() => {
+        let active = true;
+        getCatalogFilters().then(normalizeCatalogFilters)
+            .then((data) => { if (active) setFilters(data); })
+            .catch((error) => { if (active) setFilterError(error.message); });
+        return () => { active = false; };
+    }, []);
 
     const setField = (field, value) => setForm((current) => ({ ...current, [field]: value }));
 
-    const loadProviderState = useCallback(async ({ showToast = false } = {}) => {
-        try {
-            const state = await getProviderDemoState();
-            const savedRows = mapSavedProviderRows(state);
-            const nextRows = mergeOfferingRows(staticOfferingRows, savedRows);
-            setUpdateRows(nextRows);
-            setStateLoadWarning(null);
+    const addRow = (field, row) => setForm((current) => ({ ...current, [field]: [...current[field], row] }));
+    const editRow = (field, index, key, value) => setForm((current) => ({
+        ...current, [field]: current[field].map((row, offset) => offset === index ? { ...row, [key]: value } : row)
+    }));
+    const removeRow = (field, index) => setForm((current) => ({
+        ...current, [field]: current[field].filter((_, offset) => offset !== index)
+    }));
+    const addCustomOfferingField = () => addRow('customOfferingFields', { name: '', value: '', unit: '', notes: '' });
+    const updateCustomOfferingField = (...args) => editRow('customOfferingFields', ...args);
+    const removeCustomOfferingField = (index) => removeRow('customOfferingFields', index);
+    const addCustomCapabilityField = () => addRow('customCapabilityFields', { name: '', value: '', unit: '', notes: '' });
+    const updateCustomCapabilityField = (...args) => editRow('customCapabilityFields', ...args);
+    const removeCustomCapabilityField = (index) => removeRow('customCapabilityFields', index);
 
-            setSelectedOffering((current) => (
-                nextRows.find((row) => row.id === current?.id) || nextRows[0] || null
-            ));
-
-            if (showToast) {
-                toast.current?.show({
-                    severity: 'success',
-                    summary: 'Provider state loaded',
-                    detail: 'Saved demo providers were loaded.',
-                    life: 2000
-                });
+    const refresh = async (id, selectedId, preservedEntity) => {
+        const [providerResponse, list] = await Promise.all([getProvider(id), listProviderOfferings(id)]);
+        const preferred = list.offerings.find((item) => item.offering_id === selectedId) || list.offerings[0];
+        const offeringResponse = preferred ? await getOffering(preferred.offering_id) : null;
+        const fresh = hydrateProviderForm(providerResponse.data, offeringResponse?.data);
+        if (preservedEntity && provider) {
+            const previous = hydrateProviderForm(provider, offering);
+            for (const key of Object.keys(fresh)) {
+                if (providerInputs.includes(key) !== (preservedEntity === 'provider')) continue;
+                if (JSON.stringify(form[key]) !== JSON.stringify(previous[key])) fresh[key] = form[key];
             }
-        } catch (error) {
-            setUpdateRows(staticOfferingRows);
-            setSelectedOffering((current) => (
-                staticOfferingRows.find((row) => row.id === current?.id) || staticOfferingRows[0]
-            ));
-            setStateLoadWarning('Saved demo providers could not be loaded. Showing static Tasowheel demo rows.');
         }
-    }, []);
-
-    useEffect(() => {
-        loadProviderState();
-    }, [loadProviderState]);
-
-    const addCustomOfferingField = () => {
-        setForm((current) => ({
-            ...current,
-            customOfferingFields: [
-                ...(current.customOfferingFields || []),
-                { name: '', value: '' }
-            ]
-        }));
+        setSnapshot({ provider: providerResponse, offering: offeringResponse, list });
+        setForm(fresh);
+        setLookupId(id);
     };
 
-    const updateCustomOfferingField = (index, field, value) => {
-        setForm((current) => ({
-            ...current,
-            customOfferingFields: (current.customOfferingFields || []).map((item, itemIndex) => (
-                itemIndex === index ? { ...item, [field]: value } : item
-            ))
-        }));
+    const runAction = async (action, operation, inspect) => {
+        if (inFlight.current) return;
+        inFlight.current = true;
+        setLoadingAction(action);
+        setActionResult(null);
+        setStateLoadWarning(null);
+        let response;
+        let error;
+        try {
+            try {
+                response = await operation();
+            } catch (failure) {
+                error = failure;
+            }
+            setActionResult({ action, response: response?.data || response, error });
+            if (error) {
+                toast.current?.show({ severity: 'warn', summary: action, detail: error.message, life: 3500 });
+            }
+            if (inspect && (!error || error.status == null || [404, 409, 412, 428].includes(error.status) || error.status >= 500)) {
+                try {
+                    await inspect(error);
+                } catch (failure) {
+                    setSnapshot(null);
+                    setStateLoadWarning(failure.status === 404
+                        ? 'The provider is absent. Confirm the intended identity before another write.'
+                        : 'The resource could not be read back. Load its current state before another write.');
+                }
+            }
+        } finally {
+            inFlight.current = false;
+            setLoadingAction(null);
+        }
     };
 
-    const removeCustomOfferingField = (index) => {
-        setForm((current) => ({
-            ...current,
-            customOfferingFields: (current.customOfferingFields || []).filter((_, itemIndex) => itemIndex !== index)
-        }));
-    };
-
-    const addCustomCapabilityField = () => {
-        setForm((current) => ({
-            ...current,
-            customCapabilityFields: [
-                ...(current.customCapabilityFields || []),
-                { name: '', value: '', unit: '', notes: '' }
-            ]
-        }));
-    };
-
-    const updateCustomCapabilityField = (index, field, value) => {
-        setForm((current) => ({
-            ...current,
-            customCapabilityFields: (current.customCapabilityFields || []).map((item, itemIndex) => (
-                itemIndex === index ? { ...item, [field]: value } : item
-            ))
-        }));
-    };
-
-    const removeCustomCapabilityField = (index) => {
-        setForm((current) => ({
-            ...current,
-            customCapabilityFields: (current.customCapabilityFields || []).filter((_, itemIndex) => itemIndex !== index)
-        }));
-    };
-
-    const applyTemplate = (templateValue) => {
-        const defaults = templateDefaults[templateValue];
-        if (!defaults) return;
-        setForm((current) => ({
-            ...current,
-            capabilityTemplate: templateValue,
-            ...defaults
-        }));
+    const inspectWrite = (id, selectedId, preservedEntity) => async () => {
+        setMode('update');
+        setLookupId(id);
+        await refresh(id, selectedId, preservedEntity);
     };
 
     const switchMode = (nextMode) => {
-        toast.current?.clear();
         setMode(nextMode);
         setActionResult(null);
-        setForm(nextMode === 'register' ? createRegisterForm() : updateForm);
+        setStateLoadWarning(null);
+        setSnapshot(null);
+        setForm(emptyProviderForm());
     };
 
-    const listBody = (field) => (row) => (row[field] || []).join(', ');
-    const statusBody = (row) => <StatusTag value={row.status} status={row.status} />;
-
-    const handleSelection = (e) => {
-        const next = e.value;
-        setSelectedOffering(next);
-        if (!next) return;
-
-        setForm((current) => ({
-            ...current,
-            action: 'update_existing_provider',
-            providerId: next.providerId || updateForm.providerId,
-            providerName: next.providerName || updateForm.providerName,
-            country: next.country || updateForm.country,
-            description: next.description || updateForm.description,
-            offeringId: next.id,
-            offeringName: next.offering,
-            serviceCategory: next.serviceCategory,
-            partFamily: next.partFamily,
-            capabilityTemplate: next.capabilityTemplate,
-            partTypes: next.supportedPartTypes || [],
-            materials: next.materials || [],
-            certifications: next.certifications || [],
-            processes: Array.from(new Set(next.processes || []))
-        }));
-    };
-
-    const runAction = async (action) => {
-        if (!hasValidControlledMapping) {
-            setActionResult(null);
-            toast.current?.show({
-                severity: 'warn',
-                summary: 'Controlled mapping required',
-                detail: 'Choose a valid controlled capability template before previewing or saving this update.',
-                life: 3500
-            });
-            return;
-        }
-
-        const isPreview = action === 'preview';
-        toast.current?.clear();
-        setLoadingAction(action);
+    const startOffering = () => {
+        setMode('add');
         setActionResult(null);
+        setForm({
+            ...hydrateProviderForm(provider),
+            partFamily: offering?.part_family || '',
+            serviceCategory: offering?.service_category || ''
+        });
+    };
 
-        try {
-            const response = isPreview
-                ? await previewProviderPublication(payload)
-                : await simulateProviderUpdate(payload);
-            if (!isPreview && payload.action === 'register_provider') {
-                await loadProviderState();
+    const handleSelection = (event) => {
+        if (!event.value || event.value.id === offering?.offering_id) return;
+        const id = event.value.id;
+        runAction('Load offering', async () => {
+            const next = await getOffering(id);
+            setSnapshot((current) => ({ ...current, offering: next }));
+            setForm((current) => {
+                const draft = hydrateProviderForm(provider, next.data);
+                for (const key of providerInputs) draft[key] = current[key];
+                return draft;
+            });
+        });
+    };
+
+    const removeRecord = (entity) => {
+        const isProvider = entity === 'provider';
+        const id = isProvider ? provider.provider_id : offering.offering_id;
+        if (!window.confirm('Delete disposable ' + entity + ' ' + id + '?')) return;
+        const execute = isProvider
+            ? () => deleteProvider(id, snapshot.provider.etag)
+            : () => deleteOffering(id, snapshot.offering.etag);
+        runAction('Delete ' + entity, execute, async (error) => {
+            if (!error && isProvider) {
+                setSnapshot(null);
+                setForm(emptyProviderForm());
+                return;
             }
-            setActionResult({ action, payloadAction: payload.action, response });
-            toast.current?.show({
-                severity: 'success',
-                summary: isPreview ? 'Preview validation' : 'Demo save',
-                detail: 'Demo provider endpoint responded successfully.',
-                life: 2500
-            });
-        } catch (error) {
-            setActionResult({ action, payloadAction: payload.action, error });
-            toast.current?.show({
-                severity: error?.status === 501 ? 'warn' : 'error',
-                summary: isPreview ? 'Preview validation' : 'Demo save',
-                detail: error?.message || 'Provider demo action failed.',
-                life: 3500
-            });
-        } finally {
-            setLoadingAction(null);
-        }
+            await refresh(provider.provider_id, id);
+        });
     };
 
     const renderProviderInformation = () => (
@@ -432,7 +216,7 @@ const ProviderDemoPanel = () => {
                 </div>
                 <div className="field col-12 md:col-4">
                     <label htmlFor="providerId" className="font-medium">Provider ID</label>
-                    <InputText id="providerId" value={form.providerId} onChange={(e) => setField('providerId', e.target.value)} className="w-full" />
+                    <InputText id="providerId" value={form.providerId} readOnly={mode !== 'register'} onChange={(e) => setField('providerId', e.target.value)} className="w-full" />
                 </div>
                 <div className="field col-12 md:col-4">
                     <label htmlFor="country" className="font-medium">Country</label>
@@ -441,6 +225,10 @@ const ProviderDemoPanel = () => {
                 <div className="field col-12">
                     <label htmlFor="description" className="font-medium">Short description / notes</label>
                     <InputTextarea id="description" value={form.description} onChange={(e) => setField('description', e.target.value)} {...textArea} />
+                </div>
+                <div className="field col-12 md:col-4">
+                    <label htmlFor="certifications" className="font-medium">Provider certifications</label>
+                    <MultiSelect inputId="certifications" value={form.certifications} options={filters?.certifications || []} optionLabel="label" optionValue="value" onChange={(e) => setField('certifications', e.value)} display="chip" className="w-full" />
                 </div>
             </div>
         </Panel>
@@ -455,48 +243,26 @@ const ProviderDemoPanel = () => {
                 </div>
                 <div className="field col-12 md:col-6">
                     <label htmlFor="offeringId" className="font-medium">Offering ID</label>
-                    <InputText id="offeringId" value={form.offeringId} onChange={(e) => setField('offeringId', e.target.value)} className="w-full" />
+                    <InputText id="offeringId" value={form.offeringId} readOnly={mode === 'update'} onChange={(e) => setField('offeringId', e.target.value)} className="w-full" />
                 </div>
-                {mode === 'update' ? (
-                    <>
-                        <div className="field col-12 md:col-6">
-                            <label htmlFor="serviceCategory" className="font-medium">Service category / capability area</label>
-                            <InputText
-                                id="serviceCategory"
-                                value={form.serviceCategory || 'Choose a controlled template'}
-                                readOnly
-                                className="w-full"
-                            />
-                        </div>
-                        <div className="field col-12 md:col-6">
-                            <label htmlFor="capabilityTemplate" className="font-medium">Capability template</label>
-                            <Dropdown
-                                inputId="capabilityTemplate"
-                                value={form.capabilityTemplate}
-                                options={capabilityTemplates}
-                                optionLabel="label"
-                                optionValue="value"
-                                onChange={(e) => applyTemplate(e.value)}
-                                placeholder="Choose a controlled template"
-                                className="w-full"
-                            />
-                        </div>
-                        <div className="field col-12">
-                            <p className="text-600 line-height-3 mb-0">
-                                Choose a controlled template to couple the current MDC service category, part family and supported part types. Flexible facts that do not map yet remain registration/custom staging data.
-                            </p>
-                        </div>
-                        {!hasValidControlledMapping ? (
-                            <div className="col-12">
-                                <Message
-                                    severity="warn"
-                                    text="This saved flexible offering requires an explicit controlled MDC mapping. Choose a capability template before previewing or saving the update."
-                                    className="w-full justify-content-start"
-                                />
-                            </div>
-                        ) : null}
-                    </>
-                ) : null}
+                <div className="field col-12 md:col-4">
+                    <label htmlFor="serviceCategory" className="font-medium">Service category</label>
+                    <InputText id="serviceCategory" value={form.serviceCategory} readOnly className="w-full" />
+                </div>
+                <div className="field col-12 md:col-4">
+                    <label htmlFor="partFamily" className="font-medium">Part family</label>
+                    <Dropdown inputId="partFamily" value={form.partFamily} options={filters?.partFamilies || []}
+                        optionLabel="label" optionValue="value" disabled={mode === 'update' || !filters}
+                        onChange={(event) => setForm((current) => ({
+                            ...current, partFamily: event.value, serviceCategory: filters.serviceCategoryByFamily[event.value], partTypes: []
+                        }))} className="w-full" />
+                </div>
+                <div className="field col-12 md:col-4">
+                    <label htmlFor="supportStatus" className="font-medium">Support status</label>
+                    <Dropdown inputId="supportStatus" value={form.supportStatus} options={supportStatuses}
+                        optionLabel="label" optionValue="value" onChange={(event) => setField('supportStatus', event.value)}
+                        className="w-full" />
+                </div>
             </div>
         </Panel>
     );
@@ -554,19 +320,20 @@ const ProviderDemoPanel = () => {
         <>
             <div className="field col-12 md:col-4">
                 <label htmlFor="materials" className="font-medium">Materials</label>
-                <MultiSelect inputId="materials" value={form.materials} options={materials} onChange={(e) => setField('materials', e.value)} display="chip" className="w-full" />
+                <MultiSelect inputId="materials" value={form.materials} options={filters?.materials || []} optionLabel="label" optionValue="value" onChange={(e) => setForm((current) => ({
+                    ...current, materials: e.value,
+                    availableGrades: e.value.length === 1 && current.materials.length === 1
+                        && current.materials[0] === e.value[0] ? current.availableGrades : ''
+                }))} display="chip" className="w-full" />
             </div>
             <div className="field col-12 md:col-4">
                 <label htmlFor="availableGrades" className="font-medium">Material grades</label>
-                <MultiSelect inputId="availableGrades" value={form.availableGrades} options={availableGrades} onChange={(e) => setField('availableGrades', e.value)} display="chip" className="w-full" />
+                <InputText id="availableGrades" value={form.availableGrades} onChange={(e) => setField('availableGrades', e.target.value)} disabled={form.materials.length !== 1} placeholder="Comma-separated grades" className="w-full" />
             </div>
-            <div className="field col-12 md:col-4">
-                <label htmlFor="certifications" className="font-medium">Certifications</label>
-                <MultiSelect inputId="certifications" value={form.certifications} options={certifications} onChange={(e) => setField('certifications', e.value)} display="chip" className="w-full" />
-            </div>
+
             <div className="field col-12">
                 <label htmlFor="processes" className="font-medium">Processes</label>
-                <MultiSelect inputId="processes" value={form.processes} options={processes} onChange={(e) => setField('processes', e.value)} display="chip" className="w-full" />
+                <MultiSelect inputId="processes" value={form.processes} options={filters?.processes || []} optionLabel="label" optionValue="value" onChange={(e) => setField('processes', e.value)} display="chip" className="w-full" />
             </div>
             <div className="field col-12 md:col-3">
                 <label htmlFor="batchSizeMin" className="font-medium">Batch size min</label>
@@ -599,7 +366,7 @@ const ProviderDemoPanel = () => {
         <>
             <div className="field col-12">
                 <label htmlFor="gearPartTypes" className="font-medium">Supported gear part types</label>
-                <MultiSelect inputId="gearPartTypes" value={form.partTypes} options={partTypes.gears} onChange={(e) => setField('partTypes', e.value)} display="chip" className="w-full" />
+                <MultiSelect inputId="gearPartTypes" value={form.partTypes} options={filters?.partTypes.gear || []} optionLabel="label" optionValue="value" onChange={(e) => setField('partTypes', e.value)} display="chip" className="w-full" />
             </div>
             <div className="field col-12 md:col-3">
                 <label htmlFor="moduleMin" className="font-medium">Module min</label>
@@ -632,7 +399,7 @@ const ProviderDemoPanel = () => {
         <>
             <div className="field col-12">
                 <label htmlFor="shaftPartTypes" className="font-medium">Supported shaft part types</label>
-                <MultiSelect inputId="shaftPartTypes" value={form.partTypes} options={partTypes.shafts} onChange={(e) => setField('partTypes', e.value)} display="chip" className="w-full" />
+                <MultiSelect inputId="shaftPartTypes" value={form.partTypes} options={filters?.partTypes.shaft || []} optionLabel="label" optionValue="value" onChange={(e) => setField('partTypes', e.value)} display="chip" className="w-full" />
             </div>
             <div className="field col-12 md:col-3">
                 <label htmlFor="lengthMaxMm" className="font-medium">Length max</label>
@@ -646,10 +413,12 @@ const ProviderDemoPanel = () => {
                 <label htmlFor="outerDiameterMaxMm" className="font-medium">Outer diameter max</label>
                 <InputNumber inputId="outerDiameterMaxMm" value={form.outerDiameterMaxMm} onValueChange={(e) => setField('outerDiameterMaxMm', e.value)} suffix=" mm" className="w-full" />
             </div>
-            <div className="field col-12 md:col-3">
-                <label htmlFor="splineModule" className="font-medium">Spline module</label>
-                <InputNumber inputId="splineModule" value={form.splineModule} onValueChange={(e) => setField('splineModule', e.value)} minFractionDigits={1} maxFractionDigits={2} className="w-full" />
-            </div>
+            {form.partTypes.includes('splined_shaft') && (
+                <div className="field col-12 md:col-3">
+                    <label htmlFor="splineModule" className="font-medium">Spline module</label>
+                    <InputNumber inputId="splineModule" value={form.splineModule} onValueChange={(e) => setField('splineModule', e.value)} minFractionDigits={1} maxFractionDigits={2} className="w-full" />
+                </div>
+            )}
         </>
     );
 
@@ -657,24 +426,32 @@ const ProviderDemoPanel = () => {
         <>
             <div className="field col-12">
                 <label htmlFor="metalPartTypes" className="font-medium">Supported metal part types</label>
-                <MultiSelect inputId="metalPartTypes" value={form.partTypes} options={partTypes.metalParts} onChange={(e) => setField('partTypes', e.value)} display="chip" className="w-full" />
+                <MultiSelect inputId="metalPartTypes" value={form.partTypes} options={filters?.partTypes.metal_part || []} optionLabel="label" optionValue="value" onChange={(e) => setField('partTypes', e.value)} display="chip" className="w-full" />
             </div>
-            <div className="field col-12 md:col-3">
-                <label htmlFor="maxLengthMm" className="font-medium">Maximum length</label>
-                <InputNumber inputId="maxLengthMm" value={form.maxLengthMm} onValueChange={(e) => setField('maxLengthMm', e.value)} suffix=" mm" className="w-full" />
-            </div>
-            <div className="field col-12 md:col-3">
-                <label htmlFor="maxWidthMm" className="font-medium">Maximum width</label>
-                <InputNumber inputId="maxWidthMm" value={form.maxWidthMm} onValueChange={(e) => setField('maxWidthMm', e.value)} suffix=" mm" className="w-full" />
-            </div>
-            <div className="field col-12 md:col-3">
-                <label htmlFor="maxHeightMm" className="font-medium">Maximum height/thickness</label>
-                <InputNumber inputId="maxHeightMm" value={form.maxHeightMm} onValueChange={(e) => setField('maxHeightMm', e.value)} suffix=" mm" className="w-full" />
-            </div>
-            <div className="field col-12 md:col-3">
-                <label htmlFor="maxDiameterMm" className="font-medium">Maximum diameter</label>
-                <InputNumber inputId="maxDiameterMm" value={form.maxDiameterMm} onValueChange={(e) => setField('maxDiameterMm', e.value)} suffix=" mm" className="w-full" />
-            </div>
+            {boxEnabled && (
+                <div className="field col-12 md:col-3">
+                    <label htmlFor="maxLengthMm" className="font-medium">Maximum length</label>
+                    <InputNumber inputId="maxLengthMm" value={form.maxLengthMm} onValueChange={(e) => setField('maxLengthMm', e.value)} suffix=" mm" className="w-full" />
+                </div>
+            )}
+            {boxEnabled && (
+                <div className="field col-12 md:col-3">
+                    <label htmlFor="maxWidthMm" className="font-medium">Maximum width</label>
+                    <InputNumber inputId="maxWidthMm" value={form.maxWidthMm} onValueChange={(e) => setField('maxWidthMm', e.value)} suffix=" mm" className="w-full" />
+                </div>
+            )}
+            {boxEnabled && (
+                <div className="field col-12 md:col-3">
+                    <label htmlFor="maxHeightMm" className="font-medium">Maximum height/thickness</label>
+                    <InputNumber inputId="maxHeightMm" value={form.maxHeightMm} onValueChange={(e) => setField('maxHeightMm', e.value)} suffix=" mm" className="w-full" />
+                </div>
+            )}
+            {roundEnabled && (
+                <div className="field col-12 md:col-3">
+                    <label htmlFor="maxDiameterMm" className="font-medium">Maximum diameter</label>
+                    <InputNumber inputId="maxDiameterMm" value={form.maxDiameterMm} onValueChange={(e) => setField('maxDiameterMm', e.value)} suffix=" mm" className="w-full" />
+                </div>
+            )}
             <div className="field col-12 md:col-6">
                 <label htmlFor="tolerance" className="font-medium">Tolerance</label>
                 <InputText id="tolerance" value={form.tolerance} onChange={(e) => setField('tolerance', e.target.value)} className="w-full" />
@@ -687,16 +464,19 @@ const ProviderDemoPanel = () => {
     );
 
     const renderTemplateFields = () => {
-        if (form.capabilityTemplate === 'shaft_manufacturing') return renderShaftFields();
-        if (form.capabilityTemplate === 'metal_part_manufacturing') return renderMetalPartFields();
-        if (form.capabilityTemplate === 'gear_manufacturing') return renderGearFields();
+        if (form.partFamily === 'shaft') return renderShaftFields();
+        if (form.partFamily === 'metal_part') return renderMetalPartFields();
+        if (form.partFamily === 'gear') return renderGearFields();
         return null;
     };
 
     const renderCapabilityInformation = () => (
         <Panel header="Capability information">
-            {mode === 'register' ? (
-                <div className="flex flex-column gap-3">
+            <div className="grid formgrid">
+                {renderTemplateFields()}
+                {renderSharedCapabilityFields()}
+            </div>
+            <div className="flex flex-column gap-3">
                     {(form.customCapabilityFields || []).map((field, index) => (
                         <div className="grid formgrid align-items-end" key={`capability-field-${index}`}>
                             <div className="field col-12 md:col-3">
@@ -757,42 +537,30 @@ const ProviderDemoPanel = () => {
                             onClick={addCustomCapabilityField}
                         />
                     </div>
-                </div>
-            ) : (
-                <div className="grid formgrid">
-                    {renderTemplateFields()}
-                    {renderSharedCapabilityFields()}
-                </div>
-            )}
+            </div>
         </Panel>
-    );
-
-    const renderRegisterMode = () => (
-        <>
-            {renderProviderInformation()}
-            {renderOfferingInformation()}
-            {renderAdditionalOfferingInformation()}
-            {renderCapabilityInformation()}
-        </>
     );
 
     const renderUpdateMode = () => (
         <>
             <Card title="Update Existing Provider">
-                {stateLoadWarning ? (
-                    <Message severity="warn" text={stateLoadWarning} className="w-full justify-content-start mb-3" />
-                ) : null}
-                <DataTable
-                    value={updateRows}
-                    dataKey="id"
-                    paginator={updateRows.length > 3}
-                    rows={3}
-                    selectionMode="single"
-                    selection={selectedOffering}
-                    onSelectionChange={handleSelection}
-                    responsiveLayout="scroll"
-                    stripedRows
-                >
+                <div className="flex flex-wrap align-items-end gap-2 mb-3">
+                    <div className="flex flex-column gap-2">
+                        <label htmlFor="providerLookup" className="font-medium">Provider ID to look up</label>
+                        <InputText id="providerLookup" value={lookupId} disabled={busy} onChange={(event) => setLookupId(event.target.value)} />
+                    </div>
+                    <Button label="Load provider" icon="pi pi-search" outlined disabled={busy || !lookupId.trim()}
+                        onClick={() => {
+                            setSnapshot(null);
+                            setForm(emptyProviderForm());
+                            runAction('Load provider', () => refresh(lookupId.trim()));
+                        }} />
+                    {manageable && <Button label="Add offering" icon="pi pi-plus" outlined disabled={busy || !filters} onClick={startOffering} />}
+                </div>
+                {provider && !manageable && <Message severity="info" text="This provider is read-only in the Stage 1B demo." className="w-full mb-3" />}
+                <DataTable value={rows} dataKey="id" paginator={rows.length > 3} rows={3}
+                    selectionMode={busy ? undefined : 'single'} selection={selectedRow} onSelectionChange={handleSelection}
+                    responsiveLayout="scroll" stripedRows emptyMessage="No offerings loaded">
                     <Column field="providerName" header="Provider" sortable />
                     <Column field="offering" header="Offering" sortable />
                     <Column field="serviceCategory" header="Service category" sortable />
@@ -800,62 +568,75 @@ const ProviderDemoPanel = () => {
                     <Column header="Supported part types" body={listBody('supportedPartTypes')} />
                     <Column header="Materials" body={listBody('materials')} />
                     <Column header="Processes" body={listBody('processes')} />
-                    <Column header="Status" body={statusBody} />
+                    <Column header="Status" body={(row) => <StatusTag value={row.status} status={row.status} />} />
                 </DataTable>
             </Card>
-            {renderProviderInformation()}
-            {renderOfferingInformation()}
-            {renderCapabilityInformation()}
+            {provider && renderProviderInformation()}
+            {offering && renderOfferingInformation()}
+            {offering && renderAdditionalOfferingInformation()}
+            {offering && renderCapabilityInformation()}
         </>
     );
 
     return (
         <div className="flex flex-column gap-4">
             <Toast ref={toast} />
-
-            <Message
-                severity="info"
-                text="This provider flow uses demo persistence only. It illustrates a future Marketplace/CMM-mediated lifecycle, does not call trusted production lifecycle APIs from the browser, and requires a deliberately demo-enabled backend."
-                className="w-full justify-content-start"
-            />
-
+            <Message severity="info" text={'Provider and offering writes are limited to disposable IDs starting with ' + DISPOSABLE_PROVIDER_PREFIX + '.'}
+                className="w-full justify-content-start" />
+            {filterError && <Message severity="error" text={'Current catalogue filters are unavailable. ' + filterError} className="w-full" />}
+            {stateLoadWarning && <Message severity="warn" text={stateLoadWarning} className="w-full" />}
             <div className="flex flex-wrap gap-2">
-                <Button
-                    label="Register New Provider"
-                    icon="pi pi-plus"
-                    outlined={mode !== 'register'}
-                    onClick={() => switchMode('register')}
-                />
-                <Button
-                    label="Update Existing Provider"
-                    icon="pi pi-pencil"
-                    outlined={mode !== 'update'}
-                    onClick={() => switchMode('update')}
-                />
+                <Button label="Register New Provider" icon="pi pi-plus" outlined={mode !== 'register'}
+                    disabled={busy} onClick={() => switchMode('register')} />
+                <Button label="Update Existing Provider" icon="pi pi-pencil" outlined={!editing}
+                    disabled={busy} onClick={() => switchMode('update')} />
             </div>
-
-            {mode === 'register' ? renderRegisterMode() : renderUpdateMode()}
-
+            <fieldset disabled={busy} className="flex flex-column gap-4 border-none p-0 m-0">
+                {editing ? renderUpdateMode() : (
+                    <>
+                        {mode === 'register' && renderProviderInformation()}
+                        {renderOfferingInformation()}
+                        {renderAdditionalOfferingInformation()}
+                        {renderCapabilityInformation()}
+                    </>
+                )}
+            </fieldset>
             <div className="flex flex-wrap gap-2">
-                <Button
-                    label={mode === 'register' ? 'Preview' : 'Preview update'}
-                    icon="pi pi-eye"
-                    loading={loadingAction === 'preview'}
-                    disabled={Boolean(loadingAction) || !hasValidControlledMapping}
-                    onClick={() => runAction('preview')}
-                />
-                <Button
-                    label={mode === 'register' ? 'Register for demo' : 'Save update for demo'}
-                    icon={mode === 'register' ? 'pi pi-plus' : 'pi pi-save'}
-                    outlined
-                    loading={loadingAction === 'save'}
-                    disabled={Boolean(loadingAction) || !hasValidControlledMapping}
-                    onClick={() => runAction('save')}
-                />
+                {mode === 'register' && (
+                    <>
+                        <Button label="Validate publication" icon="pi pi-eye"
+                            disabled={busy || !creationReady || !form.providerName.trim() || !form.country.trim()}
+                            onClick={() => runAction('Validate publication', () => validateProviderPublication(payload))} />
+                        <Button label="Register provider" icon="pi pi-plus" outlined
+                            disabled={busy || !creationReady || !form.providerName.trim() || !form.country.trim()}
+                            onClick={() => runAction('Register provider', () => registerProvider(payload),
+                                inspectWrite(payload.provider_id, payload.offerings[0].offering_id))} />
+                    </>
+                )}
+                {mode === 'add' && <Button label="Create offering" icon="pi pi-plus"
+                    disabled={busy || !creationReady || !manageable}
+                    onClick={() => runAction('Create offering', () => createOffering(provider.provider_id, payload),
+                        inspectWrite(provider.provider_id, payload.offering_id))} />}
+                {editing && provider && (
+                    <>
+                        <Button label="Save provider" icon="pi pi-save" disabled={busy || !manageable || !providerEtag || !Object.keys(patches.provider).length}
+                            onClick={() => runAction('Save provider', () => updateProvider(provider.provider_id, patches.provider, snapshot.provider.etag),
+                                inspectWrite(provider.provider_id, offering?.offering_id, 'offering'))} />
+                        {offering && <Button label="Save offering" icon="pi pi-save" outlined
+                            disabled={busy || !manageable || !offeringEtag || !Object.keys(patches.offering).length}
+                            onClick={() => runAction('Save offering', () => updateOffering(offering.offering_id, patches.offering, snapshot.offering.etag),
+                                inspectWrite(provider.provider_id, offering.offering_id, 'provider'))} />}
+                        {offering && <Button label="Delete offering" icon="pi pi-trash" severity="danger" outlined
+                            disabled={busy || !manageable || !offeringEtag || !isDisposableOfferingId(offering.offering_id, provider.provider_id)}
+                            onClick={() => removeRecord('offering')} />}
+                        <Button label="Delete provider" icon="pi pi-trash" severity="danger" outlined
+                            disabled={busy || !manageable || !providerEtag} onClick={() => removeRecord('provider')} />
+                    </>
+                )}
             </div>
 
             <ProviderPayloadPreview payload={payload} />
-            <ProviderActionResult result={actionResult} payload={payload} />
+            <ProviderActionResult result={actionResult} />
         </div>
     );
 };

@@ -17,7 +17,7 @@ export const ROUTE_ACCESS = {
     '/home/Brand': 'public',
     '/home/AccessDenied': 'public',
     '/home/ErrorPage': 'public',
-    '/demo': 'public',
+    '/demo': 'authenticated',
     '/demo/provider': 'authenticated',
     '/demo/consumer-search': 'authenticated',
     '/demo/admin-audit': 'authenticated',

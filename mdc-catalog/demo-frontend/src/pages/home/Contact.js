@@ -1,11 +1,29 @@
-import React, { useDeferredValue, useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
 
 const accentCycle = ['orange', 'blue', 'green', 'purple', 'teal', 'red'];
 
-// Add more contact cards by appending objects to this array.
-// Each item should include: name, organization, organizationShort, type, email, and optional imageSrc.
 const contacts = [
+    {
+        name: 'Jose Martinez Lastra',
+        organization: 'Tampere University — FAST-Lab',
+        organizationShort: 'TAU',
+        type: 'University',
+        role: 'Unit Head',
+        email: 'jose.martinezlastra@tuni.fi',
+        website: 'https://research.tuni.fi/fast/',
+        websiteLabel: 'FAST-Lab homepage'
+    },
+    {
+        name: 'Samuel Afolaranmi',
+        organization: 'Tampere University — FAST-Lab',
+        organizationShort: 'TAU',
+        type: 'University',
+        role: 'Developer, MaaS Dynamic Catalogue',
+        email: 'samuel.afolaranmi@tuni.fi',
+        website: 'https://documentation.maasai-srv.cigip.upv.es/solutions/mdc/',
+        websiteLabel: 'MDC documentation'
+    },
     {
         name: 'Miguel Angel Mateo-Casali',
         organization: 'Universitat Politecnica de Valencia (CIGIP)',
@@ -50,26 +68,9 @@ const ContactLogo = ({ src, alt, initials }) => {
 };
 
 const Contact = () => {
-    const [activeType, setActiveType] = useState('All');
-    const [search, setSearch] = useState('');
     const [copiedEmail, setCopiedEmail] = useState('');
     const [toastMessage, setToastMessage] = useState('');
-    const deferredSearch = useDeferredValue(search);
     const timeoutRef = useRef(null);
-
-    const availableTypes = Array.from(new Set(contacts.map((contact) => contact.type)));
-    const filterChips = ['All', ...availableTypes];
-
-    const filteredContacts = contacts.filter((contact) => {
-        const query = deferredSearch.trim().toLowerCase();
-        const matchesType = activeType === 'All' || contact.type === activeType;
-        const matchesQuery =
-            !query ||
-            contact.name.toLowerCase().includes(query) ||
-            contact.organization.toLowerCase().includes(query);
-
-        return matchesType && matchesQuery;
-    });
 
     useEffect(() => {
         return () => {
@@ -104,42 +105,12 @@ const Contact = () => {
             <section className="contact-page__header">
                 <div>
                     <h1>Contact Detail</h1>
-                    <p>Project team and participating organisations in MaaSAI.</p>
-                </div>
-                <span className="contact-page__count">{filteredContacts.length} contacts</span>
-            </section>
-
-            <section className="contact-toolbar">
-                <label className="contact-search" htmlFor="contact-search">
-                    <svg viewBox="0 0 24 24" aria-hidden="true">
-                        <path d="M11 19a8 8 0 1 1 0-16 8 8 0 0 1 0 16Z" />
-                        <path d="m21 21-4.35-4.35" />
-                    </svg>
-                    <input
-                        id="contact-search"
-                        type="search"
-                        placeholder="Search by contact or organisation..."
-                        value={search}
-                        onChange={(event) => setSearch(event.target.value)}
-                    />
-                </label>
-
-                <div className="contact-chips" role="tablist" aria-label="Contact filters">
-                    {filterChips.map((chip) => (
-                        <button
-                            key={chip}
-                            type="button"
-                            className={`contact-chip ${activeType === chip ? 'contact-chip--active' : ''}`}
-                            onClick={() => setActiveType(chip)}
-                        >
-                            {chip}
-                        </button>
-                    ))}
+                    <p>MDC development team and MaaSAI project contacts.</p>
                 </div>
             </section>
 
             <section className="contact-grid">
-                {filteredContacts.map((contact, index) => {
+                {contacts.map((contact, index) => {
                     const accent = accentCycle[index % accentCycle.length];
                     const isCopied = copiedEmail === contact.email;
 
@@ -158,9 +129,17 @@ const Contact = () => {
                                     <div>
                                         <h2>{contact.name}</h2>
                                         <p>{contact.organization}</p>
+                                        {contact.role && <p>{contact.role}</p>}
                                     </div>
                                     <span className={`contact-badge ${badgeToneByType[contact.type]}`}>{contact.type}</span>
                                 </div>
+
+                                {contact.website && (
+                                    <a href={contact.website} className="contact-card__website" target="_blank" rel="noreferrer">
+                                        <i className="pi pi-external-link" aria-hidden="true" />
+                                        {contact.websiteLabel}
+                                    </a>
+                                )}
 
                                 <div className="contact-card__footer">
                                     <a href={`mailto:${contact.email}`} className="contact-card__email">
@@ -189,10 +168,6 @@ const Contact = () => {
                     );
                 })}
             </section>
-
-            {filteredContacts.length === 0 ? (
-                <div className="contact-empty">No contacts match the current filters.</div>
-            ) : null}
 
             <div className={`contact-toast ${toastMessage ? 'contact-toast--visible' : ''}`} aria-live="polite">
                 {toastMessage}

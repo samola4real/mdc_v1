@@ -1,5 +1,4 @@
-// localhost is a development convention only. Deployments override this object
-// through /config.js (window.MAASAI_CONFIG) with an HTTPS API URL allowed by CORS.
+// The local Stage 1 MDC calls use a same-origin server route.
 const defaultConfig = {
     keycloak: {
         enabled: true,
@@ -8,9 +7,8 @@ const defaultConfig = {
         onLoad: 'check-sso'
     },
     mdcApi: {
-        baseUrl: 'http://localhost:8000',
-        sharedApiPrefix: '/api',
-        demoApiPrefix: '/api/demo'
+        baseUrl: '',
+        sharedApiPrefix: '/api/mdc'
     }
 };
 
@@ -44,5 +42,3 @@ export const getMdcApiConfig = () => getRuntimeConfig().mdcApi;
 export const getMdcApiBaseUrl = () => getMdcApiConfig().baseUrl;
 
 export const getMdcSharedApiPrefix = () => getMdcApiConfig().sharedApiPrefix;
-
-export const getMdcDemoApiPrefix = () => getMdcApiConfig().demoApiPrefix;
