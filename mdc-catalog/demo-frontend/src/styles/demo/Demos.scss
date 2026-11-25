@@ -3,3 +3,40 @@
 @import 'TimelineDemo';
 @import 'flags/flags.css';
 @import 'badges';
+
+.mdc-provider-registration {
+    .mdc-registration-section > .p-panel-header .p-panel-title {
+        font-size: 1.25rem;
+        font-weight: 700;
+        line-height: 1.3;
+    }
+
+    .mdc-registration-subsection > .p-panel-header {
+        background-color: var(--bg-card);
+
+        .p-panel-header-icon {
+            color: var(--blue);
+        }
+    }
+
+    .mdc-registration-subheading,
+    .mdc-registration-subsection > .p-panel-header .p-panel-title {
+        border-inline-start: 3px solid var(--brand-orange);
+        padding-inline-start: 0.5rem;
+        color: var(--blue);
+        font-size: 1.125rem;
+        font-weight: 600;
+        line-height: 1.4;
+    }
+
+    .mdc-registration-part-heading {
+        color: var(--blue);
+        font-size: 1.0625rem;
+        font-weight: 600;
+    }
+
+    .mdc-registration-field-label {
+        color: var(--text-dark);
+        font-size: 1rem;
+    }
+}

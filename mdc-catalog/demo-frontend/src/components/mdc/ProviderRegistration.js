@@ -6,7 +6,6 @@ import { Panel } from 'primereact/panel';
 import {
     getOffering, getProvider, listProviderOfferings, registerProvider, validateProviderPublication
 } from '@/services/mdc/provider.service';
-import ProviderPayloadPreview from './ProviderPayloadPreview';
 import ProviderRegistrationFields from './ProviderRegistrationFields';
 import { buildRegistrationPayload } from './providerRegistrationPayload';
 import {
@@ -204,7 +203,7 @@ export default function ProviderRegistration({ form, onChange, filters, filterEr
     });
 
     return (
-        <form className="flex flex-column gap-4" noValidate aria-busy={busy} onSubmit={handleValidation}>
+        <form className="mdc-provider-registration flex flex-column gap-4" noValidate aria-busy={busy} onSubmit={handleValidation}>
             {!filters && !filterError && <Message severity="info" text="Loading catalogue options…" />}
             {filterError && (
                 <div className="flex flex-wrap align-items-center gap-2">
@@ -224,7 +223,6 @@ export default function ProviderRegistration({ form, onChange, filters, filterEr
                     onClick={handleRegistration} />
                 {action && <span role="status">{action}</span>}
             </div>
-            <ProviderPayloadPreview payload={payload} />
             <ValidationFeedback result={validation} locallyInvalid={attemptedValidation && locallyInvalid} />
             <RegistrationOutcome result={outcome} onCheck={checkProvider} busy={busy} />
         </form>

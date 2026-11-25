@@ -41,7 +41,7 @@ function safeDetails(value) {
 const directFields = {
     provider_id: 'providerId', provider_name: 'providerName', country: 'country', certifications: 'certifications',
     offering_id: 'offeringId', offering_name: 'offeringName', part_family: 'partFamily',
-    service_category: 'partFamily', support_status: 'supportStatus', supported_part_types: 'partTypes'
+    service_category: 'partFamily', supported_part_types: 'partTypes'
 };
 
 function rangeField(ranges, path, prefix) {
@@ -87,6 +87,7 @@ function controlFor(path, payload) {
         return {
             quality_class: 'familyDetails.qualityClass', notes: 'capabilityNotes',
             tolerance: 'familyDetails.tolerance', surface_finish: 'familyDetails.surfaceFinish',
+            quality_tolerance_standard: 'familyDetails.qualityToleranceStandard', tolerance_class_fit: 'familyDetails.toleranceClassFit',
             additional_materials: 'additionalMaterials', additional_processes: 'additionalProcesses'
         }[rest[0]?.replace(/\[\d+\]/g, '')] || 'customCapabilityFields';
     }

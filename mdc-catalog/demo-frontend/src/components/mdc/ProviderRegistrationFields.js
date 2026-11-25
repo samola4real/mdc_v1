@@ -7,12 +7,11 @@ import { InputTextarea } from 'primereact/inputtextarea';
 import { MultiSelect } from 'primereact/multiselect';
 import { Panel } from 'primereact/panel';
 import {
-    FAMILY_RANGES, GENERAL_RANGES, QUALITY_STANDARDS, SUPPORT_STATUSES, measurementFields,
-    registrationPartRanges, selectRegistrationFamily, selectRegistrationSupport
+    FAMILY_RANGES, GENERAL_RANGES, QUALITY_STANDARDS, measurementFields, registrationPartRanges, selectRegistrationFamily
 } from './providerRegistrationPayload';
 
 function Field({ name, label, value, onChange, error, help, required, kind = 'text',
-    options, disabled, readOnly, suffix, decimal, width = 'md:col-4' }) {
+    options, disabled, readOnly, suffix, decimal, width = 'md:col-4', heading = false }) {
     const id = 'registration-' + name.replaceAll('.', '-');
     const common = {
         className: 'w-full' + (error ? ' p-invalid' : ''),
@@ -35,9 +34,14 @@ function Field({ name, label, value, onChange, error, help, required, kind = 'te
         control = <Input {...common} id={id} value={value ?? ''} readOnly={readOnly}
             {...(kind === 'area' && { rows: 2, autoResize: true })} onChange={(event) => onChange?.(event.target.value)} />;
     }
+    const fieldLabel = (
+        <label htmlFor={id} className={heading ? undefined : 'mdc-registration-field-label font-medium'}>
+            {label}{required && <span aria-hidden="true"> *</span>}
+        </label>
+    );
     return (
         <div className={['field', 'col-12', width].join(' ')}>
-            <label htmlFor={id} className="font-medium">{label}{required && <span aria-hidden="true"> *</span>}</label>
+            {heading ? <h3 className="mdc-registration-subheading mt-0 mb-2">{fieldLabel}</h3> : fieldLabel}
             {control}
             {help && <small id={id + '-help'} className="block mt-1 text-600">{help}</small>}
             {error && <small id={id + '-error'} className="block mt-1 p-error">{error}</small>}
@@ -65,7 +69,7 @@ function RepeatableFields({ name, heading, fields, rows, replace, errors, addLab
     const addRow = () => replace([...rows, { id: Math.max(0, ...rows.map(({ id }) => id)) + 1 }]);
     return (
         <div className="flex flex-column gap-2 mb-3">
-            <h3 className="text-base font-semibold m-0">{heading}</h3>
+            <h3 className="mdc-registration-subheading m-0">{heading}</h3>
             {errors[name] && <small className="p-error">{errors[name]}</small>}
             {rows.map((row, index) => (
                 <div className="grid formgrid align-items-start" key={row.id}>
@@ -95,6 +99,8 @@ function Measurements({ ranges, values, prefix, errors, onChange, disabled }) {
 }
 
 const textOptions = (values) => values.map((value) => ({ value, label: value }));
+const sectionHeading = { title: { role: 'heading', 'aria-level': 2 } };
+const subsectionHeading = { title: { role: 'heading', 'aria-level': 3 } };
 
 export default function ProviderRegistrationFields({ form, filters, errors, onChange, disabled,
     serviceCollapsed, setServiceCollapsed, technicalCollapsed, setTechnicalCollapsed }) {
@@ -110,7 +116,6 @@ export default function ProviderRegistrationFields({ form, filters, errors, onCh
     const family = form.partFamily;
     const partOptions = filters?.partTypes[family] || [];
     const measurementTypes = form.partTypes.filter((type) => registrationPartRanges(family, type).length);
-    const canPublishMeasurements = form.supportStatus === 'confirmed';
     const familyField = (name, label, options) => (
         <Field name={'familyDetails.' + name} label={label} value={form.familyDetails[name]}
             error={errors['familyDetails.' + name]} onChange={(value) => set('familyDetails', { ...form.familyDetails, [name]: value })}
@@ -119,7 +124,7 @@ export default function ProviderRegistrationFields({ form, filters, errors, onCh
 
     return (
         <>
-            <Panel header="Provider information">
+            <Panel header="Provider information" className="mdc-registration-section" pt={sectionHeading}>
                 <div className="grid formgrid">
                     {field('providerName', 'Provider name', { required: true })}
                     {field('providerId', 'Provider ID', {
@@ -135,7 +140,7 @@ export default function ProviderRegistrationFields({ form, filters, errors, onCh
                 {rows('otherCertifications', 'Other certifications', nameField, 'Add other certification')}
             </Panel>
 
-            <Panel header="Offering information">
+            <Panel header="Offering information" className="mdc-registration-section" pt={sectionHeading}>
                 <div className="grid formgrid">
                     {field('offeringName', 'Offering name', { required: true, width: 'md:col-6' })}
                     {field('offeringId', 'Offering ID', {
@@ -145,20 +150,15 @@ export default function ProviderRegistrationFields({ form, filters, errors, onCh
                     {field('partFamily', 'Part family', {
                         kind: 'select', required: true, options: filters?.partFamilies || [], disabled: !filters,
                         onChange: (value) => onChange(selectRegistrationFamily(form, value, () => window.confirm(
-                            'Changing the part family will clear selected part types and their specifications. Continue?'
+                            'Changing the part family will clear selected part types and family-specific specifications. Continue?'
                         )))
                     })}
                     {field('serviceCategory', 'Service category', {
                         readOnly: true, value: filters?.serviceCategoryByFamily[family] || ''
                     })}
-                    {field('supportStatus', 'Support status', {
-                        kind: 'select', options: SUPPORT_STATUSES,
-                        onChange: (value) => onChange(selectRegistrationSupport(form, value, () => window.confirm(
-                            'This status will omit the entered part-specific measurements from publication. Keep them in this draft and continue?'
-                        )))
-                    })}
                 </div>
-                <Panel header="Additional service details" toggleable collapsed={serviceCollapsed}
+                <Panel header="Additional service details" className="mdc-registration-subsection" pt={subsectionHeading}
+                    toggleable collapsed={serviceCollapsed}
                     onToggle={(event) => setServiceCollapsed(event.value)}>
                     <div className="grid formgrid">
                         {field('productionMode', 'Production mode', {
@@ -173,11 +173,14 @@ export default function ProviderRegistrationFields({ form, filters, errors, onCh
                 </Panel>
             </Panel>
 
-            <Panel header="Capability information">
+            <Panel header="Capability information" className="mdc-registration-section" pt={sectionHeading}>
                 {!family ? <p className="m-0 text-600">Select a part family to enter capabilities.</p> : (
                     <>
                         <div className="grid formgrid">
-                            {field('partTypes', 'Supported part types', { kind: 'multi', options: partOptions, width: '' })}
+                            {field('partTypes', 'Supported part types', { kind: 'multi', options: partOptions, width: '', heading: true })}
+                        </div>
+                        <h3 className="mdc-registration-subheading mt-0 mb-3">Technical specifications</h3>
+                        <div className="grid formgrid">
                             <Measurements ranges={FAMILY_RANGES[family] || []} values={form.familyDetails}
                                 prefix="familyDetails" errors={errors} disabled={disabled} onChange={(value) => set('familyDetails', value)} />
                             {family === 'gear' && (
@@ -188,29 +191,33 @@ export default function ProviderRegistrationFields({ form, filters, errors, onCh
                                     {familyField('qualityClass', 'Quality class', { width: 'md:col-6' })}
                                 </>
                             )}
-                            {family === 'metal_part' && (
+                            {(family === 'shaft' || family === 'metal_part') && (
                                 <>
-                                    {familyField('tolerance', 'Tolerance', { width: 'md:col-6' })}
-                                    {familyField('surfaceFinish', 'Surface finish', { width: 'md:col-6' })}
+                                    {familyField('qualityToleranceStandard', 'Quality / tolerance standard', {
+                                        width: 'md:col-6', help: 'For example, ISO 286 where applicable.'
+                                    })}
+                                    {familyField('toleranceClassFit', 'Tolerance class / fit', {
+                                        width: 'md:col-6', help: 'For example, h6 for a shaft or H7 for a hole, where applicable.'
+                                    })}
                                 </>
                             )}
+                            {familyField('tolerance', 'Tolerance', { width: 'md:col-6', help: 'For example, 0.05 mm.' })}
+                            {familyField('surfaceFinish', 'Surface finish', { width: 'md:col-6', help: 'For example, Ra 1.6 µm.' })}
                         </div>
-                        {!canPublishMeasurements && measurementTypes.length > 0 && (
-                            <p className="text-600 mt-0">Only confirmed part types can publish part-specific measurements.
-                                Measurements entered earlier are kept in this draft.</p>
-                        )}
                         {measurementTypes.map((type) => (
                             <div key={type}>
-                                <h3 className="text-base font-semibold mt-0 mb-3">{partOptions.find(({ value }) => value === type)?.label || type}</h3>
+                                <h4 className="mdc-registration-part-heading mt-0 mb-3">
+                                    {partOptions.find(({ value }) => value === type)?.label || type}
+                                </h4>
                                 <div className="grid formgrid">
                                     <Measurements ranges={registrationPartRanges(family, type)} values={form.partMeasurements[type] || {}}
-                                        prefix={'partMeasurements.' + type} errors={errors} disabled={disabled || !canPublishMeasurements}
+                                        prefix={'partMeasurements.' + type} errors={errors} disabled={disabled}
                                         onChange={(value) => set('partMeasurements', { ...form.partMeasurements, [type]: value })} />
                                 </div>
                             </div>
                         ))}
 
-                        <h3 className="text-base font-semibold mt-0 mb-3">Materials and grades</h3>
+                        <h3 className="mdc-registration-subheading mt-0 mb-3">Materials and grades</h3>
                         <div className="grid formgrid">
                             {field('materials', 'Materials', { kind: 'multi', options: filters?.materials || [], width: 'md:col-6' })}
                             {form.materials.map((value) => (
@@ -224,11 +231,13 @@ export default function ProviderRegistrationFields({ form, filters, errors, onCh
                         {rows('additionalMaterials', 'Other material families', materialFields, 'Add other material')}
 
                         <div className="grid formgrid">
-                            {field('processes', 'Processes', { kind: 'multi', options: filters?.processes || [], width: '' })}
+                            {field('processes', 'Manufacturing processes', {
+                                kind: 'multi', options: filters?.processes || [], width: '', heading: true
+                            })}
                         </div>
                         {rows('additionalProcesses', 'Other manufacturing processes', nameField, 'Add other process')}
 
-                        <h3 className="text-base font-semibold mt-0 mb-3">General capabilities</h3>
+                        <h3 className="mdc-registration-subheading mt-0 mb-3">General manufacturing capabilities</h3>
                         <p className="text-600 mt-0">Batch size is the supported customer order quantity for the offering.
                             Lead time is the offering-level delivery range.</p>
                         <div className="grid formgrid">
@@ -236,7 +245,8 @@ export default function ProviderRegistrationFields({ form, filters, errors, onCh
                                 prefix="general" errors={errors} disabled={disabled} onChange={(value) => set('general', value)} />
                             {field('capabilityNotes', 'Notes', { kind: 'area', width: '' })}
                         </div>
-                        <Panel header="Additional technical capabilities" toggleable collapsed={technicalCollapsed}
+                        <Panel header="Additional technical capabilities" className="mdc-registration-subsection" pt={subsectionHeading}
+                            toggleable collapsed={technicalCollapsed}
                             onToggle={(event) => setTechnicalCollapsed(event.value)}>
                             {rows('customCapabilityFields', 'Technical entries', technicalFields, 'Add technical entry')}
                         </Panel>

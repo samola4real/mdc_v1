@@ -18,7 +18,6 @@ import {
 } from '@/services/mdc/provider.service';
 import { DISPOSABLE_PROVIDER_PREFIX, isDisposableMdcId, isDisposableOfferingId } from '@/services/mdc/stage1bScope';
 import ProviderActionResult from './ProviderActionResult';
-import ProviderPayloadPreview from './ProviderPayloadPreview';
 import ProviderRegistration, { RegistrationOutcome } from './ProviderRegistration';
 import StatusTag from './StatusTag';
 import {
@@ -666,7 +665,6 @@ const ProviderDemoPanel = () => {
                             </>
                         )}
                     </div>
-                    <ProviderPayloadPreview payload={payload} />
                     <ProviderActionResult result={actionResult} />
                     <RegistrationOutcome result={registrationOutcome} />
                 </>

@@ -1,8 +1,9 @@
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
 import {
     buildRegistrationPayload, emptyRegistrationForm, hasRegistrationDraft, measurementFields,
-    registrationPartRanges, selectRegistrationFamily, selectRegistrationSupport
+    registrationPartRanges, selectRegistrationFamily
 } from '../src/components/mdc/providerRegistrationPayload.js';
 import {
     createRegistrationRequestGuard, invalidateRegistrationValidation, isCurrentRegistrationValidation,
@@ -37,7 +38,7 @@ test('blank registration has no seeded selections and shows only the contractual
     assert.equal(hasRegistrationDraft(blank), false);
     assert.equal(hasRegistrationDraft({ ...blank, otherCertifications: [{ id: 1 }] }), false);
     assert.equal(hasRegistrationDraft({ ...blank, providerName: 'Unsaved' }), true);
-    assert.equal(blank.supportStatus, 'confirmed');
+    assert.equal(Object.hasOwn(blank, 'supportStatus'), false);
     assert.deepEqual(blank.partTypes, []);
     assert.deepEqual(blank.materials, []);
     const { errors } = build(blank);
@@ -66,7 +67,6 @@ test('family changes derive categories, confirm before discard and retain shared
     const backToGear = selectRegistrationFamily(previousMetal, 'gear', () => true);
     assert.deepEqual(backToGear.partMeasurements, {});
     assert.deepEqual(offering(backToGear).custom_capability_fields, {});
-    assert.deepEqual(offering({ ...gear, familyDetails: previousMetal.familyDetails }).custom_capability_fields, {});
 });
 
 test('block plus roller and block plus plate keep independent dimensions through removal and reselection', () => {
@@ -91,7 +91,7 @@ test('block plus roller and block plus plate keep independent dimensions through
     assert.equal(measurementFields(registrationPartRanges('metal_part', 'roller')).length, 1);
 });
 
-test('splined shaft follows selection and status eligibility without discarding its own draft', () => {
+test('selected spline measurements retain their draft and new support is always declared confirmed', () => {
     const initial = {
         ...draft('shaft'), partTypes: ['plain_shaft', 'splined_shaft'],
         familyDetails: { lengthMaxMm: 300, outerDiameterMinMm: 12, outerDiameterMaxMm: 50 },
@@ -99,13 +99,72 @@ test('splined shaft follows selection and status eligibility without discarding 
     };
     assert.equal(offering(initial).family_capabilities.length_mm.max, 300);
     assert.equal(offering(initial).part_type_capabilities.splined_shaft.spline_module.value, 2);
-    assert.deepEqual(offering({ ...initial, partTypes: ['plain_shaft'] }).part_type_capabilities, {});
-    assert.strictEqual(selectRegistrationSupport(initial, 'candidate_requiring_confirmation', () => false), initial);
-    const candidate = selectRegistrationSupport(initial, 'candidate_requiring_confirmation', () => true);
-    assert.deepEqual(offering(candidate).part_type_capabilities, {});
-    assert.ok(offering(candidate).supported_part_types.every(({ support_status }) => support_status === 'candidate_requiring_confirmation'));
-    assert.deepEqual(offering({ ...candidate, supportStatus: 'unknown' }).part_type_capabilities, {});
-    assert.equal(offering({ ...candidate, supportStatus: 'confirmed' }).part_type_capabilities.splined_shaft.spline_module.value, 2);
+    const withoutSpline = { ...initial, partTypes: ['plain_shaft'] };
+    assert.deepEqual(offering(withoutSpline).part_type_capabilities, {});
+    assert.equal(offering({ ...withoutSpline, partTypes: initial.partTypes }).part_type_capabilities.splined_shaft.spline_module.value, 2);
+    for (const supportStatus of [undefined, 'candidate_requiring_confirmation', 'unknown']) {
+        const { payload, errors } = build({ ...initial, supportStatus });
+        const [result] = payload.offerings;
+        assert.deepEqual(errors, {});
+        assert.equal(result.support_status, 'confirmed');
+        assert.deepEqual(result.supported_part_types, initial.partTypes.map((part_type) => ({
+            part_type, support_status: 'confirmed', source_type: 'provider_confirmed', confidence: 'declared'
+        })));
+        assert.equal(result.part_type_capabilities.splined_shaft.spline_module.value, 2);
+    }
+});
+
+test('technical text is optional for each family and gear quality keeps its canonical representation', () => {
+    for (const family of ['gear', 'shaft', 'metal_part']) {
+        const fit = family === 'shaft' ? 'h6' : 'H7';
+        const form = { ...draft(family), familyDetails: {
+            tolerance: ' 0.05 mm ', surfaceFinish: ' Ra 1.6 µm ',
+            qualityToleranceStandard: ' ISO 286 ', toleranceClassFit: ' ' + fit + ' ',
+            ...(family === 'gear' && { qualityStandard: 'ISO', qualityClass: '6' })
+        } };
+        const { payload, errors } = build(form);
+        const [result] = payload.offerings;
+        assert.deepEqual(errors, {}, family);
+        assert.deepEqual(result.custom_capability_fields, {
+            tolerance: '0.05 mm', surface_finish: 'Ra 1.6 µm',
+            ...(family !== 'gear' && { quality_tolerance_standard: 'ISO 286', tolerance_class_fit: fit })
+        }, family);
+        assert.deepEqual(result.family_capabilities.gear_quality, family === 'gear' ? {
+            source_type: 'provider_confirmed', confidence: 'declared', standard: 'ISO', best_class: 6
+        } : undefined, family);
+        const blank = build({ ...form, familyDetails: {
+            tolerance: ' ', surfaceFinish: ' ', qualityToleranceStandard: '\t', toleranceClassFit: ' '
+        } });
+        assert.deepEqual(blank.errors, {}, family);
+        assert.deepEqual(blank.payload.offerings[0].custom_capability_fields, {}, family);
+    }
+});
+
+test('part selections retain fit specifications and family changes clear them only after confirmation', () => {
+    const fitDetails = { qualityToleranceStandard: 'ISO 286', toleranceClassFit: 'h6' };
+    const shaft = { ...draft('shaft'), familyDetails: fitDetails };
+    assert.deepEqual(offering({ ...shaft, partTypes: ['plain_shaft', 'splined_shaft'] }).custom_capability_fields,
+        offering(shaft).custom_capability_fields);
+    assert.strictEqual(selectRegistrationFamily(shaft, 'metal_part', () => false), shaft);
+    const metal = selectRegistrationFamily(shaft, 'metal_part', () => true);
+    assert.deepEqual(offering(metal).custom_capability_fields, {});
+    const metalWithFit = { ...metal, familyDetails: { ...fitDetails, toleranceClassFit: 'H7' } };
+    assert.strictEqual(selectRegistrationFamily(metalWithFit, 'gear', () => false), metalWithFit);
+    const gear = selectRegistrationFamily(metalWithFit, 'gear', () => true);
+    assert.deepEqual(offering(gear).custom_capability_fields, {});
+    assert.deepEqual(offering(selectRegistrationFamily(gear, 'shaft', () => true)).custom_capability_fields, {});
+});
+
+test('generic technical fields cannot use reserved keys or the technical control labels', () => {
+    const names = ['Tolerance', 'Surface finish', 'QUALITY_TOLERANCE_STANDARD', 'Tolerance class / fit',
+        'Quality / tolerance standard', 'tolerance_class_fit'];
+    const { payload, errors } = build({ ...draft('shaft'), familyDetails: {
+        tolerance: '0.05 mm', surfaceFinish: 'Ra 1.6 µm', qualityToleranceStandard: 'ISO 286', toleranceClassFit: 'h6'
+    }, customCapabilityFields: names.map((name, index) => row(index + 1, name, { value: 'Collision' })) });
+    for (const [index] of names.entries()) assert.match(errors['customCapabilityFields.' + (index + 1) + '.name'], /reserved keys/);
+    assert.deepEqual(payload.offerings[0].custom_capability_fields, {
+        tolerance: '0.05 mm', surface_finish: 'Ra 1.6 µm', quality_tolerance_standard: 'ISO 286', tolerance_class_fit: 'h6'
+    });
 });
 
 test('independent controlled grades and structured extension maps preserve free text', () => {
@@ -187,6 +246,25 @@ test('validation is explicit, maps domain messages, redacts private details and 
     assert.equal(stale.kind, 'stale');
     assert.equal(isCurrentRegistrationValidation(invalidateRegistrationValidation(stale, registrationPayloadKey(original)),
         registrationPayloadKey(original)), false);
+});
+
+test('fit specification edits invalidate validation and server details map to both inputs', async () => {
+    for (const family of ['shaft', 'metal_part']) {
+        const form = { ...draft(family), familyDetails: { qualityToleranceStandard: 'ISO 286', toleranceClassFit: 'H7' } };
+        const { payload } = build(form);
+        const validation = await validateRegistration(payload, async () => ({ valid: true }));
+        for (const field of ['qualityToleranceStandard', 'toleranceClassFit']) {
+            const changed = build({ ...form, familyDetails: { ...form.familyDetails, [field]: '' } }).payload;
+            assert.equal(invalidateRegistrationValidation(validation, registrationPayloadKey(changed)).kind, 'stale');
+        }
+        const invalid = await validateRegistration(payload, async () => ({ valid: false, errors: {
+            'offerings[0].custom_capability_fields.quality_tolerance_standard': ['Check the standard'],
+            'offerings[0].custom_capability_fields.tolerance_class_fit': ['Check the fit']
+        } }));
+        assert.deepEqual(invalid.errors, {
+            'familyDetails.qualityToleranceStandard': 'Check the standard', 'familyDetails.toleranceClassFit': 'Check the fit'
+        });
+    }
 });
 
 const receipt = (data = {}) => ({ status: 201, data: {
@@ -282,6 +360,7 @@ test('the request guard suppresses concurrent submissions and releases after com
 test('legacy update and add preserve opaque extensions and retain the baseline read-only guard', () => {
     const { payload } = build({
         ...draft(), otherCertifications: [row(1, 'Test certificate')],
+        familyDetails: { tolerance: '0.05 mm', qualityToleranceStandard: 'ISO 286', toleranceClassFit: 'H7' },
         materials: ['steel', 'aluminum'], materialGrades: { steel: '42CrMo4', aluminum: '6061' },
         additionalMaterials: [row(1, 'Other alloy', { grades: 'Other grade' })],
         industriesServed: 'Manufacturing'
@@ -298,13 +377,26 @@ test('legacy update and add preserve opaque extensions and retain the baseline r
     assert.deepEqual(patches.offering.generic_capabilities.materials, savedOffering.generic_capabilities.materials);
     assert.equal(patches.offering.custom_capability_fields, undefined);
     assert.equal(patches.offering.custom_offering_fields, undefined);
+    const tolerancePatch = buildProviderPatches({ ...restored, tolerance: '0.08 mm' }, provider, savedOffering).offering;
+    assert.deepEqual(tolerancePatch.custom_capability_fields, {
+        ...savedOffering.custom_capability_fields, tolerance: '0.08 mm'
+    });
     const add = buildOfferingCreation({
         ...emptyProviderForm(), providerId, offeringId, offeringName: 'Legacy add',
         serviceCategory: 'precision_gears', partFamily: 'gear', partTypes: ['spur_gear'],
-        materials: ['steel'], availableGrades: '42CrMo4'
+        materials: ['steel'], availableGrades: '42CrMo4', supportStatus: 'candidate_requiring_confirmation'
     });
     assert.equal(add.generic_capabilities.materials[0].available_grades[0], '42CrMo4');
     assert.equal(add.offering_id, offeringId);
+    assert.equal(add.support_status, 'candidate_requiring_confirmation');
+    assert.equal(add.supported_part_types[0].support_status, 'candidate_requiring_confirmation');
     assert.equal(isDisposableMdcId('tasowheel'), false);
     assert.equal(isDisposableMdcId('precipart'), false);
+});
+
+test('registration and the shared Update/Add view do not mount the advanced payload panel', () => {
+    for (const component of ['ProviderRegistration', 'ProviderDemoPanel']) {
+        const source = readFileSync(new URL('../src/components/mdc/' + component + '.js', import.meta.url), 'utf8');
+        assert.doesNotMatch(source, /ProviderPayloadPreview|Advanced \/ payload preview/);
+    }
 });

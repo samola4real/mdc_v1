@@ -54,7 +54,7 @@ const positive = (value) => typeof value === 'number' && Number.isFinite(value) 
 
 export const emptyRegistrationForm = () => ({
     providerName: '', providerId: '', country: '', description: '', certifications: [], otherCertifications: [],
-    offeringName: '', offeringId: '', partFamily: '', supportStatus: 'confirmed', partTypes: [],
+    offeringName: '', offeringId: '', partFamily: '', partTypes: [],
     productionMode: '', industriesServed: '', otherServiceInformation: '', customOfferingFields: [],
     familyDetails: {}, partMeasurements: {}, materials: [], materialGrades: {}, additionalMaterials: [],
     processes: [], additionalProcesses: [], general: {}, capabilityNotes: '', customCapabilityFields: []
@@ -69,18 +69,12 @@ const hasContent = (value) => {
     return entered(value);
 };
 
-export const hasRegistrationDraft = ({ supportStatus, ...fields }) => supportStatus !== 'confirmed' || hasContent(fields);
+export const hasRegistrationDraft = hasContent;
 
 export const selectRegistrationFamily = (form, family, confirmChange) => {
     if (family === form.partFamily) return form;
     if (hasContent([form.partTypes, form.familyDetails, form.partMeasurements]) && !confirmChange()) return form;
     return { ...form, partFamily: family, partTypes: [], familyDetails: {}, partMeasurements: {} };
-};
-
-export const selectRegistrationSupport = (form, supportStatus, confirmChange) => {
-    const dropsMeasurements = form.supportStatus === 'confirmed' && supportStatus !== 'confirmed'
-        && form.partTypes.some((type) => hasContent(form.partMeasurements[type]));
-    return dropsMeasurements && !confirmChange() ? form : { ...form, supportStatus };
 };
 
 const requiredText = (errors, field, value, label, max) => {
@@ -109,7 +103,8 @@ const grades = (value = '') => splitUnique(value, ',');
 const reservedNames = new Set([
     'additional_certifications', 'additional_materials', 'additional_processes',
     'production_mode', 'industries_served', 'other_service_information', 'notes',
-    'tolerance', 'surface_finish', 'quality_class', 'description', 'provider_id', 'provider_name',
+    'tolerance', 'surface_finish', 'quality_tolerance_standard', 'tolerance_class_fit', 'quality_class',
+    'description', 'provider_id', 'provider_name',
     'offering_id', 'offering_name', 'part_family', 'service_category', 'support_status', 'supported_part_types',
     'display_name', 'facility_id', 'material_id', 'grade_id', 'certifications', 'materials', 'processes',
     'family_capabilities', 'part_type_capabilities', 'generic_capabilities', 'custom_provider_fields',
@@ -143,7 +138,7 @@ function readCustomMap(rows, field, errors, technical = false) {
     const entries = [];
     for (const row of readNamedRows(rows, field, errors)) {
         const control = field + '.' + row.id;
-        const reserved = compareName(row.name).replace(/[\s-]+/g, '_');
+        const reserved = compareName(row.name).replace(/[\s/-]+/g, '_');
         const value = clean(row.value);
         if (reservedNames.has(reserved)) {
             errors[control + '.name'] = 'Use a name outside the standard fields and reserved keys.';
@@ -175,7 +170,6 @@ function validateRanges(ranges, values, prefix, errors) {
 }
 
 function buildPartCapabilities(form, partTypes, errors) {
-    if (form.supportStatus !== 'confirmed') return {};
     const result = {};
     for (const type of partTypes) {
         const values = form.partMeasurements[type] || {};
@@ -214,10 +208,6 @@ export function buildRegistrationPayload(form, filters) {
     if (!serviceCategory || !filters?.partFamilies.some(({ value }) => value === form.partFamily)) {
         errors.partFamily = 'Select a part family from the catalogue.';
     }
-    if (!SUPPORT_STATUSES.some(({ value }) => value === form.supportStatus)) {
-        errors.supportStatus = 'Select a support status.';
-    }
-
     const partTypes = controlledSelection(form.partTypes, filters?.partTypes[form.partFamily], 'partTypes', errors);
     const certifications = controlledSelection(form.certifications, filters?.certifications, 'certifications', errors);
     const materials = controlledSelection(form.materials, filters?.materials, 'materials', errors);
@@ -247,10 +237,10 @@ export function buildRegistrationPayload(form, filters) {
         ...form.general, ...familyDetails,
         providerId, offeringId, serviceCategory, partTypes, certifications, materials, processes,
         providerName: form.providerName, offeringName: form.offeringName, country: form.country,
-        description: form.description, partFamily: form.partFamily, supportStatus: form.supportStatus,
+        description: form.description, partFamily: form.partFamily, supportStatus: 'confirmed',
         capabilityNotes: form.capabilityNotes,
-        tolerance: form.partFamily === 'metal_part' ? familyDetails.tolerance : '',
-        surfaceFinish: form.partFamily === 'metal_part' ? familyDetails.surfaceFinish : ''
+        tolerance: form.partFamily ? familyDetails.tolerance : '',
+        surfaceFinish: form.partFamily ? familyDetails.surfaceFinish : ''
     });
     const [offering] = payload.offerings;
     offering.part_type_capabilities = buildPartCapabilities(form, partTypes, errors);
@@ -272,8 +262,13 @@ export function buildRegistrationPayload(form, filters) {
         ...(industries.length && { industries_served: industries }),
         ...(clean(form.otherServiceInformation) && { other_service_information: clean(form.otherServiceInformation) })
     };
+    const hasFitSpecifications = form.partFamily === 'shaft' || form.partFamily === 'metal_part';
+    const qualityToleranceStandard = hasFitSpecifications ? clean(familyDetails.qualityToleranceStandard) : '';
+    const toleranceClassFit = hasFitSpecifications ? clean(familyDetails.toleranceClassFit) : '';
     offering.custom_capability_fields = {
         ...offering.custom_capability_fields, ...capabilityCustom,
+        ...(qualityToleranceStandard && { quality_tolerance_standard: qualityToleranceStandard }),
+        ...(toleranceClassFit && { tolerance_class_fit: toleranceClassFit }),
         ...(extraMaterials.length && { additional_materials: extraMaterials.map(({ name, grades: value }) => (
             { name, available_grades: grades(value) }
         )) }),
