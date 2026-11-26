@@ -16,12 +16,31 @@ const availabilityLabels = {
     error: 'Check failed'
 };
 
-const AvailabilityCard = ({ title, status }) => (
-    <Card className="h-full" style={{ borderTop: '3px solid var(--blue)' }}
-        pt={{ body: { className: 'p-3' }, content: { className: 'p-0' } }}>
-        <div className="flex flex-wrap align-items-center justify-content-between gap-2">
-            <h2 className="text-base font-semibold m-0">{title}</h2>
-            <StatusTag value={availabilityLabels[status]} status={status === 'available' ? 'healthy' : status} />
+const backendDescriptions = {
+    checking: 'Waiting for the health response.',
+    available: 'The health endpoint is responding.',
+    unavailable: 'The API reported an unavailable state.',
+    error: 'The health check could not be completed.'
+};
+const catalogueDescriptions = {
+    checking: 'Waiting for catalogue filters.',
+    available: 'The current catalogue filters are loaded.',
+    unavailable: 'The catalogue filters are unavailable.',
+    error: 'The catalogue filters could not be loaded.'
+};
+const metricIcons = { 'Part families': 'pi-box', Materials: 'pi-clone', Processes: 'pi-cog', Certifications: 'pi-verified' };
+
+const AvailabilityCard = ({ title, icon, status, descriptions }) => (
+    <Card className="mdc-admin-availability-card">
+        <div className="mdc-admin-availability-card__content">
+            <span className="mdc-admin-icon"><i className={'pi ' + icon} aria-hidden="true" /></span>
+            <div className="mdc-admin-availability-card__description">
+                <h2>{title}</h2>
+                <p>{descriptions[status]}</p>
+            </div>
+            <span className={'mdc-admin-status mdc-admin-status--' + status}>
+                <StatusTag value={availabilityLabels[status]} status={status === 'available' ? 'healthy' : status} />
+            </span>
         </div>
     </Card>
 );
@@ -43,31 +62,30 @@ const AdminAuditPanel = () => {
     };
 
     return (
-        <div className="flex flex-column gap-4">
-            <div className="flex flex-column sm:flex-row gap-3" role="group" aria-label="System availability" aria-live="polite">
-                <div className="flex-1">
-                    <AvailabilityCard title="Backend API" status={checks?.apiStatus ?? 'checking'} />
-                </div>
-                <div className="flex-1">
-                    <AvailabilityCard title="Catalogue" status={checks?.catalogueStatus ?? 'checking'} />
-                </div>
+        <>
+            <div className="mdc-admin-availability" role="group" aria-label="System availability" aria-live="polite">
+                <AvailabilityCard title="Backend API" icon="pi-server" status={checks?.apiStatus ?? 'checking'} descriptions={backendDescriptions} />
+                <AvailabilityCard title="Catalogue" icon="pi-database" status={checks?.catalogueStatus ?? 'checking'} descriptions={catalogueDescriptions} />
             </div>
-            <AdminProviderDeletion />
-            <Panel header="Catalogue overview">
+            <AdminProviderDeletion filters={checks?.filters} />
+            <Panel className="mdc-admin-section" header={<><i className="pi pi-chart-bar" aria-hidden="true" />Catalogue overview</>}
+                pt={{ title: { role: 'heading', 'aria-level': 2 } }}>
                 {checks?.counts ? (
-                    <dl className="grid m-0 mb-2">
+                    <dl className="mdc-admin-metrics">
                         {Object.entries(checks.counts).map(([label, count]) => (
-                            <div className="col-6 md:col-3" key={label}>
-                                <dt className="text-sm">{label}</dt>
-                                <dd className="m-0 text-2xl font-semibold">{count}</dd>
+                            <div className="mdc-admin-metric" key={label}>
+                                <dt><span className="mdc-admin-icon"><i className={'pi ' + metricIcons[label]} aria-hidden="true" /></span>{label}</dt>
+                                <dd>{count}</dd>
                             </div>
                         ))}
                     </dl>
-                ) : <p className="mt-0">{loading ? 'Checking catalogue…' : 'Catalogue counts are unavailable.'}</p>}
-                <Button type="button" label="Refresh checks" icon="pi pi-refresh" outlined
-                    loading={loading} disabled={loading} onClick={refresh} />
+                ) : <p className="mdc-admin-catalogue-message">{loading ? 'Checking catalogue…' : 'Catalogue counts are unavailable.'}</p>}
+                <div className="mdc-admin-refresh">
+                    <Button type="button" label="Refresh checks" icon="pi pi-refresh" outlined
+                        className="mdc-admin-action mdc-admin-action--outline" loading={loading} disabled={loading} onClick={refresh} />
+                </div>
             </Panel>
-        </div>
+        </>
     );
 };
 

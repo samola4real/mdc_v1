@@ -5,6 +5,7 @@ import { Message } from 'primereact/message';
 import { Panel } from 'primereact/panel';
 import { deleteProvider, getProvider } from '@/services/mdc/provider.service';
 import { isDisposableMdcId } from '@/services/mdc/stage1bScope';
+import AdminProviderView from './AdminProviderView';
 import ProviderActionResult, { DeletionReview, ProviderActionToast, useProviderActionToast } from './ProviderActionResult';
 import { canDeleteAdminProvider, createAdminProviderLookup } from './adminDashboardFlow';
 import { managementFeedback } from './providerActionFeedback';
@@ -17,10 +18,11 @@ import { createRegistrationRequestGuard, safeText } from './providerRegistration
 const services = { deleteProvider, getProvider };
 const emptyLookup = { provider: null, recovery: null, result: null, loading: false };
 
-export default function AdminProviderDeletion() {
+export default function AdminProviderDeletion({ filters }) {
     const [lookupId, setLookupId] = useState('');
     const [state, setState] = useState(emptyLookup);
     const [busy, setBusy] = useState('');
+    const [viewVisible, setViewVisible] = useState(false);
     const [providerLookup] = useState(() => createAdminProviderLookup(services));
     const [runOnce] = useState(createRegistrationRequestGuard);
     const { toast, notify } = useProviderActionToast();
@@ -55,6 +57,7 @@ export default function AdminProviderDeletion() {
         const value = event.target.value;
         if (value.trim() !== id) {
             providerLookup.invalidate();
+            setViewVisible(false);
             toast.current?.clear();
             setState((current) => ({
                 ...emptyLookup,
@@ -68,6 +71,7 @@ export default function AdminProviderDeletion() {
         event.preventDefault();
         if (busy || !id || providerLookup.isPending()) return;
         if (recovery && !window.confirm('Leave the current provider deletion review and load this provider?')) return;
+        setViewVisible(false);
         toast.current?.clear();
         setState({ ...emptyLookup, loading: true });
         return providerLookup.load(id, ({ provider: resource, error }) => {
@@ -78,6 +82,7 @@ export default function AdminProviderDeletion() {
 
     const applyDeletion = (outcome) => {
         const removed = observedWrite(outcome.request, outcome.observed);
+        if (removed) setViewVisible(false);
         setState((current) => ({
             ...emptyLookup,
             provider: removed ? null : current.provider,
@@ -114,31 +119,41 @@ export default function AdminProviderDeletion() {
     };
 
     return (
-        <Panel header="Provider management">
-            <ProviderActionToast toast={toast} />
-            <form className="flex flex-wrap align-items-end gap-2 mb-3" onSubmit={lookup}>
-                <div className="flex flex-column gap-2">
-                    <label htmlFor="adminProviderLookup" className="font-medium">Provider ID to look up</label>
+        <Panel className="mdc-admin-section" header={<><i className="pi pi-briefcase" aria-hidden="true" />Provider management</>}
+            pt={{ title: { role: 'heading', 'aria-level': 2 } }}>
+            <ProviderActionToast toast={toast} className="mdc-admin-toast" />
+            <form className="mdc-admin-lookup" onSubmit={lookup}>
+                <div className="mdc-admin-lookup__field">
+                    <label htmlFor="adminProviderLookup">Provider ID to look up</label>
                     <InputText id="adminProviderLookup" value={lookupId} disabled={Boolean(busy)} onChange={changeLookupId} />
                 </div>
-                <Button type="submit" label="Load provider" icon="pi pi-search" outlined disabled={Boolean(busy) || loading || !id} />
+                <Button type="submit" label="Load provider" icon="pi pi-search" className="mdc-admin-action mdc-admin-action--load"
+                    disabled={Boolean(busy) || loading || !id} />
             </form>
             {(busy || loading) && <p role="status">{busy || 'Loading provider'}…</p>}
             {record && (
-                <div role="group" aria-label="Loaded provider" className="surface-card border-1 surface-border border-round p-3 mb-3">
-                    <h2 className="m-0 text-xl" style={{ overflowWrap: 'anywhere' }}>{record.provider_name}</h2>
-                    <dl className="flex flex-wrap gap-3 mt-2 mb-0 text-sm">
-                        <div><dt className="font-medium">Country</dt><dd className="m-0">{record.country || 'Unavailable'}</dd></div>
-                        <div style={{ overflowWrap: 'anywhere', minWidth: 0 }}>
-                            <dt className="font-medium">Provider ID</dt><dd className="m-0">{record.provider_id}</dd>
+                <div role="group" aria-label="Loaded provider" className="mdc-admin-loaded-provider">
+                    <div className="mdc-admin-loaded-provider__identity">
+                        <span className="mdc-admin-icon"><i className="pi pi-building" aria-hidden="true" /></span>
+                        <div className="mdc-admin-loaded-provider__details">
+                            <h3>{record.provider_name}</h3>
+                            <dl>
+                                <div><dt>Country</dt><dd>{record.country || 'Unavailable'}</dd></div>
+                                <div><dt>Provider ID</dt><dd>{record.provider_id}</dd></div>
+                            </dl>
                         </div>
-                    </dl>
+                    </div>
+                    <div className="mdc-admin-loaded-provider__actions">
+                        <Button type="button" label="View provider" icon="pi pi-eye" className="mdc-admin-action mdc-admin-action--view"
+                            aria-haspopup="dialog" disabled={Boolean(busy)} onClick={() => setViewVisible(true)} />
+                        {canDelete && <Button type="button" label="Delete provider" icon="pi pi-trash" severity="danger"
+                            className="mdc-admin-action mdc-admin-action--delete" disabled={Boolean(busy)} onClick={remove} />}
+                    </div>
                 </div>
             )}
+            {record && <AdminProviderView providerId={record.provider_id} filters={filters} visible={viewVisible} onHide={() => setViewVisible(false)} />}
             {record && !disposable && <Message severity="info" text="This provider is read-only in the Stage 1B demo." />}
             {disposable && !strongEtag(provider.etag) && <Message severity="warn" text="Load a current provider revision to delete this provider." />}
-            {canDelete && <Button type="button" label="Delete provider" icon="pi pi-trash" severity="danger" outlined
-                disabled={Boolean(busy)} onClick={remove} />}
             <ProviderActionResult result={result} />
             <DeletionReview recovery={recovery} busy={Boolean(busy)} onCheck={check} onResume={resume} />
         </Panel>

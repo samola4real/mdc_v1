@@ -53,7 +53,7 @@ function OfferingsTable({ model, filters }) {
     );
 }
 
-function ManagedFields({ entity, form, filters, errors = {}, idPrefix, ...props }) {
+export function ManagedFields({ entity, form, filters, errors = {}, idPrefix, ...props }) {
     const [serviceCollapsed, setServiceCollapsed] = useState(true);
     const [technicalCollapsed, setTechnicalCollapsed] = useState(true);
     const fieldsWithErrors = Object.keys(errors);

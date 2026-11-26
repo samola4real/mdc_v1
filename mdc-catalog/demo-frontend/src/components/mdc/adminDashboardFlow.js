@@ -10,6 +10,7 @@ export async function readAdminAvailability({ getBackendHealth, getCatalogFilter
     return {
         apiStatus: health.status === 'rejected' ? 'error' : (health.value?.status === 'ok' ? 'available' : 'unavailable'),
         catalogueStatus: filters ? 'available' : 'error',
+        filters,
         counts: filters && {
             'Part families': filters.partFamilies.length,
             Materials: filters.materials.length,

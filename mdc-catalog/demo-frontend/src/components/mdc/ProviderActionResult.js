@@ -15,8 +15,8 @@ export function useProviderActionToast() {
     return { toast, notify };
 }
 
-export function ProviderActionToast({ toast }) {
-    return <Toast ref={toast} position="top-right" />;
+export function ProviderActionToast({ toast, className }) {
+    return <Toast ref={toast} position="top-right" className={className} />;
 }
 
 export default function ProviderActionResult({ result, feedback = managementFeedback(result), label = 'Latest action' }) {
