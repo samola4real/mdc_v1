@@ -86,3 +86,8 @@ npm.cmd run dev -- --hostname 127.0.0.1 --port 3000
 ```
 
 Keep Stage 1B writes paused during any subsequent Stage 2 test since the Previews share the validation database. If a rollback is needed, stop Stage 2 writes, restore the prior fixed server pin and restart the local frontend. Stage 1B writes can make the Stage 2 graph stale. Keep the receipts and current data available for recovery. If the validation tunnel hostname changes, the accepted Stage 2 Preview needs coordinated endpoint re-verification. [Task 12 restart instructions](12_MDC_Stage2_Fuseki_Integration_Readiness_Report.md#restart-and-rollback)
+
+
+## Task 14A closure
+
+Task 14A closed the strict result-list acceptance gap. With the same signed-in Module 4 search, the disposable gear was included at range 1–5 and omitted at range 1–3. The protected API enforced the same rule under the legacy policy. Automatic synchronization, cleanup and baseline integrity passed on the corrected Stage 2 Preview. [Task 14A correction and Stage 2 closure](14A_MDC_Strict_Technical_Eligibility_Correction_Report.md)
