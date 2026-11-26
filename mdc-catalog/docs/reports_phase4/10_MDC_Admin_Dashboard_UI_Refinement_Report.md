@@ -1,6 +1,6 @@
 # Task 10 — Final Admin Dashboard and minor UI refinement
 
-**Ready for operator acceptance · 2026-11-26.** Implementation `9300b6c94c2d1b561a02d701b50f5e3c88b5348d` on `phase4/task10-admin-dashboard` in the permanent checkout at `C:/Users/Elahi/Desktop/mdc_v1`. Reviewed `origin/main` at `312765107afd76e927ba63536f45eed7661989f4`. [Task 10 prompt](https://github.com/samola4real/mdc_v1/blob/312765107afd76e927ba63536f45eed7661989f4/mdc-catalog/docs/prompts_phase4/10_MDC_Admin_Dashboard_UI_Refinement_Prompt.md)
+**Initial dashboard · 2026-11-26.** Implementation `9300b6c94c2d1b561a02d701b50f5e3c88b5348d` on `phase4/task10-admin-dashboard` in the permanent checkout at `C:/Users/Elahi/Desktop/mdc_v1`. Reviewed `origin/main` at `312765107afd76e927ba63536f45eed7661989f4`. [Task 10 prompt](https://github.com/samola4real/mdc_v1/blob/312765107afd76e927ba63536f45eed7661989f4/mdc-catalog/docs/prompts_phase4/10_MDC_Admin_Dashboard_UI_Refinement_Prompt.md)
 
 ## Verified Task 09 base
 
@@ -38,3 +38,42 @@ node --experimental-default-type=module --experimental-test-isolation=none --tes
 3. For a deletion check, use a separately authorized disposable fixture. Confirm the dialog names that provider and warns about its offerings. Cancel first to verify the record stays loaded. For an authorized confirmed deletion, verify the Toast and receipt after absence is confirmed.
 
 Signed-in Task 10 acceptance remains pending. The Task 10 branch is the review target for that acceptance.
+
+## Operator visual acceptance correction · 2026-11-26
+
+Implementation `43e6cfa77e5f212a17067ce52f9a59ca24f0cb3d` on `phase4/task10-admin-dashboard`, based on the published functional report `c6fd634557f71ee07a75235791d441d3147aad13`. The visual correction was reviewed at `origin/main` commit `f6a1bb332ca45c9b7bfa9f6fb5f005b592975a04`. [Updated prompt](https://github.com/samola4real/mdc_v1/blob/f6a1bb332ca45c9b7bfa9f6fb5f005b592975a04/mdc-catalog/docs/prompts_phase4/10_MDC_Admin_Dashboard_UI_Refinement_Prompt.md#operator-visual-acceptance-correction--2026-11-26), [Implementation commit](https://github.com/samola4real/mdc_v1/commit/43e6cfa77e5f212a17067ce52f9a59ca24f0cb3d)
+
+**View provider** opens an in-place, read-only dialog for the exact loaded provider, including protected providers. It loads the current provider, offering list and selected offering through the existing authenticated read services. A selector switches between exact offerings and clears previous capability values while the selection loads. The dialog reuses the Provider Area's Provider, Offering and Capability information sections and catalogue labels. Escape closes it and restores focus to the View button. [Dialog and exact reads](../../demo-frontend/src/components/mdc/AdminProviderView.js), [Shared management fields](../../demo-frontend/src/components/mdc/ProviderManagement.js)
+
+Changing the lookup ID, failing a lookup or confirming absence clears the loaded card and its actions. The Delete action retains the signed Admin gate, disposable scope, strong ETag, named cascade confirmation and exact read-back. Conflict and ambiguous outcomes still require review. [Loaded card and deletion controls](../../demo-frontend/src/components/mdc/AdminProviderDeletion.js), [Local relay](../../demo-frontend/src/pages/api/mdc/%5B...path%5D.js)
+
+### Visual acceptance checklist
+
+| Check | Rendered evidence |
+| --- | --- |
+| Typography and layout | Edge loaded Outfit and rendered the title at 32 px on desktop and 28 px at 390 px. Availability and provider titles are 20 px, section bars are 18 px, and metric counts are 30 px with 16 px desktop and 15 px mobile labels. Areas follow the existing shell, with responsive spacing and a full saved ID that wraps on mobile. |
+| Availability and icons | Two equal cards on desktop stack on mobile. The actual PrimeIcons server and database glyphs render at 26 px with navy-based icon surfaces. The badges and descriptions show the health and catalogue check states. The provider, section and metric icons also rendered from the installed font. |
+| Lookup and actions | The desktop input is 400 px and fills the lookup area on mobile. Load uses MaaSAI orange with ink text, View uses navy with white text, and Delete uses a dark semantic red. View and Delete sit inside the loaded card and align to the right on desktop. Refresh checks is outlined and right-aligned below the metrics. |
+| Theme contrast | The light, dark and HMI renders retained semantic availability and error colours. Theme-adjusted navy tints keep outlined controls, counts and icons readable on dark surfaces. The nine checked foreground and background pairs measured at least 5.92:1 in all three themes. [Scoped styles](../../demo-frontend/src/styles/demo/AdminDashboard.scss) |
+| Catalogue and feedback | Four API-derived metric tiles share a row on desktop and use two columns at 390 px. A failed lookup shows a readable Toast below the navigation and compact text by the input. The failed state has no loaded provider or stale actions. |
+
+### Rendered screenshots
+
+Edge captured the existing layout shell, real PrimeReact components, Outfit and PrimeIcons with sanitized fixture authentication and data. The figures are browser captures. The table identifies the viewport and state for visual review.
+
+| Capture | State |
+| --- | --- |
+| [Desktop light](assets/task10-admin-dashboard/desktop-light.png) | 1536 px wide with provider loaded and all four metrics |
+| [Desktop dark](assets/task10-admin-dashboard/desktop-dark.png) | 1536 px wide with provider loaded |
+| [Desktop HMI](assets/task10-admin-dashboard/desktop-hmi.png) | 1536 px wide with provider loaded |
+| [Mobile light](assets/task10-admin-dashboard/mobile-light.png) | 390 px wide with wrapped ID, in-card actions and two-column metrics |
+| [View provider](assets/task10-admin-dashboard/view-provider.png) | Exact read-only provider, offering and Roller capabilities, including diameter and Steel grades |
+| [Lookup failure](assets/task10-admin-dashboard/lookup-failure.png) | Missing fixture ID with no stale loaded card or actions |
+
+### Verification and acceptance
+
+- All 62 focused Node tests passed, including the existing 59 and three additions covering exact and mismatched View reads, protected eligibility and the shared read-only fields. Targeted lint and the isolated Next.js production build passed. The build emitted the existing layout hook, stylesheet and Browserslist warnings. [Focused tests](../../demo-frontend/tests/adminDashboard.test.mjs)
+- The Edge fixture exercised View for both disposable and protected providers, showed the exact second offering's capabilities after a switch, and issued only reads from the dialog. Admin denial, stale lookups, weak revisions, cancellation, conflict, ambiguous deletion and verified absence passed. Registration, saves, Add offering, row deletion and the Provider Area detail status controls also passed.
+- Authorized pinned Preview GETs returned HTTP 200 for health, filters and the existing acceptance provider and metal offering. The filters returned 3 part families, 6 materials, 15 processes and 6 certifications. Both saved records returned strong ETags. Live checking used GETs and the screenshots and write checks used isolated fixtures.
+
+For signed-in visual acceptance, open the Admin Dashboard in the existing Admin session. Compare the loaded card, theme contrast and mobile layout with the captures. Try View on an existing provider and a protected provider, select a different offering, and check that a failed lookup leaves the actions absent. Signed-in visual acceptance remains pending. [Admin Dashboard](http://localhost:3000/demo/admin-audit)
