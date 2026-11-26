@@ -50,3 +50,38 @@ node --experimental-default-type=module --experimental-test-isolation=none --tes
 ```
 
 Signed-in operator acceptance remains pending. The permanent route check reached the signed-out shell. Browser write scenarios used mock services and the contract checks used a local in-memory database. Live Preview verification consisted of baseline reads. [Provider Area](http://localhost:3000/demo/provider)
+
+## Operator acceptance correction · 2026-11-26
+
+Section 05, Step 3 stopped on the existing provider `mdc_stage1b_accept_20261126_a` and offering `mdc_stage1b_accept_20261126_a_metal`. The correction is commit `38a56e1a7709a6802b150bf7622437bf94972a65` on `phase4/task09-update-existing-provider`, following the initial report at `78ccad458126c067fec6dbd232cce4ec0e9e6292`. The correction prompt was reviewed at `origin/main` commit `4dd5908f0fd0eaaf673a6a8aa7144c9ec7e5dc86`. [Operator acceptance correction prompt](https://github.com/samola4real/mdc_v1/blob/4dd5908f0fd0eaaf673a6a8aa7144c9ec7e5dc86/mdc-catalog/docs/prompts_phase4/09_MDC_Update_Existing_Provider_UI_Refactoring_Prompt.md#operator-acceptance-correction--disposable-offering-unexpectedly-read-only-2026-11-26)
+
+Preview response compression was weakening the offering ETag. Authorized read-only requests to the pinned Preview produced the following results. The initial signed-in browser check also showed HTTP 200 with a `W/` ETag on the relay offering GET. The operator reported that Provider information appeared read-only in that view as well.
+
+| Request | Status | Response encoding | ETag |
+| --- | --- | --- | --- |
+| Offering detail with Node fetch defaults or explicit `br` | 200 | Brotli (`br`) | Weak, `W/` followed by the quoted 64-hex revision |
+| Same offering with `Accept-Encoding: identity` | 200 | Uncompressed | Strong, the quoted 64-hex revision |
+| Provider detail with defaults or `identity` | 200 | Uncompressed | Strong, a separate provider revision |
+| Provider offering list with defaults or `identity` | 200 | Brotli with defaults, uncompressed with `identity` | Absent |
+
+The decoded offering bodies matched, and the linked provider and offering IDs matched the registered record and its offering list. Both IDs passed their disposable scope checks. Registration read-back verifies the exact identities before opening the workspace. Explicit Load provider and row selection also use the exact offering detail read. The relay copies the upstream ETag and ends the successful response directly. The Axios client reads that header into `resource.etag`. The weak tag therefore reached `strongEtag` intact and made `offeringEditable` false. The provider gate uses its own detail ETag, and a newly opened workspace starts without write recovery. [Identity scope](../../demo-frontend/src/services/mdc/stage1bScope.js), [Registration read-back](../../demo-frontend/src/components/mdc/providerRegistrationFlow.js), [Management lookup and gates](../../demo-frontend/src/components/mdc/useProviderManagement.js), [Client ETag mapping](../../demo-frontend/src/services/mdc/client.js)
+
+The local Next.js relay now requests `Accept-Encoding: identity` on provider and offering detail GETs and passes the upstream ETag through verbatim. Weak or missing ETags keep the corresponding editor read-only. Lifecycle writes continue to send the exact strong revision as `X-MDC-If-Match`, with the existing role, scope and recovery checks. [Local relay](../../demo-frontend/src/pages/api/mdc/%5B...path%5D.js), [Strong revision gate](../../demo-frontend/src/components/mdc/providerManagementFlow.js)
+
+### Correction verification
+
+| Evidence | Result |
+| --- | --- |
+| Protected Preview, live read-only | Repeated GETs returned the same saved provider and offering data before and after the relay change. Steel grades and the Roller outer diameter are present in the offering detail. |
+| Focused Node regression | The added test failed before the fix on the weak ETag and passed afterward. It covers registration read-back, explicit lookup, exact row read and weak or missing revisions. All 44 tests passed across the three suites above. |
+| Isolated Edge with fixture responses | The browser used the real client and relay with local fixtures. Registration handed off the exact selected offering. Reload and reselection made Steel grades and Roller diameter editable with a strong ETag. A weak offering ETag kept that section read-only while Provider name remained editable. Save offering required a valid change and sent the exact ETag. The mock save kept saved capabilities and the independent provider draft. Add worked and the baseline stayed read-only. |
+| Lint, build and local route | Targeted lint passed. An isolated production build with the installed lockfile dependencies generated 20 pages and the standalone server, with the existing layout, stylesheet and Browserslist warnings. The running `localhost:3000` development relay compiled the correction and still returned HTTP 401 for an anonymous offering detail request. |
+
+All live verification for this correction used GETs against the existing records. The browser save checks used in-memory fixtures. The corrected signed-in session and the operator’s Step 3 save are the remaining manual acceptance checks.
+
+### Resume Section 05, Step 3
+
+1. In the signed-in Provider Area, keep the existing provider. Preserve any unsaved draft before reloading. Open **Update Existing Provider**, enter `mdc_stage1b_accept_20261126_a`, and click **Load provider**. Confirm the selected offering is `mdc_stage1b_accept_20261126_a_metal`. [Provider Area](http://localhost:3000/demo/provider)
+2. Confirm **Offering name**, **Steel grades**, and **Outer diameter max** under **Roller** are editable and show the saved values. **Provider name** has its own editor. **Save offering** starts disabled, and the IDs, part family and service category are fixed.
+3. Apply the edits specified in Step 3, then click **Save offering** once it is enabled. Reload the same provider and confirm the saved values. Use **Save provider** separately for any provider edits required by the manual.
+4. If the app asks for a current offering revision, pause at Step 3 and record the offering detail GET status and whether the ETag is strong, weak or absent. If a concurrent save triggers **Review current offering**, use **Check latest offering**, review the record, and choose **Edit the latest offering revision** before reapplying any edits.
