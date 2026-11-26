@@ -81,17 +81,17 @@ class ServiceDiscoverySearchNormalizerTests(SimpleTestCase):
         self.assertEqual(
             normalized["match_policy"],
             {
-                "optional_match_mode": "any",
-                "unknown_policy": "keep_as_unknown",
+                "optional_match_mode": "all",
+                "unknown_policy": "reject_unknown",
                 "minimum_score": None,
             },
         )
 
-    def test_explicit_match_policy_is_preserved(self):
+    def test_legacy_policy_normalizes_to_strict_and_preserves_minimum_score(self):
         payload = complete_spur_gear_request()
         payload["match_policy"] = {
             "optional_match_mode": "score_only",
-            "unknown_policy": "reject_unknown",
+            "unknown_policy": "keep_as_unknown",
             "minimum_score": 0.75,
         }
 
@@ -100,11 +100,21 @@ class ServiceDiscoverySearchNormalizerTests(SimpleTestCase):
         self.assertEqual(
             normalized["match_policy"],
             {
-                "optional_match_mode": "score_only",
+                "optional_match_mode": "all",
                 "unknown_policy": "reject_unknown",
                 "minimum_score": 0.75,
             },
         )
+
+    def test_empty_lists_normalize_to_no_requirement(self):
+        payload = complete_spur_gear_request()
+        payload["requirements"] = {
+            "generic_requirements": {
+                "materials": [], "processes": [], "certifications": [], "batch_size": 10,
+            },
+        }
+        generic = normalize_payload(payload).requirements["generic_requirements"]
+        self.assertEqual(generic, {"batch_size": 10})
 
     def test_empty_requirement_groups_remain_present(self):
         payload = {

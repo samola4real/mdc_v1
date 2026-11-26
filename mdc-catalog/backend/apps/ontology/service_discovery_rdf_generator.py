@@ -22,6 +22,7 @@ from apps.ontology.service_discovery_rdf_mappings import (
     get_process_concept,
     get_service_category_concept,
     material_evidence_resource,
+    offering_certification_evidence_resource,
     offering_resource,
     part_type_capability_resource,
     part_type_support_resource,
@@ -164,6 +165,18 @@ def _add_component_capabilities(graph: Graph, parent, record: dict[str, Any]) ->
         _add_record_properties(graph, component, component_record)
 
 
+def _add_certification(
+    graph: Graph, subject, node, certification: dict[str, Any], sequence_index: int,
+) -> None:
+    code = certification["code"]
+    graph.add((subject, MDC.hasCertificationEvidence, node))
+    graph.add((node, RDF.type, MDC.CertificationEvidence))
+    graph.add((node, MDC.certification, _require_mapping(get_certification_concept, code)))
+    graph.add((node, MDC.certificationCode, Literal(code)))
+    graph.add((node, MDC.sequenceIndex, Literal(sequence_index, datatype=XSD.integer)))
+    _add_record_properties(graph, node, certification)
+
+
 def _add_provider(graph: Graph, provider: dict[str, Any]) -> None:
     provider_id = provider["provider_id"]
     subject = provider_resource(provider_id)
@@ -177,14 +190,8 @@ def _add_provider(graph: Graph, provider: dict[str, Any]) -> None:
         graph.add((subject, MDC.country, Literal(country)))
 
     for sequence_index, certification in enumerate(provider.get("certifications", [])):
-        code = certification["code"]
-        node = certification_evidence_resource(provider_id, code)
-        graph.add((subject, MDC.hasCertificationEvidence, node))
-        graph.add((node, RDF.type, MDC.CertificationEvidence))
-        graph.add((node, MDC.certification, _require_mapping(get_certification_concept, code)))
-        graph.add((node, MDC.certificationCode, Literal(code)))
-        graph.add((node, MDC.sequenceIndex, Literal(sequence_index, datatype=XSD.integer)))
-        _add_record_properties(graph, node, certification)
+        node = certification_evidence_resource(provider_id, certification["code"])
+        _add_certification(graph, subject, node, certification, sequence_index)
 
 
 def _add_part_type_support(graph: Graph, offering_subject, offering_id: str, support: dict[str, Any]) -> None:
@@ -272,11 +279,12 @@ def _add_generic_capabilities(graph: Graph, offering_subject, offering_id: str, 
         _add_materials(graph, offering_subject, offering_id, generic["materials"])
     if "processes" in generic:
         _add_processes(graph, offering_subject, offering_id, generic["processes"])
+    for sequence_index, certification in enumerate(generic.get("certifications", [])):
+        node = offering_certification_evidence_resource(offering_id, certification["code"])
+        _add_certification(graph, offering_subject, node, certification, sequence_index)
 
     for field_code, record in generic.items():
-        if field_code in {"materials", "processes"}:
-            continue
-        if field_code == "certifications":
+        if field_code in {"certifications", "materials", "processes"}:
             continue
         if not isinstance(record, dict):
             raise ServiceDiscoveryRdfGenerationError(

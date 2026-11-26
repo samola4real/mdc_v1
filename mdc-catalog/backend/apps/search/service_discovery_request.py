@@ -2,6 +2,12 @@ from dataclasses import dataclass, field
 from typing import Any
 
 
+STRICT_MATCH_POLICY = {
+    "optional_match_mode": "all",
+    "unknown_policy": "reject_unknown",
+}
+
+
 @dataclass(frozen=True)
 class CanonicalServiceDiscoverySearchRequest:
     request_id: str

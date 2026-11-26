@@ -211,47 +211,22 @@ class ServiceDiscoveryLocalMatcherTests(SimpleTestCase):
         self.assertIn("precipart", provider_ids)
         self.assertIn("tasowheel", provider_ids)
 
-    def test_precipart_candidate_crown_gear_remains_unknown(self):
+    def test_precipart_candidate_crown_gear_is_excluded_under_both_unknown_policies(self):
+        for policy in ("keep_as_unknown", "reject_unknown"):
+            with self.subTest(policy=policy):
+                response = search_service_discovery_catalog(
+                    gear_request("crown_gear", unknown_policy=policy),
+                    provider_records=self.records,
+                )
+                self.assertIsNone(result_by_provider(response, "precipart"))
+                self.assertEqual(response["result_count"], 0)
+
+    def test_tasowheel_unasserted_gear_subtype_is_excluded(self):
         response = search_service_discovery_catalog(
             gear_request("crown_gear"),
             provider_records=self.records,
         )
-        precipart = result_by_provider(response, "precipart")
-
-        self.assertIsNotNone(precipart)
-        self.assertEqual(precipart["match"]["status"], "unknown_match")
-        self.assertTrue(
-            any(
-                item.get("confidence") == "inferred"
-                and item.get("source_type") == "public_web"
-                for item in precipart["unknown_attributes"]
-            )
-        )
-
-        rejected = search_service_discovery_catalog(
-            gear_request("crown_gear", unknown_policy="reject_unknown"),
-            provider_records=self.records,
-        )
-        self.assertEqual(rejected["results"], [])
-
-    def test_tasowheel_unconfirmed_gear_subtype_remains_unknown(self):
-        response = search_service_discovery_catalog(
-            gear_request("crown_gear"),
-            provider_records=self.records,
-        )
-        tasowheel = result_by_provider(response, "tasowheel")
-
-        self.assertIsNotNone(tasowheel)
-        self.assertEqual(tasowheel["match"]["status"], "unknown_match")
-
-        rejected = search_service_discovery_catalog(
-            gear_request("crown_gear", unknown_policy="reject_unknown"),
-            provider_records=self.records,
-        )
-        self.assertNotIn(
-            "tasowheel",
-            {result["provider"]["provider_id"] for result in rejected["results"]},
-        )
+        self.assertIsNone(result_by_provider(response, "tasowheel"))
 
     def test_tasowheel_confirmed_shaft_subtypes_are_full_matches_without_extra_criteria(self):
         for part_type in ["splined_shaft", "plain_shaft", "hollow_shaft"]:
@@ -265,26 +240,13 @@ class ServiceDiscoveryLocalMatcherTests(SimpleTestCase):
             self.assertEqual(tasowheel["match"]["status"], "full_match", part_type)
             self.assertEqual(tasowheel["match"]["score"], 1.0, part_type)
 
-    def test_tasowheel_unconfirmed_shaft_subtypes_remain_unknown(self):
-        for part_type in ["stepped_shaft", "worm_shaft"]:
-            response = search_service_discovery_catalog(
-                shaft_request(part_type),
-                provider_records=self.records,
-            )
-            tasowheel = result_by_provider(response, "tasowheel")
-
-            self.assertIsNotNone(tasowheel, part_type)
-            self.assertEqual(tasowheel["match"]["status"], "unknown_match", part_type)
-
-            rejected = search_service_discovery_catalog(
-                shaft_request(part_type, unknown_policy="reject_unknown"),
-                provider_records=self.records,
-            )
-            self.assertNotIn(
-                "tasowheel",
-                {result["provider"]["provider_id"] for result in rejected["results"]},
-                part_type,
-            )
+    def test_tasowheel_unasserted_shaft_subtypes_are_excluded(self):
+        for part_type in ("stepped_shaft", "worm_shaft"):
+            with self.subTest(part_type=part_type):
+                response = search_service_discovery_catalog(
+                    shaft_request(part_type), provider_records=self.records
+                )
+                self.assertIsNone(result_by_provider(response, "tasowheel"))
 
     def test_tasowheel_process_request_is_matched_from_harmonized_offering_evidence(self):
         response = search_service_discovery_catalog(
@@ -355,71 +317,35 @@ class ServiceDiscoveryLocalMatcherTests(SimpleTestCase):
             )
         self.assertEqual(tasowheel["match"]["score"], 1.0)
 
-    def test_tasowheel_face_width_is_unknown_for_confirmed_gear_subtype(self):
+    def test_missing_face_width_excludes_confirmed_gear_subtype(self):
         response = search_service_discovery_catalog(
-            gear_request(
-                "spur_gear",
-                requirements={
-                    "part_type_specifications": {
-                        "face_width_mm": {"exact": 20},
-                    }
-                },
-            ),
+            gear_request(requirements={
+                "part_type_specifications": {"face_width_mm": {"exact": 20}},
+            }),
             provider_records=self.records,
         )
-        tasowheel = result_by_provider(response, "tasowheel")
+        self.assertIsNone(result_by_provider(response, "tasowheel"))
 
-        self.assertEqual(tasowheel["match"]["status"], "partial_match")
-        self.assertTrue(
-            any(item["field"] == "part_type" for item in tasowheel["matched_attributes"])
-        )
-        self.assertTrue(
-            any(item["field"] == "face_width_mm" for item in tasowheel["unknown_attributes"])
-        )
-
-    def test_tasowheel_tolerance_is_unknown_and_not_satisfied_by_gear_quality(self):
+    def test_gear_quality_does_not_prove_dimensional_tolerance(self):
         response = search_service_discovery_catalog(
-            gear_request(
-                "spur_gear",
-                requirements={
-                    "part_family_specifications": {
-                        "tolerance_mm": {"max": 0.02},
-                    }
+            gear_request(requirements={
+                "part_family_specifications": {
+                    "gear_quality": {"standard": "DIN", "max_class": 5},
+                    "tolerance_mm": {"max": 0.02},
                 },
-            ),
+            }),
             provider_records=self.records,
         )
-        tasowheel = result_by_provider(response, "tasowheel")
+        self.assertIsNone(result_by_provider(response, "tasowheel"))
 
-        self.assertEqual(tasowheel["match"]["status"], "partial_match")
-        self.assertTrue(
-            any(item["field"] == "tolerance_mm" for item in tasowheel["unknown_attributes"])
-        )
-        self.assertFalse(
-            any(
-                item["field"] == "tolerance_mm" and item["status"] == "matched"
-                for item in tasowheel["matched_attributes"]
-            )
-        )
-
-    def test_tasowheel_shaft_tolerance_is_unknown_and_not_satisfied_by_din4(self):
+    def test_missing_shaft_tolerance_excludes_a_confirmed_subtype(self):
         response = search_service_discovery_catalog(
-            shaft_request(
-                "hollow_shaft",
-                requirements={
-                    "part_family_specifications": {
-                        "tolerance_mm": {"max": 0.02},
-                    }
-                },
-            ),
+            shaft_request("hollow_shaft", requirements={
+                "part_family_specifications": {"tolerance_mm": {"max": 0.02}},
+            }),
             provider_records=self.records,
         )
-        tasowheel = result_by_provider(response, "tasowheel")
-
-        self.assertEqual(tasowheel["match"]["status"], "partial_match")
-        self.assertTrue(
-            any(item["field"] == "tolerance_mm" for item in tasowheel["unknown_attributes"])
-        )
+        self.assertIsNone(result_by_provider(response, "tasowheel"))
 
     def test_tasowheel_shaft_length_outer_diameter_and_spline_module_match(self):
         response = search_service_discovery_catalog(
@@ -495,33 +421,25 @@ class ServiceDiscoveryLocalMatcherTests(SimpleTestCase):
             )
         )
 
-    def test_minimum_score_filters_below_threshold(self):
-        response = search_service_discovery_catalog(
-            gear_request(
-                "spur_gear",
-                requirements={
-                    "part_family_specifications": {
-                        "tolerance_mm": {"max": 0.02},
-                    }
-                },
-                minimum_score=0.75,
-            ),
-            provider_records=self.records,
-        )
-        provider_ids = {result["provider"]["provider_id"] for result in response["results"]}
+    def test_minimum_score_is_independent_of_mandatory_eligibility(self):
+        for cutoff in (None, 0.0, 0.75, 1.0):
+            with self.subTest(cutoff=cutoff):
+                response = search_service_discovery_catalog(
+                    gear_request(
+                        requirements={"part_family_specifications": {
+                            "tolerance_mm": {"max": 0.02},
+                        }},
+                        minimum_score=cutoff,
+                    ),
+                    provider_records=self.records,
+                )
+                self.assertIsNone(result_by_provider(response, "tasowheel"))
+                eligible = search_service_discovery_catalog(
+                    gear_request(minimum_score=cutoff), provider_records=self.records
+                )
+                self.assertIsNotNone(result_by_provider(eligible, "tasowheel"))
 
-        self.assertNotIn("tasowheel", provider_ids)
-
-        retained = search_service_discovery_catalog(
-            gear_request("spur_gear", minimum_score=1.0),
-            provider_records=self.records,
-        )
-        retained_provider_ids = {
-            result["provider"]["provider_id"] for result in retained["results"]
-        }
-        self.assertIn("tasowheel", retained_provider_ids)
-
-    def test_optional_match_policy_modes_are_reported_without_dropping_candidates(self):
+    def test_legacy_policies_cannot_admit_an_offering_that_fails_one_requirement(self):
         records = synthetic_confirmed_spur_provider()
         requirements = {
             "generic_requirements": {
@@ -529,27 +447,14 @@ class ServiceDiscoveryLocalMatcherTests(SimpleTestCase):
                 "certifications": ["full_traceability"],
             }
         }
-
-        any_response = search_service_discovery_catalog(
-            gear_request("spur_gear", requirements=requirements, optional_match_mode="any"),
-            provider_records=records,
-        )
-        all_response = search_service_discovery_catalog(
-            gear_request("spur_gear", requirements=requirements, optional_match_mode="all"),
-            provider_records=records,
-        )
-        score_only_response = search_service_discovery_catalog(
-            gear_request("spur_gear", requirements=requirements, optional_match_mode="score_only"),
-            provider_records=records,
-        )
-
-        self.assertEqual(len(any_response["results"]), 1)
-        self.assertEqual(len(all_response["results"]), 1)
-        self.assertEqual(len(score_only_response["results"]), 1)
-        self.assertTrue(any_response["results"][0]["match"]["optional_policy_satisfied"])
-        self.assertFalse(all_response["results"][0]["match"]["optional_policy_satisfied"])
-        self.assertTrue(score_only_response["results"][0]["match"]["optional_policy_satisfied"])
-        self.assertEqual(any_response["results"][0]["match"]["status"], "partial_match")
+        for mode in ("any", "all", "score_only"):
+            with self.subTest(mode=mode):
+                response = search_service_discovery_catalog(
+                    gear_request(requirements=requirements, optional_match_mode=mode),
+                    provider_records=records,
+                )
+                self.assertEqual(response["results"], [])
+                self.assertEqual(response["result_count"], 0)
 
     def test_confirmed_subtype_with_all_requirements_matched_can_full_match(self):
         response = search_service_discovery_catalog(

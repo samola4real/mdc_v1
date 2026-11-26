@@ -1,5 +1,7 @@
 from copy import deepcopy
+from dataclasses import replace
 from decimal import Decimal
+from unittest.mock import patch
 
 from django.test import SimpleTestCase
 
@@ -11,6 +13,7 @@ from apps.search.service_discovery_matching_alignment import (
     ServiceDiscoveryMatchingAlignmentError,
     build_request_scoped_provider_records_from_retrieval,
     normalize_search_response_for_alignment_comparison,
+    search_service_discovery_catalog_via_fuseki,
     search_service_discovery_catalog_via_local_rdf,
 )
 from apps.search.service_discovery_normalizer import normalize_service_discovery_search_request
@@ -127,6 +130,162 @@ def synthetic_shaft_only_records() -> list[dict]:
             ],
         }
     ]
+
+
+class StrictEligibilityAlignmentTests(SimpleTestCase):
+    def fixture(self, category, family, part_type, family_caps, type_caps):
+        evidence = {"source_type": "provider_confirmed", "confidence": "declared"}
+        offering = {
+            "offering_id": "eligibility_line_a",
+            "provider_id": "eligibility",
+            "name": "Eligibility line",
+            "service_category": category,
+            "part_family": family,
+            "support_status": "confirmed",
+            "supported_part_types": [
+                {"part_type": part_type, "support_status": "confirmed", **evidence}
+            ],
+            "family_capabilities": family_caps,
+            "part_type_capabilities": {part_type: type_caps} if type_caps else {},
+            "generic_capabilities": {
+                "materials": [
+                    {"material": "steel", "available_grades": ["42CrMo4"], **evidence},
+                    {"material": "aluminum", "available_grades": [], **evidence},
+                ],
+                "processes": [
+                    {"process": "machining", "delivery_mode": "unspecified", **evidence},
+                    {"process": "milling", "delivery_mode": "unspecified", **evidence},
+                ],
+                "certifications": [{"code": "ISO14001_2015", **evidence}],
+                "batch_size": {"min": 1, "max": 20, **evidence},
+                "lead_time_weeks": {"max": 3, **evidence},
+                "surface_finish_ra_um": {"max": 1.6, **evidence},
+                "quality": {"standard": "ISO", "best_class": 5, **evidence},
+                "weight_kg": {"max": 10, **evidence},
+            },
+        }
+        return [{
+            "provider": {
+                "provider_id": "eligibility",
+                "display_name": "Eligibility Workshop",
+                "certifications": [{"code": "ISO9001_2015", **evidence}],
+            },
+            "offerings": [offering],
+        }]
+
+    def assert_paths(self, request, records, expected_ids):
+        graph = build_service_discovery_graph(records)
+        direct = search_service_discovery_catalog(request, provider_records=records)
+        local = search_service_discovery_catalog_via_local_rdf(request, graph=graph)
+        with patch(
+            "apps.search.service_discovery_fuseki_service.execute_fuseki_sparql_query",
+            side_effect=lambda query, **kwargs: list(graph.query(query)),
+        ):
+            remote = search_service_discovery_catalog_via_fuseki(request)
+
+        self.assertEqual([item["offering"]["offering_id"] for item in direct["results"]], expected_ids)
+        self.assertEqual(direct["result_count"], len(expected_ids))
+        self.assertTrue(all(item["match"]["status"] == "full_match" for item in direct["results"]))
+        assert_equivalent(self, direct, local)
+        assert_equivalent(self, direct, remote)
+
+    def test_all_requirement_groups_and_inclusive_boundaries_across_families(self):
+        families = (
+            ("precision_gears", "gear", "spur_gear",
+             {"module": {"min": 1, "max": 5}}, {"module": {"min": 1, "max": 5}},
+             "face_width_mm", 30),
+            ("precision_shafts", "shaft", "plain_shaft",
+             {"length_mm": {"min": 20, "max": 100}}, {"length_mm": {"exact": 100}},
+             "principal_diameter_mm", 10),
+            ("precision_metal_parts", "metal_part", "block",
+             {"bounding_box_mm": {"length_mm": {"max": 60}, "width_mm": {"max": 25}}},
+             {"bounding_box_mm": {"length_mm": {"max": 60}, "width_mm": {"max": 25}}},
+             "number_of_holes", 4),
+        )
+        for category, family, part_type, evidence, specs, type_field, exact in families:
+            with self.subTest(family=family):
+                records = self.fixture(
+                    category, family, part_type, evidence, {type_field: {"exact": exact}},
+                )
+                original = records[0]["offerings"][0]
+                sibling = deepcopy(original)
+                sibling["offering_id"] = "eligibility_line_b"
+                records[0]["offerings"].insert(0, sibling)
+
+                generic = {
+                    "materials": ["steel", "aluminum"],
+                    "processes": ["machining", "milling"],
+                    "certifications": ["ISO9001_2015", "ISO14001_2015"],
+                    "batch_size": 20,
+                    "delivery": {"max_weeks": 3},
+                    "surface_finish_ra_um": {"min": 1, "exact": 1.6, "max": 2},
+                    "quality": {"standard": "ISO", "max_class": 5},
+                    "weight_kg": 10,
+                }
+                if family == "metal_part":
+                    original["generic_capabilities"]["tolerance_mm"] = {"max": 0.02}
+                    sibling["generic_capabilities"]["tolerance_mm"] = {"max": 0.02}
+                    generic["tolerance_mm"] = {"min": 0.02}
+                request = canonical_request(
+                    service_category=category, part_family=family, part_type=part_type,
+                    requirements={"part_family_specifications": specs,
+                                  "part_type_specifications": {type_field: {"exact": exact}},
+                                  "generic_requirements": generic},
+                )
+                self.assert_paths(request, records, ["eligibility_line_a", "eligibility_line_b"])
+                request = replace(request, match_policy={
+                    "optional_match_mode": "score_only", "unknown_policy": "keep_as_unknown",
+                })
+                if family == "gear":
+                    sibling["family_capabilities"]["module"]["max"] = 3
+                elif family == "shaft":
+                    sibling["generic_capabilities"]["certifications"].clear()
+                else:
+                    sibling["family_capabilities"]["bounding_box_mm"].pop("width_mm")
+                self.assert_paths(request, records, ["eligibility_line_a"])
+
+    def test_partial_lists_unknown_evidence_and_unconfirmed_types_are_excluded(self):
+        records = self.fixture(
+            "precision_gears", "gear", "spur_gear",
+            {"module": {"min": 1, "max": 5}}, {},
+        )
+        request = gear_request(
+            requirements={"part_family_specifications": {"module": {"exact": 5}},
+                          "generic_requirements": {"processes": ["machining", "milling"]}},
+        )
+        for case in ("partial_list", "unknown_module", "candidate", "unknown_type", "absent_type"):
+            with self.subTest(case=case):
+                changed = deepcopy(records)
+                offering = changed[0]["offerings"][0]
+                if case == "partial_list":
+                    offering["generic_capabilities"]["processes"].pop()
+                elif case == "unknown_module":
+                    offering["family_capabilities"]["module"].update(
+                        source_type="not_confirmed", confidence="unknown"
+                    )
+                elif case == "absent_type":
+                    offering["supported_part_types"].clear()
+                else:
+                    offering["supported_part_types"][0]["support_status"] = (
+                        "unknown" if case == "unknown_type" else "candidate_requiring_confirmation"
+                    )
+                self.assert_paths(request, changed, [])
+        omitted = gear_request(requirements={"generic_requirements": {"materials": []}})
+        self.assert_paths(omitted, records, ["eligibility_line_a"])
+
+    def test_all_supplied_numeric_bounds_are_checked(self):
+        records = self.fixture(
+            "precision_gears", "gear", "spur_gear",
+            {"module": {"min": 1, "max": 5}}, {},
+        )
+        for group, field, value in (
+            ("part_family_specifications", "module", {"min": 6}),
+            ("part_family_specifications", "module", {"max": 0.5}),
+            ("generic_requirements", "surface_finish_ra_um", {"min": 2}),
+            ("generic_requirements", "surface_finish_ra_um", {"exact": 1, "max": 2}),
+        ):
+            with self.subTest(field=field, value=value):
+                self.assert_paths(gear_request(requirements={group: {field: value}}), records, [])
 
 
 class ServiceDiscoveryMatchingAlignmentTests(SimpleTestCase):
@@ -340,32 +499,16 @@ class ServiceDiscoveryMatchingAlignmentTests(SimpleTestCase):
             "ascending",
         )
 
-    def test_face_width_and_general_tolerance_remain_unknown_equivalently(self):
-        face_width = self.assert_direct_equals_local_rdf(
-            gear_request(
-                "spur_gear",
-                requirements={"part_type_specifications": {"face_width_mm": {"exact": 20}}},
-            )
-        )
-        tolerance = self.assert_direct_equals_local_rdf(
-            gear_request(
-                "spur_gear",
-                requirements={"part_family_specifications": {"tolerance_mm": {"max": 0.02}}},
-            )
-        )
-
-        self.assertTrue(
-            any(item["field"] == "face_width_mm" for item in result_by_provider(face_width, "tasowheel")["unknown_attributes"])
-        )
-        self.assertTrue(
-            any(item["field"] == "tolerance_mm" for item in result_by_provider(tolerance, "tasowheel")["unknown_attributes"])
-        )
-        self.assertFalse(
-            any(
-                item["field"] == "tolerance_mm"
-                for item in result_by_provider(tolerance, "tasowheel")["matched_attributes"]
-            )
-        )
+    def test_missing_face_width_and_general_tolerance_exclude_equivalently(self):
+        for group, field, criterion in (
+            ("part_type_specifications", "face_width_mm", {"exact": 20}),
+            ("part_family_specifications", "tolerance_mm", {"max": 0.02}),
+        ):
+            with self.subTest(field=field):
+                response = self.assert_direct_equals_local_rdf(
+                    gear_request(requirements={group: {field: criterion}})
+                )
+                self.assertIsNone(result_by_provider(response, "tasowheel"))
 
     def test_confirmed_splined_shaft_scope_is_equivalent(self):
         response = self.assert_direct_equals_local_rdf(
@@ -389,30 +532,17 @@ class ServiceDiscoveryMatchingAlignmentTests(SimpleTestCase):
         self.assertNotIn("shaft_quality", str(tasowheel))
 
     def test_unasserted_subtypes_are_equivalent_under_unknown_policies(self):
-        keep = self.assert_direct_equals_local_rdf(gear_request("crown_gear"))
-        reject = self.assert_direct_equals_local_rdf(
-            gear_request("crown_gear", unknown_policy="reject_unknown")
-        )
+        for policy in ("keep_as_unknown", "reject_unknown"):
+            with self.subTest(policy=policy):
+                response = self.assert_direct_equals_local_rdf(
+                    gear_request("crown_gear", unknown_policy=policy)
+                )
+                self.assertIsNone(result_by_provider(response, "tasowheel"))
 
-        self.assertEqual(result_by_provider(keep, "tasowheel")["match"]["status"], "unknown_match")
-        self.assertNotIn(
-            "tasowheel",
-            {result["provider"]["provider_id"] for result in reject["results"]},
-        )
-
-    def test_precipart_candidate_crown_gear_is_equivalent_and_not_promoted(self):
+    def test_precipart_candidate_crown_gear_is_equivalently_excluded(self):
         response = self.assert_direct_equals_local_rdf(gear_request("crown_gear"))
-        precipart = result_by_provider(response, "precipart")
-
-        self.assertEqual(precipart["match"]["status"], "unknown_match")
-        self.assertTrue(
-            any(
-                item["field"] == "part_type"
-                and item.get("source_type") == "public_web"
-                and item.get("confidence") == "inferred"
-                for item in precipart["unknown_attributes"]
-            )
-        )
+        self.assertIsNone(result_by_provider(response, "precipart"))
+        self.assertEqual(response["result_count"], 0)
 
     def test_optional_policy_and_minimum_score_cases_are_equivalent(self):
         requirements = {

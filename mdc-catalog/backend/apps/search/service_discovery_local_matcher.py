@@ -2,7 +2,10 @@ from copy import deepcopy
 from typing import Any
 
 from apps.providers.service_discovery_loaders import load_service_discovery_providers
-from apps.search.service_discovery_request import CanonicalServiceDiscoverySearchRequest
+from apps.search.service_discovery_request import (
+    STRICT_MATCH_POLICY,
+    CanonicalServiceDiscoverySearchRequest,
+)
 
 
 MATCHER_STATUS = {
@@ -19,6 +22,7 @@ def _is_unknown_record(record: Any) -> bool:
     return isinstance(record, dict) and (
         record.get("source_type") == "not_confirmed"
         or record.get("confidence") == "unknown"
+        or record.get("support_status") in {"unknown", "candidate_requiring_confirmation"}
     )
 
 
@@ -95,6 +99,8 @@ def _evaluate_range(
 
     provider_min = _number(provided, "min")
     provider_max = _number(provided, "max")
+    if provider_min is None and provider_max is None:
+        provider_min = provider_max = _number(provided, "exact")
     requested_exact = requested.get("exact")
     requested_min = requested.get("min")
     requested_max = requested.get("max")
@@ -110,12 +116,16 @@ def _evaluate_range(
         if provider_min is None:
             can_compare = False
         else:
-            matched = matched and provider_min <= requested_min
+            matched = matched and provider_min <= requested_min and (
+                provider_max is None or requested_min <= provider_max
+            )
     if requested_max is not None:
         if provider_max is None:
             can_compare = False
         else:
-            matched = matched and provider_max >= requested_max
+            matched = matched and requested_max <= provider_max and (
+                provider_min is None or provider_min <= requested_max
+            )
 
     if not can_compare:
         status = "unknown"
@@ -142,10 +152,11 @@ def _evaluate_range(
 def _evaluate_max_requirement(
     *,
     field: str,
-    requested: float,
+    requested: float | dict,
     provided: Any,
     match_type: str,
-    provider_max_must_be_at_least: bool,
+    lower_bound: float | None = None,
+    upper_bound: float | None = None,
 ) -> dict:
     if not isinstance(provided, dict) or _is_unknown_record(provided):
         return _base_explanation(
@@ -161,10 +172,15 @@ def _evaluate_max_requirement(
 
     provider_max = _number(provided, "max")
     if provider_max is None:
+        provider_max = _number(provided, "exact")
+    if provider_max is None:
         status = "unknown"
         reason = f"Provider evidence for {field} has no comparable maximum."
     else:
-        matched = provider_max >= requested if provider_max_must_be_at_least else provider_max <= requested
+        matched = (
+            (lower_bound is None or lower_bound <= provider_max)
+            and (upper_bound is None or provider_max <= upper_bound)
+        )
         status = "matched" if matched else "unmatched"
         reason = None if matched else f"Provider evidence for {field} does not satisfy the request."
 
@@ -199,13 +215,14 @@ def _evaluate_quality(
             evidence=provided if isinstance(provided, dict) else None,
         )
 
+    best_class = _number(provided, "best_class")
     if provided.get("standard") != requested.get("standard"):
         status = "unknown"
         reason = "Quality standards differ or are not comparable in H5."
-    elif provided.get("best_class") is None:
+    elif best_class is None:
         status = "unknown"
         reason = "Provider quality class is not comparable."
-    elif provided.get("best_class") <= requested.get("max_class"):
+    elif best_class <= requested["max_class"]:
         status = "matched"
         reason = None
     else:
@@ -377,7 +394,7 @@ def _evaluate_batch_size(requested: int, provided: Any) -> dict:
     )
 
 
-def _evaluate_part_type(selection: dict, offering: dict) -> tuple[dict, float, str]:
+def _evaluate_part_type(selection: dict, offering: dict) -> dict:
     requested_type = selection["part_type"]
     records = {
         item.get("part_type"): item
@@ -386,33 +403,29 @@ def _evaluate_part_type(selection: dict, offering: dict) -> tuple[dict, float, s
     }
     record = records.get(requested_type)
 
-    if record and record.get("support_status") == "confirmed":
+    if record and record.get("support_status") == "confirmed" and not _is_unknown_record(record):
         status = "matched"
         reason = None
-        score = 1.0
     elif record and record.get("support_status") == "candidate_requiring_confirmation":
         status = "unknown"
         reason = "Requested part type is identified only as a candidate requiring confirmation."
-        score = 0.5
     else:
         status = "unknown"
         reason = (
             "Offering confirms the part family, but confirmed support for the "
             "requested part type is not available."
         )
-        score = 0.5
 
-    explanation = _base_explanation(
+    return _base_explanation(
         field="part_type",
         match_type="selection",
         requested=requested_type,
         provided=record,
         status=status,
         reason=reason,
-        coverage=score,
+        coverage=_coverage_for_status(status),
         evidence=record,
     )
-    return explanation, score, status
 
 
 def _evaluate_family_requirements(requirements: dict, offering: dict) -> list[dict]:
@@ -447,27 +460,7 @@ def _evaluate_part_type_requirements(
     requirements: dict,
     offering: dict,
     requested_part_type: str,
-    part_type_status: str,
 ) -> list[dict]:
-    if not requirements:
-        return []
-    if part_type_status != "matched":
-        return [
-            _base_explanation(
-                field=field,
-                match_type="part_type_specification",
-                requested=requested,
-                provided=None,
-                status="unknown",
-                reason=(
-                    "Part-type-specific capability cannot be confirmed because "
-                    "requested part-type support is not confirmed."
-                ),
-                coverage=0.0,
-            )
-            for field, requested in requirements.items()
-        ]
-
     capability = offering.get("part_type_capabilities", {}).get(requested_part_type, {})
     evaluations = []
     for field, requested in requirements.items():
@@ -521,27 +514,22 @@ def _evaluate_generic_requirements(requirements: dict, provider: dict, offering:
                     requested=requested["max_weeks"],
                     provided=generic.get("lead_time_weeks"),
                     match_type="generic_requirement",
-                    provider_max_must_be_at_least=False,
+                    upper_bound=requested["max_weeks"],
                 )
             )
-        elif field == "surface_finish_ra_um":
+        elif field in {"surface_finish_ra_um", "tolerance_mm"}:
+            upper_bound = min(
+                (requested[key] for key in ("max", "exact") if key in requested),
+                default=None,
+            )
             evaluations.append(
                 _evaluate_max_requirement(
                     field=field,
-                    requested=requested.get("max") or requested.get("exact"),
+                    requested=upper_bound if set(requested) in ({"max"}, {"exact"}) else requested,
                     provided=generic.get(field),
                     match_type="generic_requirement",
-                    provider_max_must_be_at_least=False,
-                )
-            )
-        elif field == "tolerance_mm":
-            evaluations.append(
-                _evaluate_max_requirement(
-                    field=field,
-                    requested=requested.get("max") or requested.get("exact"),
-                    provided=generic.get(field),
-                    match_type="generic_requirement",
-                    provider_max_must_be_at_least=False,
+                    lower_bound=requested.get("min"),
+                    upper_bound=upper_bound,
                 )
             )
         elif field == "weight_kg":
@@ -551,7 +539,7 @@ def _evaluate_generic_requirements(requirements: dict, provider: dict, offering:
                     requested=requested,
                     provided=generic.get("weight_kg"),
                     match_type="generic_requirement",
-                    provider_max_must_be_at_least=True,
+                    lower_bound=requested,
                 )
             )
         elif field == "quality":
@@ -563,42 +551,9 @@ def _evaluate_generic_requirements(requirements: dict, provider: dict, offering:
                     match_type="generic_requirement",
                 )
             )
-    return evaluations
-
-
-def _optional_policy_satisfied(policy: str, evaluations: list[dict]) -> bool:
-    if not evaluations or policy == "score_only":
-        return True
-    if policy == "all":
-        return all(item["status"] == "matched" for item in evaluations)
-    return any(item["status"] in {"matched", "partial_match"} for item in evaluations)
-
-
-def _calculate_score(selection_score: float, evaluations: list[dict]) -> float:
-    if not evaluations:
-        return selection_score
-    optional_score = sum(item.get("coverage", 0.0) for item in evaluations) / len(evaluations)
-    return round((0.70 * selection_score) + (0.30 * optional_score), 3)
-
-
-def _result_status(part_type_status: str, evaluations: list[dict]) -> str:
-    if part_type_status == "unknown":
-        return "unknown_match"
-    if all(item["status"] == "matched" for item in evaluations):
-        return "full_match"
-    return "partial_match"
-
-
-def _split_explanations(evaluations: list[dict]) -> tuple[list, list, list]:
-    matched, unmatched, unknown = [], [], []
-    for item in evaluations:
-        if item["status"] == "matched":
-            matched.append(item)
-        elif item["status"] == "unknown":
-            unknown.append(item)
         else:
-            unmatched.append(item)
-    return matched, unmatched, unknown
+            raise ValueError(f"Unsupported generic requirement: {field}")
+    return evaluations
 
 
 def _relevant_evidence(provider: dict, offering: dict) -> dict:
@@ -620,10 +575,7 @@ def _build_result(
     offering: dict,
     selection: dict,
     part_type_evaluation: dict,
-    selection_score: float,
-    part_type_status: str,
     evaluations: list[dict],
-    match_policy: dict,
 ) -> dict:
     category_evaluation = _base_explanation(
         field="service_category",
@@ -643,13 +595,6 @@ def _build_result(
         reason=None,
         coverage=1.0,
     )
-    all_evaluations = [category_evaluation, family_evaluation, part_type_evaluation, *evaluations]
-    matched_attributes, unmatched_attributes, unknown_attributes = _split_explanations(all_evaluations)
-
-    optional_policy = match_policy.get("optional_match_mode", "any")
-    optional_policy_satisfied = _optional_policy_satisfied(optional_policy, evaluations)
-    score = _calculate_score(selection_score, evaluations)
-
     return {
         "provider": {
             "provider_id": provider["provider_id"],
@@ -662,14 +607,14 @@ def _build_result(
             "part_family": offering["part_family"],
         },
         "match": {
-            "status": _result_status(part_type_status, evaluations),
-            "score": score,
+            "status": "full_match",
+            "score": 1.0,
             "hard_filters_passed": True,
-            "optional_policy_satisfied": optional_policy_satisfied,
+            "optional_policy_satisfied": True,
         },
-        "matched_attributes": matched_attributes,
-        "unmatched_attributes": unmatched_attributes,
-        "unknown_attributes": unknown_attributes,
+        "matched_attributes": [category_evaluation, family_evaluation, part_type_evaluation, *evaluations],
+        "unmatched_attributes": [],
+        "unknown_attributes": [],
         "evidence": _relevant_evidence(provider, offering),
     }
 
@@ -699,7 +644,7 @@ def search_service_discovery_catalog(
         if offering.get("part_family") != selection["part_family"]:
             continue
 
-        part_type_evaluation, selection_score, part_type_status = _evaluate_part_type(selection, offering)
+        part_type_evaluation = _evaluate_part_type(selection, offering)
 
         evaluations = [
             *_evaluate_family_requirements(
@@ -710,7 +655,6 @@ def search_service_discovery_catalog(
                 requirements.get("part_type_specifications", {}),
                 offering,
                 selection["part_type"],
-                part_type_status,
             ),
             *_evaluate_generic_requirements(
                 requirements.get("generic_requirements", {}),
@@ -719,19 +663,17 @@ def search_service_discovery_catalog(
             ),
         ]
 
-        if match_policy.get("unknown_policy") == "reject_unknown":
-            if part_type_status == "unknown" or any(item["status"] == "unknown" for item in evaluations):
-                continue
+        if part_type_evaluation["status"] != "matched" or any(
+            item["status"] != "matched" for item in evaluations
+        ):
+            continue
 
         result = _build_result(
             provider=provider,
             offering=offering,
             selection=selection,
             part_type_evaluation=part_type_evaluation,
-            selection_score=selection_score,
-            part_type_status=part_type_status,
             evaluations=evaluations,
-            match_policy=match_policy,
         )
 
         minimum_score = match_policy.get("minimum_score")
@@ -742,8 +684,6 @@ def search_service_discovery_catalog(
 
     results.sort(
         key=lambda result: (
-            -result["match"]["score"],
-            0 if result["match"]["status"] != "unknown_match" else 1,
             result["provider"]["provider_id"],
             result["offering"]["offering_id"],
         )
@@ -755,7 +695,10 @@ def search_service_discovery_catalog(
         "query_interpretation": {
             "selection": deepcopy(request["selection"]),
             "requirements": deepcopy(request["requirements"]),
-            "match_policy": deepcopy(request["match_policy"]),
+            "match_policy": {
+                **STRICT_MATCH_POLICY,
+                "minimum_score": match_policy.get("minimum_score"),
+            },
         },
         "warnings": deepcopy(canonical_request.warnings),
         "result_count": len(results),

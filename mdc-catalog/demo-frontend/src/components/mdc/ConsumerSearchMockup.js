@@ -244,9 +244,8 @@ const buildSearchPayload = (form, categoryMap = {}) => {
       generic_requirements: genericRequirements,
     },
     match_policy: {
-      unknown_policy: "keep_as_unknown",
-      optional_match_mode: "score_only",
-      minimum_score: null,
+      unknown_policy: "reject_unknown",
+      optional_match_mode: "all",
     },
   });
 };

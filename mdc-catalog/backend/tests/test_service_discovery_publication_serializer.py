@@ -93,6 +93,17 @@ def make_valid_family_level_gears_payload() -> dict:
     }
 
 
+def make_valid_confirmed_spur_gear_payload() -> dict:
+    payload = make_valid_family_level_gears_payload()
+    payload["offerings"][0]["supported_part_types"] = [{
+        "part_type": "spur_gear",
+        "support_status": "confirmed",
+        "source_type": "provider_confirmed",
+        "confidence": "declared",
+    }]
+    return payload
+
+
 def make_valid_bracket_payload() -> dict:
     return {
         "provider_id": "example_provider",

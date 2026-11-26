@@ -29,7 +29,7 @@ from apps.search.service_discovery_matching_alignment import (
     search_service_discovery_catalog_via_local_rdf,
 )
 from tests.test_service_discovery_publication_serializer import (
-    make_valid_family_level_gears_payload,
+    make_valid_confirmed_spur_gear_payload,
 )
 
 
@@ -103,13 +103,13 @@ class M4AutomaticSemanticSyncTests(TransactionTestCase):
         self.addCleanup(self.search_patcher.stop)
 
     def provider_payload(self, provider_id="m4_primary", name="M4 Primary"):
-        payload = make_valid_family_level_gears_payload()
+        payload = make_valid_confirmed_spur_gear_payload()
         payload["provider_id"] = provider_id
         payload["provider_name"] = name
         return payload
 
     def same_category_offering(self, name, module_max):
-        offering = deepcopy(make_valid_family_level_gears_payload()["offerings"][0])
+        offering = make_valid_confirmed_spur_gear_payload()["offerings"][0]
         offering["offering_name"] = name
         offering["family_capabilities"]["module"]["max"] = module_max
         return offering
@@ -203,10 +203,7 @@ class M4AutomaticSemanticSyncTests(TransactionTestCase):
             "module",
             {item["field"] for item in sibling_result["matched_capabilities"]},
         )
-        self.assertIn(
-            "module",
-            {item["field"] for item in primary_result["unmatched_capabilities"]},
-        )
+        self.assertIsNone(primary_result)
 
         provider_detail = self.client.get("/api/providers/m4_primary")
         provider_patch = self.client.patch(
@@ -240,14 +237,14 @@ class M4AutomaticSemanticSyncTests(TransactionTestCase):
                 }
             }
         )
-        primary = self.result(capability_search, primary_id)
+        self.assertIsNone(self.result(capability_search, primary_id))
+        retained_search = self.search(requirements={
+            "part_family_specifications": {"diametral_pitch": {"exact": 10}},
+        })
+        primary = self.result(retained_search, primary_id)
         self.assertIn(
-            "module",
-            {item["field"] for item in primary["unknown_capabilities"]},
-        )
-        self.assertNotIn(
             "diametral_pitch",
-            {item["field"] for item in primary["unknown_capabilities"]},
+            {item["field"] for item in primary["matched_capabilities"]},
         )
 
         unrelated = self.client.post(

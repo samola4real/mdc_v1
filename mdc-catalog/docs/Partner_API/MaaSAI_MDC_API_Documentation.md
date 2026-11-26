@@ -252,7 +252,9 @@ curl https://maasai-mdc-v1.vercel.app/api/catalog/filters
 
 ### Purpose
 
-Receives a structured service request from a MaaS Consumer/Marketplace and returns provider offerings that satisfy or partially satisfy the request according to the MDC matching policy.
+Returns the offerings with confirmed support for the requested service category, family and part type that satisfy every supplied technical requirement. The MaaS Recommendation System compares and ranks the eligible offerings.
+
+This is an intentional change from the earlier permissive discovery behavior on the same contract version. A failed requirement, partial coverage of a list or bounding box, or missing or unconfirmed required evidence excludes an offering. Omitted requirements and empty selection lists impose no constraint.
 
 ### Content type
 
@@ -271,7 +273,7 @@ Content-Type: application/json
 | `part_family` | Yes | Requested part family; must be consistent with `service_category` |
 | `part_type` | Yes | Requested part type; must belong to the selected `part_family` |
 | `requirements` | No | Structured part/manufacturing requirements |
-| `match_policy` | No | Optional matching-policy controls |
+| `match_policy` | No | Compatibility policy fields and optional additional score restriction |
 
 ## 6.2 Requirements structure
 
@@ -313,7 +315,7 @@ quality
 weight_kg
 ```
 
-Controlled values such as materials, processes, and certifications should be obtained from `GET /api/catalog/filters`.
+Use the controlled values from `GET /api/catalog/filters`. Each requested material, process and certification must be supported by the offering or by certification evidence applying to it. The search contract accepts material families. Available grades remain evidence, and `material_grades` as a separate search criterion returns HTTP 400.
 
 ## 6.3 Range values
 
@@ -329,7 +331,7 @@ or:
 {"exact": 50}
 ```
 
-A request may use one or more of `min`, `max`, and `exact` where valid for the selected field.
+A request may use one or more of `min`, `max`, and `exact` where valid for the selected field. A dimensional range must cover the requested endpoints, including equality, and every supplied component of a bounding box must match. Generic tolerance and surface finish compare the reported provider maximum with the requested bounds. An `exact` value for these two generic fields acts as an upper limit, as does `max`.
 
 ## 6.4 Representative metal-part request
 
@@ -366,24 +368,25 @@ A request may use one or more of `min`, `max`, and `exact` where valid for the s
 
 `requirements` may be empty when the Marketplace only wants to discover providers supporting the selected service category / part family / part type.
 
-## 6.5 Optional match policy
+## 6.5 Match policy compatibility
 
 The optional `match_policy` object currently supports:
 
-| Field | Accepted values | Default |
+| Field | Accepted values | Effective value |
 |---|---|---|
-| `optional_match_mode` | `any`, `all`, `score_only` | `any` |
-| `unknown_policy` | `keep_as_unknown`, `reject_unknown` | `keep_as_unknown` |
-| `minimum_score` | number from `0` to `1`, or `null` | `null` |
+| `optional_match_mode` | `any`, `all`, `score_only` | `all` |
+| `unknown_policy` | `keep_as_unknown`, `reject_unknown` | `reject_unknown` for required evidence |
+| `minimum_score` | number from `0` to `1`, or `null` | Optional restriction applied after eligibility, default `null` |
+
+MDC normalizes and applies the strict policy for every accepted caller. Legacy values cannot admit a partial or unknown result.
 
 Example:
 
 ```json
 {
   "match_policy": {
-    "optional_match_mode": "any",
-    "unknown_policy": "keep_as_unknown",
-    "minimum_score": null
+    "optional_match_mode": "all",
+    "unknown_policy": "reject_unknown"
   }
 }
 ```
@@ -402,7 +405,7 @@ Example:
 | `part_family` | Requested part family |
 | `part_type` | Requested part type |
 | `result_count` | Number of provider offerings returned |
-| `results` | Matching/partially matching provider offerings |
+| `results` | All eligible offerings in stable provider and offering ID order. Empty when none qualify. |
 
 ## 7.2 Result object
 
@@ -418,8 +421,8 @@ Each result contains:
 | `part_family` | Part family of the returned offering |
 | `match` | Match status and score |
 | `matched_capabilities` | Requested manufacturing requirements that the offering satisfies |
-| `unmatched_capabilities` | Requested requirements known not to be satisfied |
-| `unknown_capabilities` | Requested requirements for which the catalogue does not have sufficient confirmed evidence |
+| `unmatched_capabilities` | Compatibility field, empty for eligible offerings |
+| `unknown_capabilities` | Compatibility field, empty for eligible offerings |
 
 ## 7.3 Match object
 
@@ -430,7 +433,7 @@ Each result contains:
 }
 ```
 
-The exact status and score depend on the request and current catalogue data.
+Eligible results carry `full_match` and score `1.0` for compatibility. Ranking is the Recommendation System's responsibility.
 
 ## 7.4 Capability comparison objects
 
@@ -441,16 +444,6 @@ A matched capability is represented using fields such as:
   "field": "module",
   "requested": {"exact": 2.0},
   "provided": {"min": 0.3, "max": 10.0}
-}
-```
-
-An unmatched or unknown capability can additionally include a `reason`:
-
-```json
-{
-  "field": "surface_finish_ra_um",
-  "requested": {"max": 1.6},
-  "reason": "No confirmed value is available for this requirement."
 }
 ```
 
@@ -523,7 +516,7 @@ General shape:
 
 | HTTP status | Error code | Meaning |
 |---:|---|---|
-| `200` | — | Search completed successfully |
+| `200` | — | Search completed, with `result_count: 0` and `results: []` when no offering qualifies |
 | `400` | `invalid_service_discovery_request` | Request fields, controlled values, selection relationships, or requirement structure are invalid |
 | `400` | `unsupported_contract_version` | An unsupported explicit `contract_version` was submitted |
 | `503` | `service_discovery_search_unavailable` | No configured service-discovery backend could complete the search |

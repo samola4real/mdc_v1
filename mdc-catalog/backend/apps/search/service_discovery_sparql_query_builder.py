@@ -110,6 +110,14 @@ def build_service_discovery_evidence_query(
             )
 
     values = "\n        ".join(_uri(offering) for offering in offering_resources)
+    component_properties = "\n        ".join(
+        f"OPTIONAL {{ ?component mdc:{prop} ?{prop} . }}"
+        for prop in (
+            "minValue", "maxValue", "exactValue", "rawValue", "unit", "qualifier",
+            "approximate", "qualityStandard", "bestClass", "comparisonRule",
+            "normalizedOrder", "explicitNullField", "sourceType", "confidence", "sourceNote",
+        )
+    )
 
     return f"""
 {PREFIXES}
@@ -119,6 +127,7 @@ SELECT
     ?evidenceKind
     ?evidence
     ?fieldCode
+    ?componentCode
     ?capabilityField
     ?appliesToPartType
     ?partTypeCode
@@ -224,6 +233,22 @@ WHERE {{
     }}
     UNION
     {{
+        VALUES (?capabilityProperty ?evidenceKind) {{
+            (mdc:hasFamilyCapability "family_capability")
+            (mdc:hasPartTypeCapability "part_type_capability")
+            (mdc:hasGenericCapability "generic_capability")
+        }}
+        ?offering ?capabilityProperty ?evidence .
+        ?evidence mdc:fieldCode ?fieldCode ;
+            mdc:capabilityField ?capabilityField ;
+            mdc:hasComponent ?component .
+        ?component mdc:fieldCode ?componentCode .
+        OPTIONAL {{ ?evidence mdc:appliesToPartType ?appliesToPartType . }}
+        OPTIONAL {{ ?evidence mdc:partTypeCode ?partTypeCode . }}
+        {component_properties}
+    }}
+    UNION
+    {{
         ?offering mdc:hasMaterialEvidence ?evidence .
         BIND("material" AS ?evidenceKind)
         ?evidence mdc:material ?material ;
@@ -254,10 +279,17 @@ WHERE {{
     }}
     UNION
     {{
-        ?offering mdc:offeredBy ?provider .
-        ?provider mdc:hasCertificationEvidence ?evidence .
+        {{
+            ?offering mdc:offeredBy ?provider .
+            ?provider mdc:hasCertificationEvidence ?evidence .
+            BIND("provider" AS ?evidenceScope)
+        }}
+        UNION
+        {{
+            ?offering mdc:hasCertificationEvidence ?evidence .
+            BIND("offering" AS ?evidenceScope)
+        }}
         BIND("certification" AS ?evidenceKind)
-        BIND("provider" AS ?evidenceScope)
         ?evidence mdc:certification ?certification ;
             mdc:certificationCode ?certificationCode .
         OPTIONAL {{ ?evidence mdc:sequenceIndex ?sequenceIndex . }}
@@ -266,5 +298,5 @@ WHERE {{
         OPTIONAL {{ ?evidence mdc:sourceNote ?sourceNote . }}
     }}
 }}
-ORDER BY ?offering ?evidenceKind ?sequenceIndex ?evidence ?gradeSequenceIndex ?availableGrade
+ORDER BY ?offering ?evidenceKind ?sequenceIndex ?evidence ?componentCode ?gradeSequenceIndex ?availableGrade
 """.strip()

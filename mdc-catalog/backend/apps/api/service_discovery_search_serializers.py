@@ -11,6 +11,7 @@ from apps.ontology.vocabularies import (
     get_vocabulary_values,
 )
 from apps.providers.validators import FORBIDDEN_ROUTE_KEYS
+from apps.search.service_discovery_request import STRICT_MATCH_POLICY
 
 
 ALLOWED_OPTIONAL_MATCH_MODES = {
@@ -318,12 +319,16 @@ def _validate_requirements(
                 f"{field_name} must be supplied in its scoped specification group "
                 "for the selected part type."
             )
-        generic_requirements[field_name] = _validate_generic_requirement(
+        requirement = _validate_generic_requirement(
             field_name,
             value,
             location=f"requirements.generic_requirements.{field_name}",
             field_definitions=field_definitions,
         )
+        if requirement == []:
+            del generic_requirements[field_name]
+        else:
+            generic_requirements[field_name] = requirement
 
     return normalized
 
@@ -339,7 +344,7 @@ def _validate_string_choice_list(
 
     normalized = []
     for index, item in enumerate(value):
-        if item not in choices:
+        if not isinstance(item, str) or item not in choices:
             _raise(f"{location}[{index}] has invalid value '{item}'.")
         normalized.append(item)
     return normalized
@@ -409,8 +414,7 @@ def _validate_generic_requirement(
 
 def _default_match_policy() -> dict:
     return {
-        "optional_match_mode": "any",
-        "unknown_policy": "keep_as_unknown",
+        **STRICT_MATCH_POLICY,
         "minimum_score": None,
     }
 
@@ -430,14 +434,18 @@ def _validate_match_policy(value: Any) -> dict:
     normalized = _default_match_policy()
 
     optional_match_mode = value.get("optional_match_mode", normalized["optional_match_mode"])
-    if optional_match_mode not in ALLOWED_OPTIONAL_MATCH_MODES:
+    if (
+        not isinstance(optional_match_mode, str)
+        or optional_match_mode not in ALLOWED_OPTIONAL_MATCH_MODES
+    ):
         _raise("match_policy.optional_match_mode has an invalid value.")
-    normalized["optional_match_mode"] = optional_match_mode
 
     unknown_policy = value.get("unknown_policy", normalized["unknown_policy"])
-    if unknown_policy not in ALLOWED_UNKNOWN_POLICIES:
+    if (
+        not isinstance(unknown_policy, str)
+        or unknown_policy not in ALLOWED_UNKNOWN_POLICIES
+    ):
         _raise("match_policy.unknown_policy has an invalid value.")
-    normalized["unknown_policy"] = unknown_policy
 
     if "minimum_score" in value:
         minimum_score = value["minimum_score"]

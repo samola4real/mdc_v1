@@ -27,6 +27,7 @@ from apps.search.service_discovery_local_matcher import (
 )
 from tests.test_service_discovery_matching_alignment import gear_request
 from tests.test_service_discovery_publication_serializer import (
+    make_valid_confirmed_spur_gear_payload,
     make_valid_family_level_gears_payload,
 )
 
@@ -295,9 +296,11 @@ class M2MultiOfferingManagementTests(TestCase):
         payload = provider_payload()
         payload["offerings"][0]["offering_name"] = "Small module line"
         payload["offerings"][0]["family_capabilities"]["module"]["max"] = 6
-        payload["offerings"].append(
-            same_category_offering("Large module line", module_max=18)
-        )
+        confirmed_type = make_valid_confirmed_spur_gear_payload()["offerings"][0]["supported_part_types"]
+        payload["offerings"][0]["supported_part_types"] = confirmed_type
+        sibling = same_category_offering("Large module line", module_max=18)
+        sibling["supported_part_types"] = deepcopy(confirmed_type)
+        payload["offerings"].append(sibling)
         self.assertEqual(self.register(payload).status_code, status.HTTP_201_CREATED)
 
         records = load_service_discovery_providers_from_db()

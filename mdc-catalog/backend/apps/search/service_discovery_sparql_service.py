@@ -21,7 +21,8 @@ class ServiceDiscoverySparqlRetrievalError(Exception):
 EVIDENCE_STATUS_ORDER = {
     "confirmed": 0,
     "candidate_requiring_confirmation": 1,
-    "not_asserted": 2,
+    "unknown": 2,
+    "not_asserted": 3,
 }
 
 
@@ -68,7 +69,7 @@ def _row_dict(row) -> dict[str, Any]:
 def _candidate_from_row(row, selection: dict[str, Any]) -> dict:
     data = _row_dict(row)
     support_status = _string_value(data.get("partTypeSupportStatus"))
-    if support_status in {"confirmed", "candidate_requiring_confirmation"}:
+    if support_status in {"confirmed", "candidate_requiring_confirmation", "unknown"}:
         evidence_status = support_status
     elif support_status is None:
         evidence_status = "not_asserted"
@@ -122,6 +123,9 @@ def _capability_from_row(data: dict[str, Any]) -> dict:
     optional_fields = {
         "applies_to_part_type": data.get("appliesToPartType"),
         "part_type_code": _string_value(data.get("partTypeCode")),
+    }
+    item.update({key: value for key, value in optional_fields.items() if value is not None})
+    record_fields = {
         "min": _python_value(data.get("minValue")),
         "max": _python_value(data.get("maxValue")),
         "exact": _python_value(data.get("exactValue")),
@@ -137,10 +141,15 @@ def _capability_from_row(data: dict[str, Any]) -> dict:
         "confidence": _string_value(data.get("confidence")),
         "source_note": _string_value(data.get("sourceNote")),
     }
-    item.update({key: value for key, value in optional_fields.items() if value is not None})
+    record = {key: value for key, value in record_fields.items() if value is not None}
     explicit_null_field = _string_value(data.get("explicitNullField"))
     if explicit_null_field is not None:
-        item[explicit_null_field] = None
+        record[explicit_null_field] = None
+    component = _string_value(data.get("componentCode"))
+    if component is None:
+        item.update(record)
+    else:
+        item["components"] = {component: record}
     return item
 
 
@@ -193,8 +202,12 @@ def _evidence_item_from_row(data: dict[str, Any]) -> dict:
 
 def _merge_capability_item(existing: dict, incoming: dict) -> None:
     for key, value in incoming.items():
-        if key not in existing:
-            existing[key] = value
+        if key == "components":
+            components = existing.setdefault(key, {})
+            for code, record in value.items():
+                _merge_capability_item(components.setdefault(code, {}), record)
+        else:
+            existing.setdefault(key, value)
 
 
 def _sequence_sort_key(item: dict) -> tuple[int, int, str, str]:

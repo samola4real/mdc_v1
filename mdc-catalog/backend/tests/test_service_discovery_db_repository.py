@@ -322,4 +322,4 @@ class ServiceDiscoveryDbRepositoryTests(TestCase):
                 actual = search_service_discovery_catalog(request, provider_records=db_records)
                 self.assertEqual(actual, expected)
                 seen_providers.update(r["provider"]["provider_id"] for r in expected["results"])
-        self.assertEqual(seen_providers, {"demo_machining_provider", "precipart", "tasowheel"})
+        self.assertEqual(seen_providers, {"precipart", "tasowheel"})

@@ -125,8 +125,8 @@ class ServiceDiscoverySearchRequestSerializerTests(SimpleTestCase):
         self.assertEqual(
             serializer.validated_data["match_policy"],
             {
-                "optional_match_mode": "any",
-                "unknown_policy": "keep_as_unknown",
+                "optional_match_mode": "all",
+                "unknown_policy": "reject_unknown",
                 "minimum_score": None,
             },
         )

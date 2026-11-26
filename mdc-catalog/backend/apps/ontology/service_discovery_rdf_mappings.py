@@ -207,6 +207,13 @@ def certification_evidence_resource(provider_id: str, certification_code: str) -
     ]
 
 
+def offering_certification_evidence_resource(offering_id: str, certification_code: str) -> URIRef:
+    return MDC[
+        f"offering_certification_evidence_{safe_identifier(offering_id)}_"
+        f"{safe_identifier(certification_code)}"
+    ]
+
+
 def component_evidence_resource(parent_resource: URIRef, component_field: str) -> URIRef:
     return MDC[
         f"component_{safe_identifier(str(parent_resource).split('#')[-1])}_"

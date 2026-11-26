@@ -4,6 +4,7 @@ import { exportJWK, generateKeyPair, SignJWT } from 'jose';
 import route, { allowsDisposableWrite, resolveEndpoint, verifyAccessRoles } from '../src/pages/api/mdc/[...path].js';
 import { exactOffering, loadManagementSnapshot, strongEtag } from '../src/components/mdc/providerManagementFlow.js';
 import { readBackRegistration } from '../src/components/mdc/providerRegistrationFlow.js';
+import { formatSuitability } from '../src/components/mdc/searchResultFormatters.js';
 import {
     buildProviderPatches, buildProviderPreviewPayload, emptyProviderForm, hydrateProviderForm
 } from '../src/components/mdc/providerPayloadBuilder.js';
@@ -30,6 +31,13 @@ const offering = {
     custom_offering_fields: { comment: 'remove', opaque: { facts: [1] }, other: 'keep' },
     custom_capability_fields: {}
 };
+
+test('discovery labels distinguish eligibility from unmet or unconfirmed requirements', () => {
+    assert.equal(formatSuitability('full_match'), 'Eligible');
+    assert.equal(formatSuitability('partial_match'), 'Requirements unmet');
+    assert.equal(formatSuitability('unmatched'), 'Requirements unmet');
+    assert.equal(formatSuitability('unknown_match'), 'Evidence incomplete');
+});
 
 test('registration uses the canonical envelope and typed evidence', () => {
     const body = buildProviderPreviewPayload({

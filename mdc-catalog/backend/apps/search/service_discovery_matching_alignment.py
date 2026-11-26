@@ -104,6 +104,8 @@ def _capability_record(item: dict) -> dict:
     ]:
         if source_key in item:
             record[target_key] = _provider_record_value(item[source_key])
+    for code, component in item.get("components", {}).items():
+        record[code] = _capability_record({"field_code": code, **component})
     return record
 
 
@@ -145,7 +147,7 @@ def _process_record(item: dict) -> dict:
 
 
 def _certification_record(item: dict) -> dict | None:
-    if item.get("evidence_scope") not in {None, "provider"}:
+    if item.get("evidence_scope") not in {None, "provider", "offering"}:
         return None
     code = item.get("certification_code")
     if not code:
@@ -181,7 +183,7 @@ def _reconstruct_offering(candidate: dict, requested_part_type: str) -> dict:
         location="candidate.requested_part_type_support",
     )
     evidence_status = support.get("evidence_status")
-    if evidence_status in {"confirmed", "candidate_requiring_confirmation"}:
+    if evidence_status in {"confirmed", "candidate_requiring_confirmation", "unknown"}:
         if support.get("support_status") != evidence_status:
             raise ServiceDiscoveryMatchingAlignmentError(
                 "Requested part-type evidence status and support_status differ."
@@ -280,8 +282,13 @@ def build_request_scoped_provider_records_from_retrieval(
             certification = _certification_record(_require_dict(item, location="certification evidence"))
             if certification is None:
                 continue
-            if certification not in provider_record["provider"]["certifications"]:
-                provider_record["provider"]["certifications"].append(certification)
+            scoped = (
+                offering["generic_capabilities"].setdefault("certifications", [])
+                if item.get("evidence_scope") == "offering"
+                else provider_record["provider"]["certifications"]
+            )
+            if certification not in scoped:
+                scoped.append(certification)
 
     for provider_record in providers.values():
         provider_record["offerings"].sort(key=lambda item: item["offering_id"])

@@ -8,6 +8,7 @@ from rest_framework.test import APIClient
 from apps.search.service_discovery_fuseki_service import (
     ServiceDiscoveryFusekiRetrievalError,
 )
+from apps.search.service_discovery_local_matcher import search_service_discovery_catalog
 from apps.search.service_discovery_runtime_search import (
     ServiceDiscoveryRuntimeSearchError,
 )
@@ -88,6 +89,37 @@ class ServiceDiscoverySearchEndpointTests(SimpleTestCase):
 
         self.assertNotEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    @patch("apps.search.service_discovery_runtime_search.search_service_discovery_catalog_via_fuseki")
+    def test_public_search_returns_only_eligible_offerings_with_legacy_policy(self, fuseki):
+        fuseki.side_effect = lambda request, **kwargs: search_service_discovery_catalog(request)
+        for mode in ("score_only", "any"):
+            for module, expected in (
+                (1, ["precipart_precision_gears", "tasowheel_precision_gears"]),
+                (20, []),
+            ):
+                with self.subTest(mode=mode, module=module):
+                    payload = complete_spur_gear_request()
+                    payload["requirements"] = {
+                        "part_family_specifications": {"module": {"exact": module}},
+                    }
+                    payload["match_policy"] = {
+                        "optional_match_mode": mode,
+                        "unknown_policy": "keep_as_unknown",
+                    }
+                    response = self.client.post(
+                        "/api/service-discovery/search", payload, format="json"
+                    )
+                    self.assertEqual(response.status_code, 200)
+                    body = response.json()
+                    self.assertEqual(body["contract_version"], "1.0")
+                    self.assertEqual(body["result_count"], len(expected))
+                    self.assertEqual([item["offering_id"] for item in body["results"]], expected)
+                    for item in body["results"]:
+                        self.assertEqual(item["match"]["status"], "full_match")
+                        self.assertEqual(item["unmatched_capabilities"], [])
+                        self.assertEqual(item["unknown_capabilities"], [])
+                    self.assertIsNone(fuseki.call_args.args[0].match_policy["minimum_score"])
 
     def test_existing_shared_health_endpoint_still_works(self):
         response = self.client.get("/api/health")

@@ -64,14 +64,14 @@ const getSupportStatus = (result) => {
     }
 
     const matchStatus = getMatch(result).status || result.status;
-    if (['full_match', 'partial_match', 'matched'].includes(matchStatus)) return 'Confirmed';
+    if (['full_match', 'matched'].includes(matchStatus)) return 'Confirmed';
     if (matchStatus === 'unmatched') return 'Not matched';
     return 'Not confirmed';
 };
 
 const getSeverity = (status) => {
-    if (status === 'Suitable' || status === 'Confirmed' || status === 'Matched') return 'success';
-    if (status === 'Candidate' || status === 'Evidence incomplete' || status === 'Not confirmed') return 'warning';
+    if (status === 'Eligible' || status === 'Confirmed' || status === 'Matched') return 'success';
+    if (status === 'Requirements unmet' || status === 'Evidence incomplete' || status === 'Not confirmed') return 'warning';
     return 'info';
 };
 

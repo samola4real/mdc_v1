@@ -153,21 +153,10 @@ class ServiceDiscoveryFusekiMatchingAlignmentTests(SimpleTestCase):
             tasowheel["evidence"]["generic_capabilities"]["surface_finish_ra_um"]["max"]
         )
 
-    def test_crown_gear_not_asserted_and_candidate_evidence_are_equivalent(self):
+    def test_crown_gear_not_asserted_and_candidate_evidence_are_equivalently_excluded(self):
         remote = self.assert_direct_local_remote_equivalent(gear_request("crown_gear"))
-
-        tasowheel = result_by_provider(remote, "tasowheel")
-        self.assertEqual(tasowheel["match"]["status"], "unknown_match")
-        precipart = result_by_provider(remote, "precipart")
-        if precipart is not None:
-            self.assertTrue(
-                any(
-                    item["field"] == "part_type"
-                    and item.get("source_type") == "public_web"
-                    and item.get("confidence") == "inferred"
-                    for item in precipart["unknown_attributes"]
-                )
-            )
+        self.assertEqual(remote["results"], [])
+        self.assertEqual(remote["result_count"], 0)
 
     def test_splined_shaft_scope_direct_local_and_remote_matching_are_equivalent(self):
         remote = self.assert_direct_local_remote_equivalent(

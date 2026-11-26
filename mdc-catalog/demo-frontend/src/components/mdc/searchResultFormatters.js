@@ -114,11 +114,11 @@ export const getNested = (object, path, fallback = undefined) => {
 };
 
 export const formatSuitability = (status) => {
-    if (status === 'matched' || status === 'full_match' || status === 'partial_match') {
-        return 'Suitable';
+    if (status === 'matched' || status === 'full_match') {
+        return 'Eligible';
     }
-    if (status === 'unmatched') {
-        return 'Candidate';
+    if (status === 'unmatched' || status === 'partial_match') {
+        return 'Requirements unmet';
     }
     return 'Evidence incomplete';
 };

@@ -213,6 +213,8 @@ This removes `vertical_flange_length_mm` and retains the horizontal sibling:
 
 ### Canonical search
 
+Discovery returns offerings with a confirmed requested part type and evidence for every supplied requirement. If a previously required field is removed from an offering, the combined request excludes it. A request using only a retained requirement can still find it. Legacy policy values continue to validate under the strict rule, and an empty result is HTTP 200. The MaaS Recommendation System ranks eligible offerings. [API discovery contract](MaaSAI_MDC_API_Documentation.md#6-service-discovery-search)
+
 ```json
 {
   "contract_version": "1.0",
@@ -250,7 +252,13 @@ A matching response contains offering-level identity, never category-as-ID:
       "service_category": "precision_metal_parts",
       "part_family": "metal_part",
       "match": {"status": "full_match", "score": 1.0},
-      "matched_capabilities": [],
+      "matched_capabilities": [
+        {
+          "field": "horizontal_flange_length_mm",
+          "requested": {"max": 170},
+          "provided": {"max": 180}
+        }
+      ],
       "unmatched_capabilities": [],
       "unknown_capabilities": []
     }
