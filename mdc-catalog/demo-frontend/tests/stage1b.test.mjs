@@ -2,6 +2,8 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { exportJWK, generateKeyPair, SignJWT } from 'jose';
 import route, { allowsDisposableWrite, resolveEndpoint, verifyAccessRoles } from '../src/pages/api/mdc/[...path].js';
+import { exactOffering, loadManagementSnapshot, strongEtag } from '../src/components/mdc/providerManagementFlow.js';
+import { readBackRegistration } from '../src/components/mdc/providerRegistrationFlow.js';
 import {
     buildProviderPatches, buildProviderPreviewPayload, emptyProviderForm, hydrateProviderForm
 } from '../src/components/mdc/providerPayloadBuilder.js';
@@ -196,6 +198,66 @@ test('offline transport preserves exact ETag and receipt, strips identity header
     assert.equal(options.headers.Authorization, undefined);
     assert.equal(options.headers['x-mdc-actor-id'], undefined);
     assert.equal(options.redirect, 'error');
+});
+
+test('offline detail reads preserve the strong Preview revision through registration handoff and offering reload', async (t) => {
+    const jwk = { ...await exportJWK(publicKey), kid, alg: 'RS256' };
+    const config = { MDC_KEYCLOAK_AUDIENCE: audience, MDC_KEYCLOAK_ROLE_SOURCE: 'client', MDC_VERCEL_PROTECTION_BYPASS: 'offline-fixture-only' };
+    const previous = Object.keys(config).map((key) => [key, process.env[key]]);
+    t.after(() => previous.forEach(([key, value]) => {
+        if (value === undefined) delete process.env[key];
+        else process.env[key] = value;
+    }));
+    Object.assign(process.env, config);
+
+    const providerTag = '"provider-revision"';
+    const offeringTag = '"offering-revision"';
+    let uncompressedOfferingTag = offeringTag;
+    t.mock.method(globalThis, 'fetch', async (url, options) => {
+        if (String(url) === issuer + '/protocol/openid-connect/certs') return Response.json({ keys: [jwk] });
+        const path = new URL(url).pathname;
+        const encoding = new Headers(options.headers).get('accept-encoding');
+        assert.equal(options.method, 'GET');
+        if (path === '/api/providers/' + providerId) {
+            return Response.json({ contract_version: '1.0', ...provider }, { headers: { ETag: providerTag } });
+        }
+        if (path === '/api/providers/' + providerId + '/offerings') {
+            assert.equal(encoding, null);
+            return Response.json({ contract_version: '1.0', provider_id: providerId, offerings: [offering] });
+        }
+        assert.equal(path, '/api/offerings/' + offeringId);
+        // The Preview returns a weak ETag when it compresses the offering detail.
+        const etag = encoding === 'identity' ? uncompressedOfferingTag : 'W/' + offeringTag;
+        return Response.json({ contract_version: '1.0', ...offering }, { headers: etag ? { ETag: etag } : {} });
+    });
+
+    const authorization = 'Bearer ' + await fixture();
+    const getDetail = async (...path) => {
+        const { data, statusCode, headers } = await invoke({ method: 'GET', path, authorization });
+        assert.equal(statusCode, 200);
+        return { data, status: statusCode, etag: headers.ETag ?? null };
+    };
+    const services = {
+        getProvider: (id) => getDetail('providers', id),
+        listProviderOfferings: async (id) => (await getDetail('providers', id, 'offerings')).data,
+        getOffering: (id) => getDetail('offerings', id)
+    };
+    const readBack = await readBackRegistration({ providerId, offeringId }, services);
+    assert.equal(readBack.kind, 'matching');
+    const reloaded = await loadManagementSnapshot(providerId, offeringId, services);
+    for (const snapshot of [readBack.snapshot, reloaded]) {
+        assert.equal(snapshot.provider.etag, providerTag);
+        assert.equal(snapshot.offering.etag, offeringTag);
+        assert.equal(snapshot.offering.data.offering_id, offeringId);
+    }
+    assert.equal((await exactOffering(providerId, offeringId, services)).etag, offeringTag);
+
+    for (const etag of ['W/' + offeringTag, null]) {
+        uncompressedOfferingTag = etag;
+        const resource = await exactOffering(providerId, offeringId, services);
+        assert.equal(resource.etag, etag);
+        assert.equal(strongEtag(resource.etag), false);
+    }
 });
 
 test('offline default relay verifies session before forwarding and fails closed on issuer errors', async (t) => {

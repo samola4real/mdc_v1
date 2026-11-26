@@ -150,6 +150,10 @@ export default async function stage1bMdc(req, res) {
     }
     const etag = conditional || alternate;
     const headers = { Accept: 'application/json', 'x-vercel-protection-bypass': bypass };
+    if (req.method === 'GET' && ['provider', 'offering'].includes(endpoint.resource)) {
+        // Preview compression weakens the lifecycle ETag needed for a conditional write.
+        headers['Accept-Encoding'] = 'identity';
+    }
     if (etag && ['PATCH', 'DELETE'].includes(req.method)) headers['X-MDC-If-Match'] = etag;
     const sendsBody = ['POST', 'PATCH'].includes(req.method);
     if (sendsBody) {
