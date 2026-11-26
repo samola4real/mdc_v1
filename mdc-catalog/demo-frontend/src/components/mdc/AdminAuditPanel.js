@@ -5,6 +5,7 @@ import { Message } from 'primereact/message';
 import { Panel } from 'primereact/panel';
 import { getCatalogFilters, normalizeCatalogFilters } from '@/services/mdc/catalog.service';
 import { getBackendHealth } from '@/services/mdc/health.service';
+import AdminProviderDeletion from './AdminProviderDeletion';
 import StatusTag from './StatusTag';
 
 const StatusCard = ({ title, value, status, statusLabel, description }) => (
@@ -55,6 +56,7 @@ const AdminAuditPanel = () => {
 
     return (
         <div className="flex flex-column gap-4">
+            <AdminProviderDeletion />
             <Panel header="System status">
                 <div className="grid">
                     <div className="col-12 md:col-6">

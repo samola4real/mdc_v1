@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import {
-    createOffering, deleteOffering, deleteProvider, getOffering, getProvider, listProviderOfferings, updateOffering, updateProvider
+    createOffering, deleteOffering, getOffering, getProvider, listProviderOfferings, updateOffering, updateProvider
 } from '@/services/mdc/provider.service';
 import { isDisposableMdcId, isDisposableOfferingId } from '@/services/mdc/stage1bScope';
 import {
@@ -9,12 +9,15 @@ import {
 import { emptyRegistrationForm, hasRegistrationDraft } from './providerRegistrationPayload';
 import { createRegistrationRequestGuard, safeText } from './providerRegistrationFlow';
 import {
-    acceptParentRevision, exactList, exactOffering, exactProvider, executeManagementWrite, loadManagementSnapshot,
-    observeManagementTarget, observedWrite, strongEtag, writeRecovery
+    acceptParentRevision, afterVerifiedOfferingDeletion, canResumeDeletion, clearOfferingDeletion, confirmDeletionText,
+    deletionRequest, exactList, exactOffering, exactProvider, executeManagementWrite, isDisposableOfferingRow,
+    loadManagementSnapshot, observeManagementTarget, observedWrite, strongEtag, writeRecovery
 } from './providerManagementFlow';
 
-const services = { createOffering, deleteOffering, deleteProvider, getOffering, getProvider, listProviderOfferings, updateOffering, updateProvider };
-const emptyWorkspace = () => ({ provider: null, offering: null, offerings: [], selection: null, add: null, result: null });
+const services = { createOffering, deleteOffering, getOffering, getProvider, listProviderOfferings, updateOffering, updateProvider };
+const emptyWorkspace = () => ({
+    provider: null, offering: null, offerings: [], selection: null, add: null, result: null, offeringDeletions: {}
+});
 const editors = { provider: providerEditor, offering: offeringEditor };
 const pendingEdits = (editor) => Boolean(editorDirty(editor) || editor?.previousDraft || editor?.recovery);
 
@@ -26,10 +29,14 @@ function openedWorkspace({ provider, offering, list }, selection = null) {
 }
 
 function replaceOffering(rows, request, record) {
-    const others = rows.filter(({ offering_id }) => offering_id !== request.offeringId);
-    if (request.operation === 'delete') return others;
-    return others.length === rows.length ? [...rows, record]
-        : rows.map((row) => row.offering_id === request.offeringId ? record : row);
+    return rows.some(({ offering_id }) => offering_id === request.offeringId)
+        ? rows.map((row) => row.offering_id === request.offeringId ? record : row) : [...rows, record];
+}
+
+function refreshedOfferingRows(workspace, rows) {
+    const listed = new Set(rows.map(({ offering_id }) => offering_id));
+    return [...rows, ...workspace.offerings.filter(({ offering_id }) =>
+        Object.hasOwn(workspace.offeringDeletions, offering_id) && !listed.has(offering_id))];
 }
 
 function updateParentEditor(current, latest) {
@@ -45,12 +52,12 @@ function updateParentEditor(current, latest) {
     };
 }
 
-export function useProviderManagement(filters, onRegistrationReadBack) {
+export function useProviderManagement(filters, onRegistrationReadBack, onActionResult) {
     const [state, setState] = useState(emptyWorkspace);
     const [lookupId, setLookupId] = useState('');
     const [busy, setBusy] = useState(null);
     const [runOnce] = useState(createRegistrationRequestGuard);
-    const { provider, offering, add } = state;
+    const { provider, offering, add, offeringDeletions } = state;
     const providerId = provider?.resource.data.provider_id;
     const offeringId = offering?.resource.data.offering_id;
     const manageable = isDisposableMdcId(providerId);
@@ -63,7 +70,7 @@ export function useProviderManagement(filters, onRegistrationReadBack) {
     const providerPending = pendingEdits(provider);
     const offeringPending = pendingEdits(offering);
     const addPending = add && (hasRegistrationDraft(add.draft) || add.recovery);
-    const dirty = Boolean(providerPending || offeringPending || addPending);
+    const dirty = Boolean(providerPending || offeringPending || addPending || Object.keys(offeringDeletions).length);
 
     useEffect(() => {
         if (!dirty) return undefined;
@@ -78,7 +85,7 @@ export function useProviderManagement(filters, onRegistrationReadBack) {
     const confirmDiscard = (hasEdits, action) => !hasEdits || window.confirm(
         'You have unsaved changes or a write awaiting review. Discard this draft and ' + action + '?'
     );
-    const run = (label, operation) => runOnce(async () => {
+    const run = (label, operation, target) => runOnce(async () => {
         setBusy(label);
         try {
             await operation();
@@ -86,7 +93,9 @@ export function useProviderManagement(filters, onRegistrationReadBack) {
             const message = error?.status === 404 ? 'The requested record could not be found.'
                 : error?.status === 401 || error?.status === 403 ? 'The current session cannot access the requested record.'
                     : safeText(error?.message);
-            setState((current) => ({ ...current, result: { kind: 'readError', label, message } }));
+            const result = { kind: 'readError', message, target };
+            setState((current) => ({ ...current, result }));
+            onActionResult(result);
         } finally {
             setBusy(null);
         }
@@ -109,11 +118,15 @@ export function useProviderManagement(filters, onRegistrationReadBack) {
             if (registrationTarget && snapshot.offering) onRegistrationReadBack(snapshot);
             else if (registrationTarget) next.registrationTarget = registrationTarget;
             if (desired && !snapshot.offering) {
-                next.result = { kind: 'notice', message: 'The selected offering could not be found for this provider. Choose a row to inspect another offering.' };
+                next.result = {
+                    kind: 'notice', target: { providerId: id, offeringId: desired },
+                    message: 'The selected offering could not be found for this provider. Choose a row to inspect another offering.'
+                };
+                onActionResult(next.result);
             }
             setLookupId(id);
             setState(next);
-        });
+        }, { providerId: id });
     };
 
     const chooseOffering = (id) => {
@@ -121,7 +134,7 @@ export function useProviderManagement(filters, onRegistrationReadBack) {
         return run('Loading offering', async () => {
             const result = await exactOffering(providerId, id, services);
             setState((current) => ({ ...current, offering: offeringEditor(result), selection: id, add: null, result: null }));
-        });
+        }, { providerId, offeringId: id });
     };
 
     const startAdd = () => {
@@ -141,7 +154,8 @@ export function useProviderManagement(filters, onRegistrationReadBack) {
     const change = (entity, draft) => {
         setState((current) => ({
             ...current, [entity]: { ...current[entity], draft },
-            result: current.result?.kind === 'rejected' && current.result.request?.entity === (entity === 'add' ? 'offering' : entity)
+            result: current.result?.kind === 'rejected' && current.result.request?.operation !== 'delete'
+                && current.result.request?.entity === (entity === 'add' ? 'offering' : entity)
                 ? null : current.result
         }));
     };
@@ -150,6 +164,7 @@ export function useProviderManagement(filters, onRegistrationReadBack) {
         const { request, observed } = outcome;
         const key = request.operation === 'create' ? 'add' : request.entity;
         const recovery = writeRecovery(outcome);
+        onActionResult(outcome);
         if (recovery || !observedWrite(request, observed)) {
             setState((current) => ({
                 ...current,
@@ -160,18 +175,16 @@ export function useProviderManagement(filters, onRegistrationReadBack) {
             return;
         }
         if (request.entity === 'provider') {
-            setState((current) => request.operation === 'delete' ? { ...emptyWorkspace(), result: outcome }
-                : { ...current, provider: providerEditor(observed.resource), result: outcome });
+            setState((current) => ({ ...current, provider: providerEditor(observed.resource), result: outcome }));
             return;
         }
         const [parent, list] = await Promise.allSettled([exactProvider(request.providerId, services), exactList(request.providerId, services)]);
-        const deleted = request.operation === 'delete';
         setState((current) => ({
             ...current, add: null,
             provider: updateParentEditor(current.provider, parent.status === 'fulfilled' && parent.value),
-            offering: deleted ? null : offeringEditor(observed.resource),
-            selection: deleted ? null : request.offeringId,
-            offerings: list.status === 'fulfilled' ? list.value.offerings
+            offering: offeringEditor(observed.resource),
+            selection: request.offeringId,
+            offerings: list.status === 'fulfilled' ? refreshedOfferingRows(current, list.value.offerings)
                 : replaceOffering(current.offerings, request, observed.resource?.data),
             result: outcome
         }));
@@ -184,18 +197,19 @@ export function useProviderManagement(filters, onRegistrationReadBack) {
     const canSave = (editor, changes) => !busy && changes && !editor.recovery
         && Object.keys(changes.patch).length > 0 && Object.keys(changes.errors).length === 0;
     const canSaveProvider = Boolean(canSave(provider, providerChanges));
-    const canSaveOffering = Boolean(canSave(offering, offeringChanges));
+    const canSaveOffering = !offeringDeletions[offeringId] && Boolean(canSave(offering, offeringChanges));
     const canCreate = Boolean(add && !busy && manageable && filters && !add.recovery
+        && !offeringDeletions[newOffering.payload.offering_id]
         && add.duplicateId !== newOffering.payload.offering_id && Object.keys(newOffering.errors).length === 0);
-    const currentRequest = (entity, operation) => ({
-        entity, operation, providerId, offeringId: entity === 'offering' ? offeringId : undefined, etag: state[entity].resource.etag
+    const saveRequest = (entity) => ({
+        entity, operation: 'save', providerId, offeringId: entity === 'offering' ? offeringId : undefined, etag: state[entity].resource.etag
     });
 
     const saveProvider = () => {
-        if (canSaveProvider) return submit('Saving provider', { ...currentRequest('provider', 'save'), payload: providerChanges.patch });
+        if (canSaveProvider) return submit('Saving provider', { ...saveRequest('provider'), payload: providerChanges.patch });
     };
     const saveOffering = () => {
-        if (canSaveOffering) return submit('Saving offering', { ...currentRequest('offering', 'save'),
+        if (canSaveOffering) return submit('Saving offering', { ...saveRequest('offering'),
             payload: offeringChanges.patch, offering: { ...offering.resource.data, ...offeringChanges.patch } });
     };
     const addOffering = () => {
@@ -205,17 +219,56 @@ export function useProviderManagement(filters, onRegistrationReadBack) {
         });
     };
 
-    const remove = (entity) => {
-        const isProvider = entity === 'provider';
-        const target = state[entity];
-        if (busy || !(isProvider ? providerEditable : offeringEditable) || target.recovery) return;
-        const draftExists = isProvider ? dirty : offeringPending;
-        if (!confirmDiscard(draftExists, 'delete this ' + entity)) return;
-        const record = target.resource.data;
-        const message = isProvider ? 'Delete provider ' + record.provider_name + ' (' + providerId + ') and all of its offerings? This permanently removes the provider and its offerings.'
-            : 'Delete offering ' + record.offering_name + ' (' + offeringId + ') from ' + providerId + '? This removes that offering permanently.';
-        if (!window.confirm(message)) return;
-        return submit(isProvider ? 'Deleting provider' : 'Deleting offering', currentRequest(entity, 'delete'));
+    const applyOfferingDeletion = async (outcome) => {
+        const { request, observed } = outcome;
+        onActionResult(outcome);
+        if (!observedWrite(request, observed)) {
+            const recovery = writeRecovery(outcome);
+            setState((current) => ({
+                ...current, result: outcome,
+                ...(recovery && { offeringDeletions: { ...current.offeringDeletions, [request.offeringId]: recovery } })
+            }));
+            return;
+        }
+        const parent = await exactProvider(request.providerId, services).catch(() => null);
+        setState((current) => ({
+            ...afterVerifiedOfferingDeletion(current, outcome),
+            provider: updateParentEditor(current.provider, parent)
+        }));
+    };
+
+    const offeringDeleteDisabled = (id) => Boolean(busy || offeringDeletions[id]
+        || (id === offeringId && offering?.recovery) || add?.recovery?.request.offeringId === id);
+    const removeOffering = (id) => {
+        const row = state.offerings.find(({ offering_id }) => offering_id === id);
+        if (!isDisposableOfferingRow(providerId, row) || offeringDeleteDisabled(id)) return;
+        return run('Checking offering for deletion', async () => {
+            if (!confirmDiscard(id === offeringId && offeringPending, 'delete this offering')) return;
+            const target = await exactOffering(providerId, id, services);
+            if (!strongEtag(target.etag)) throw new Error('A current strong offering revision is required for deletion.');
+            const request = deletionRequest('offering', target);
+            if (!window.confirm(confirmDeletionText(request, target.data))) return;
+            setBusy('Deleting offering');
+            await applyOfferingDeletion(await executeManagementWrite(request, services));
+        }, { providerId, offeringId: id });
+    };
+
+    const checkOfferingDeletion = (id) => {
+        const recovery = offeringDeletions[id];
+        if (busy || !recovery) return;
+        return run('Checking current offering', async () => {
+            const observed = await observeManagementTarget(recovery.request, services);
+            const checked = { ...recovery, observed, checked: true };
+            if (observedWrite(recovery.request, observed)) await applyOfferingDeletion(checked);
+            else setState((current) => ({
+                ...current, offeringDeletions: { ...current.offeringDeletions, [id]: checked }
+            }));
+        }, recovery.request);
+    };
+
+    const resumeOfferingActions = (id) => {
+        if (busy || !canResumeDeletion(offeringDeletions[id])) return;
+        setState((current) => ({ ...current, offeringDeletions: clearOfferingDeletion(current.offeringDeletions, id) }));
     };
 
     const checkLatest = (entity) => {
@@ -263,7 +316,8 @@ export function useProviderManagement(filters, onRegistrationReadBack) {
     return {
         ...state, lookupId, setLookupId, busy, manageable, manageableOffering, providerEditable, offeringEditable,
         providerChanges, offeringChanges, newOffering, canSaveProvider, canSaveOffering, canCreate,
-        acceptRegistration, lookup, chooseOffering, startAdd, cancelAdd, change, saveProvider, saveOffering, addOffering, remove,
+        acceptRegistration, lookup, chooseOffering, startAdd, cancelAdd, change, saveProvider, saveOffering, addOffering,
+        removeOffering, offeringDeleteDisabled, checkOfferingDeletion, resumeOfferingActions,
         checkLatest, useLatest, continueAdd, dismissAttempt,
         canLeave: () => !busy && confirmDiscard(dirty, 'switch modes'), reset: () => setState(emptyWorkspace())
     };

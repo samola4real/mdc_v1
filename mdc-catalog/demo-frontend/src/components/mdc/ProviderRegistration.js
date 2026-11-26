@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import { Button } from 'primereact/button';
-import { Card } from 'primereact/card';
 import { Message } from 'primereact/message';
 import {
     getOffering, getProvider, listProviderOfferings, registerProvider, validateProviderPublication
 } from '@/services/mdc/provider.service';
 import ProviderRegistrationFields from './ProviderRegistrationFields';
+import ProviderActionResult from './ProviderActionResult';
+import { registrationFeedback } from './providerActionFeedback';
 import { buildRegistrationPayload } from './providerRegistrationPayload';
 import {
     createRegistrationRequestGuard, invalidateRegistrationValidation, isCurrentRegistrationValidation,
@@ -28,71 +29,22 @@ function ValidationFeedback({ result, locallyInvalid }) {
         message = 'Validation could not be completed. Try validating again when the service is available.';
     }
     return (
-        <Card>
-            <div className="flex flex-column gap-3" aria-live="polite">
-                <Message severity={severity} text={message} className="w-full justify-content-start" />
-                {result?.message && <div>{result.message}</div>}
-                {result?.messages?.map((text) => <div key={text}>{text}</div>)}
-            </div>
-        </Card>
+        <div className="text-sm line-height-3" role="status">
+            <Message severity={severity} text={message} />
+            {result?.message && <p className="m-0">{result.message}</p>}
+            {result?.messages?.map((text) => <p className="m-0" key={text}>{text}</p>)}
+        </div>
     );
 }
 
-const readBackMessages = {
-    absent: 'The provider ID was absent on read-back. Validate again before choosing to retry.',
-    matching: 'Both submitted IDs were found. Load the existing provider to review it.',
-    providerOnly: 'The provider ID exists. The submitted offering could not be confirmed. Load the existing provider to review it.',
-    unknown: 'Read-back could not establish whether the provider exists. Check the provider again before retrying.'
-};
-
-function rejectionMessage(result) {
-    if (result.code === 'provider_already_exists') return 'This provider ID is already registered. Use a different disposable provider ID or load the existing provider.';
-    if (result.code === 'offering_already_exists') return 'This offering ID is already registered. Choose a different offering ID for this provider.';
-    return 'Registration was rejected. Review the feedback and validate again before submitting.';
-}
-
 export function RegistrationOutcome({ result, onCheck, busy }) {
-    if (!result || result.kind === 'unvalidated') return null;
-    const { identity, receipt } = result;
-    const accepted = result.kind === 'accepted';
-    const uncertain = result.kind === 'uncertain';
-    const message = accepted ? 'Provider registered successfully. Manufacturing information has been saved.'
-        : uncertain ? 'Registration outcome could not be confirmed. Check the provider before trying again.'
-            : rejectionMessage(result);
     return (
-        <Card>
-            <div className="flex flex-column gap-3" aria-live="polite">
-                <Message severity={accepted ? 'success' : uncertain ? 'warn' : 'error'} text={message}
-                    className="w-full justify-content-start" />
-                {result.message && <div>{result.message}</div>}
-                {result.messages?.map((text) => <div key={text}>{text}</div>)}
-                <dl className="m-0 grid">
-                    <div className="col-12 md:col-6"><dt className="font-medium">Provider ID</dt><dd className="m-0">{identity.providerId}</dd></div>
-                    <div className="col-12 md:col-6"><dt className="font-medium">Offering ID</dt><dd className="m-0">{identity.offeringId}</dd></div>
-                    {receipt.publicationId && (
-                        <div className="col-12"><dt className="font-medium">Publication receipt</dt><dd className="m-0">{receipt.publicationId}</dd></div>
-                    )}
-                    {receipt.publicationStatus && (
-                        <div className="col-12 md:col-6"><dt className="font-medium">Publication status</dt><dd className="m-0">{receipt.publicationStatus}</dd></div>
-                    )}
-                    {receipt.syncStatus && (
-                        <div className="col-12 md:col-6"><dt className="font-medium">Synchronization status</dt><dd className="m-0">{receipt.syncStatus}</dd></div>
-                    )}
-                </dl>
-                {accepted && receipt.syncStatus === 'pending' && (
-                    <Message severity="warn" text="Semantic synchronization pending. Search availability is not yet confirmed." />
-                )}
-                {accepted && result.readBack.kind !== 'matching' && (
-                    <Message severity="warn" text="The publication was accepted. Read-back of the submitted provider and offering could not be completed. Use Load provider with the submitted ID above to review the record." />
-                )}
-                {uncertain && (
-                    <>
-                        <div>{readBackMessages[result.readBack.kind]}</div>
-                        <div><Button label="Check provider again" type="button" outlined disabled={busy} onClick={onCheck} /></div>
-                    </>
-                )}
-            </div>
-        </Card>
+        <>
+            <ProviderActionResult result={result} feedback={registrationFeedback(result)} label="Registration result" />
+            {result?.kind === 'uncertain' && (
+                <div><Button label="Check provider again" type="button" outlined disabled={busy} onClick={onCheck} /></div>
+            )}
+        </>
     );
 }
 
@@ -101,7 +53,7 @@ const rowPrefixes = [
     'additionalProcesses', 'customCapabilityFields'
 ];
 
-export default function ProviderRegistration({ form, onChange, filters, filterError, retryFilters, onBusyChange, onAccepted }) {
+export default function ProviderRegistration({ form, onChange, filters, filterError, retryFilters, onBusyChange, onAccepted, onActionResult }) {
     const [runOnce] = useState(createRegistrationRequestGuard);
     const [action, setAction] = useState(null);
     const [validation, setValidation] = useState(null);
@@ -177,6 +129,7 @@ export default function ProviderRegistration({ form, onChange, filters, filterEr
         return run('Registering provider…', async () => {
             setValidation(null);
             const result = await submitRegistration(payload, validation, services);
+            onActionResult(result);
             if (result.kind === 'accepted') onAccepted(result);
             else {
                 reveal(result.errors || {});
@@ -187,7 +140,9 @@ export default function ProviderRegistration({ form, onChange, filters, filterEr
 
     const checkProvider = () => run('Checking provider…', async () => {
         const readBack = await readBackRegistration(outcome.identity, services);
-        setOutcome({ ...outcome, readBack });
+        const result = { ...outcome, readBack };
+        setOutcome(result);
+        onActionResult(result);
     });
 
     return (

@@ -6,25 +6,24 @@ import { DataTable } from 'primereact/datatable';
 import { InputText } from 'primereact/inputtext';
 import { Message } from 'primereact/message';
 import { Panel } from 'primereact/panel';
-import ProviderActionResult from './ProviderActionResult';
+import ProviderActionResult, { DeletionReview } from './ProviderActionResult';
 import ProviderRegistrationFields from './ProviderRegistrationFields';
-import StatusTag from './StatusTag';
 import { catalogueLabel, offeringEditor, providerEditor } from './providerManagementDraft';
-import { strongEtag } from './providerManagementFlow';
-import { SUPPORT_STATUSES } from './providerRegistrationPayload';
+import { isDisposableOfferingRow, strongEtag } from './providerManagementFlow';
 
 function OfferingsTable({ model, filters }) {
+    const provider = model.provider?.resource.data;
     const values = (options, records, key) => (records || []).map((item) => catalogueLabel(options, item[key])).join(', ');
     const rows = model.offerings.map((offering) => ({
         id: offering.offering_id,
-        provider: model.provider.resource.data.provider_name,
+        provider: provider.provider_name,
         offering: offering.offering_name,
         category: catalogueLabel(filters?.serviceCategories, offering.service_category),
         family: catalogueLabel(filters?.partFamilies, offering.part_family),
         parts: values(filters?.partTypes[offering.part_family], offering.supported_part_types, 'part_type'),
         materials: values(filters?.materials, offering.generic_capabilities?.materials, 'material'),
         processes: values(filters?.processes, offering.generic_capabilities?.processes, 'process'),
-        status: offering.support_status
+        canDelete: isDisposableOfferingRow(provider.provider_id, offering)
     }));
     return (
         <DataTable value={rows} dataKey="id" paginator={rows.length > 3} rows={3}
@@ -38,7 +37,18 @@ function OfferingsTable({ model, filters }) {
             <Column field="parts" header="Supported part types" />
             <Column field="materials" header="Materials" />
             <Column field="processes" header="Processes" />
-            <Column header="Status" body={(row) => <StatusTag value={catalogueLabel(SUPPORT_STATUSES, row.status)} status={row.status} />} />
+            <Column header="Actions" body={(row) => row.canDelete && (
+                <Button type="button" icon="pi pi-trash" severity="danger" text size="small" tooltip="Delete offering"
+                    aria-label={'Delete offering ' + row.offering + ' (' + row.id + ')'}
+                    disabled={model.offeringDeleteDisabled(row.id)}
+                    onKeyDown={(event) => {
+                        if (event.key === 'Enter' || event.key === ' ') event.stopPropagation();
+                    }}
+                    onClick={(event) => {
+                        event.stopPropagation();
+                        model.removeOffering(row.id);
+                    }} />
+            )} />
         </DataTable>
     );
 }
@@ -120,14 +130,16 @@ function SaveButton({ label, enabled, onClick }) {
     return <Button type="button" label={label} icon="pi pi-save" disabled={!enabled} onClick={onClick} />;
 }
 
-export default function ProviderManagement({ model, filters, filterError, retryFilters }) {
+export default function ProviderManagement({ model, filters, filterError, retryFilters, registrationContext }) {
     const { provider, offering, add, manageable, busy } = model;
     const pending = Boolean(busy);
     const rejected = model.result?.kind === 'rejected' ? model.result : null;
     const errorsFor = (entity, changes) => ({
-        ...(rejected?.request.entity === entity && rejected.errors), ...changes?.errors
+        ...(rejected?.request.operation === (entity === 'add' ? 'create' : 'save')
+            && rejected.request.entity === (entity === 'add' ? 'offering' : entity) && rejected.errors),
+        ...changes?.errors
     });
-    const addErrors = errorsFor('offering', model.newOffering);
+    const addErrors = errorsFor('add', model.newOffering);
     if (add?.duplicateId && add.duplicateId === model.newOffering.payload.offering_id) {
         addErrors.offeringId = 'This offering ID is already registered for a record. Choose a different ID.';
     }
@@ -159,10 +171,15 @@ export default function ProviderManagement({ model, filters, filterError, retryF
                 )}
                 <OfferingsTable model={model} filters={filters} />
                 {offeringData && !add && <p className="mt-3 mb-0"><strong>Selected offering</strong> {offeringData.offering_name}</p>}
+                {pending && <div role="status">{busy}…</div>}
+                {registrationContext}
+                <ProviderActionResult result={model.result} />
+                {Object.entries(model.offeringDeletions).map(([id, recovery]) => (
+                    <DeletionReview key={id} recovery={recovery} busy={pending}
+                        onCheck={() => model.checkOfferingDeletion(id)} onResume={() => model.resumeOfferingActions(id)} />
+                ))}
             </Card>
 
-            {pending && <div role="status">{busy}…</div>}
-            <ProviderActionResult result={model.result} />
             {provider && (
                 <fieldset disabled={pending} className="mdc-provider-registration flex flex-column gap-4 border-none p-0 m-0" aria-busy={pending}>
                     {manageable && !model.providerEditable && (
@@ -202,20 +219,6 @@ export default function ProviderManagement({ model, filters, filterError, retryF
                                 )} />
                             <RevisionReview entity="offering" model={model} filters={filters} />
                         </>
-                    )}
-                    {!add && (model.providerEditable || model.offeringEditable) && (
-                        <Panel header="Delete records" className="mdc-registration-subsection">
-                            <div className="flex flex-wrap gap-2">
-                                {model.offeringEditable && (
-                                    <Button type="button" label="Delete offering" icon="pi pi-trash" severity="danger" outlined
-                                        disabled={pending || Boolean(offering.recovery)} onClick={() => model.remove('offering')} />
-                                )}
-                                {model.providerEditable && (
-                                    <Button type="button" label="Delete provider" icon="pi pi-trash" severity="danger" outlined
-                                        disabled={pending || Boolean(provider.recovery)} onClick={() => model.remove('provider')} />
-                                )}
-                            </div>
-                        </Panel>
                     )}
                 </fieldset>
             )}

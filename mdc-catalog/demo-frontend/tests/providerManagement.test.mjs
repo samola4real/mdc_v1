@@ -6,9 +6,11 @@ import {
     providerEditor, retainedPartDraft
 } from '../src/components/mdc/providerManagementDraft.js';
 import {
-    acceptParentRevision, executeManagementWrite, loadManagementSnapshot, observeManagementTarget, observedWrite,
-    strongEtag, writeRecovery
+    acceptParentRevision, afterVerifiedOfferingDeletion, canResumeDeletion, confirmDeletionText, deletionRequest,
+    exactOffering, executeManagementWrite, isDisposableOfferingRow, loadManagementSnapshot, observeManagementTarget,
+    observedWrite, strongEtag, writeRecovery
 } from '../src/components/mdc/providerManagementFlow.js';
+import { actionToastMessage, managementFeedback, registrationFeedback } from '../src/components/mdc/providerActionFeedback.js';
 import { emptyRegistrationForm } from '../src/components/mdc/providerRegistrationPayload.js';
 
 const providerId = 'mdc_stage1b_manage_fixture';
@@ -376,6 +378,125 @@ test('deletion and Add use exact identities and only canonical 404 establishes a
     });
     assert.equal(duplicate.kind, 'rejected');
     assert.equal(duplicate.code, 'offering_already_exists');
+});
+
+test('the clicked offering supplies its own current revision and exact deletion confirmation', async () => {
+    const selected = offeringEditor(resource(offering(), '"selected-revision"'));
+    const alternate = { ...offering(), offering_id: alternateId, offering_name: 'Alternate offering' };
+    assert.equal(isDisposableOfferingRow(providerId, alternate), true);
+    assert.equal(isDisposableOfferingRow(providerId, { ...alternate, provider_id: 'other' }), false);
+    assert.equal(isDisposableOfferingRow('tasowheel', { offering_id: 'tasowheel_precision_gears' }), false);
+    const detail = await exactOffering(providerId, alternateId, {
+        getOffering: async (id) => {
+            assert.equal(id, alternateId);
+            return resource(alternate, '"fresh-alternate"');
+        }
+    });
+    const request = deletionRequest('offering', detail);
+    assert.equal(confirmDeletionText(request, detail.data),
+        'Permanently delete offering Alternate offering (' + alternateId + ') from provider ' + providerId + '?');
+    assert.notEqual(request.etag, selected.resource.etag);
+    const result = await executeManagementWrite(request, {
+        deleteOffering: (id, etag) => {
+            assert.deepEqual([id, etag], [alternateId, detail.etag]);
+            return reply({ operation: 'delete', target: { entity_type: 'offering', entity_id: alternateId } });
+        },
+        getOffering: (id) => {
+            assert.equal(id, alternateId);
+            return missing();
+        }
+    });
+    assert.equal(result.kind, 'accepted');
+    assert.equal(result.observed.kind, 'absent');
+});
+
+test('row deletion changes only the verified target and keeps unrelated editor drafts', () => {
+    const first = offering();
+    const alternate = { ...first, offering_id: alternateId };
+    const request = deletionRequest('offering', resource(alternate));
+    const workspace = {
+        selection: offeringId, offering: edit(offeringEditor(resource(first)), { offeringName: 'Pending name' }),
+        provider: edit(providerEditor(resource(provider())), { providerName: 'Pending provider name' }),
+        add: { draft: { offeringName: 'Pending add' } }, offerings: [first, alternate], offeringDeletions: {
+            [alternateId]: { kind: 'uncertain', request }, [offeringId]: { kind: 'conflict' }
+        }
+    };
+    for (const observed of [undefined, { kind: 'unknown' }, { kind: 'present', resource: resource(alternate) }]) {
+        assert.strictEqual(afterVerifiedOfferingDeletion(workspace, { request, observed }), workspace);
+    }
+    const result = afterVerifiedOfferingDeletion(workspace, { request, observed: { kind: 'absent' } });
+    assert.equal(result.selection, offeringId);
+    assert.strictEqual(result.offering, workspace.offering);
+    assert.strictEqual(result.provider, workspace.provider);
+    assert.strictEqual(result.add, workspace.add);
+    assert.deepEqual(result.offerings, [first]);
+    assert.deepEqual(result.offeringDeletions, { [offeringId]: { kind: 'conflict' } });
+    const selected = afterVerifiedOfferingDeletion(workspace, {
+        request: deletionRequest('offering', resource(first)), observed: { kind: 'absent' }
+    });
+    assert.equal(selected.selection, null);
+    assert.equal(selected.offering, null);
+    assert.deepEqual(selected.offerings, [alternate]);
+});
+
+test('stale deletion requires exact review and ambiguous deletion is reconciled without replay', async () => {
+    const request = deletionRequest('offering', resource(offering()));
+    const conflict = await executeManagementWrite(request, {
+        deleteOffering: () => { throw { status: 412 }; },
+        getOffering: () => assert.fail('a stale write requires deliberate review')
+    });
+    assert.equal(conflict.kind, 'conflict');
+    const observed = await observeManagementTarget(request, { getOffering: async () => resource(offering(), '"new-revision"') });
+    assert.equal(canResumeDeletion({ ...conflict, observed }), false);
+    assert.equal(canResumeDeletion({ ...conflict, observed, checked: true }), true);
+    assert.equal(canResumeDeletion({ ...conflict, observed: { kind: 'present', resource: resource(offering(), 'W/"weak"') }, checked: true }), false);
+    let writes = 0;
+    const ambiguous = await executeManagementWrite(request, {
+        deleteOffering: () => { writes++; throw { status: 503 }; },
+        getOffering: missing
+    });
+    assert.equal(writes, 1);
+    assert.equal(ambiguous.kind, 'uncertain');
+    assert.equal(ambiguous.observed.kind, 'absent');
+    assert.equal(managementFeedback(ambiguous).severity, 'warn');
+});
+
+test('event notifications require verified success and keep pending sync, conflicts, and errors actionable', () => {
+    const receipt = { publicationId: 'fixture-receipt', syncStatus: 'pending' };
+    const registration = { kind: 'accepted', receipt, readBack: { kind: 'matching' } };
+    const registered = actionToastMessage(registrationFeedback(registration));
+    assert.deepEqual([registered.severity, registered.sticky, registered.life], ['success', false, 5000]);
+    assert.match(registered.detail, /Synchronization is pending.*Search availability/);
+    const unverified = registrationFeedback({ ...registration, readBack: { kind: 'providerOnly' } });
+    assert.equal(actionToastMessage(unverified).sticky, true);
+    assert.match(unverified.detail, /Use Load provider/);
+    const rejected = registrationFeedback({ kind: 'rejected', code: 'provider_already_exists' });
+    assert.equal(rejected.severity, 'error');
+    assert.equal(actionToastMessage(rejected).sticky, true);
+
+    const request = deletionRequest('provider', resource(provider()));
+    assert.match(confirmDeletionText(request, provider()), /Example provider.*and all of its offerings/);
+    const pending = managementFeedback({ kind: 'accepted', request, receipt, observed: { kind: 'unknown' } });
+    assert.equal(pending.severity, 'warn');
+    assert.equal(actionToastMessage(pending).sticky, true);
+    const removed = managementFeedback({ kind: 'accepted', request, receipt, observed: { kind: 'absent' } });
+    assert.equal(removed.severity, 'success');
+    const stale = managementFeedback({ kind: 'conflict', request });
+    assert.match(stale.detail, /Review the current record/);
+    assert.equal(actionToastMessage(stale).sticky, true);
+    const forbidden = managementFeedback({ kind: 'rejected', request, status: 403 });
+    assert.equal(forbidden.severity, 'error');
+    assert.match(forbidden.detail, /verified role.*disposable/);
+});
+
+test('the Provider offerings table retains its columns and wires actions to the clicked row', () => {
+    const view = readFileSync(new URL('../src/components/mdc/ProviderManagement.js', import.meta.url), 'utf8');
+    const columns = [...view.matchAll(/<Column\b[^>]*?header="([^"]+)"/g)].map(([, header]) => header);
+    assert.deepEqual(columns, ['Provider', 'Offering', 'Service category', 'Part family', 'Supported part types', 'Materials', 'Processes', 'Actions']);
+    assert.match(view, /row\.canDelete &&/);
+    assert.match(view, /aria-label=\{[^}]*row\.id/);
+    assert.match(view, /event\.stopPropagation\(\);\s+model\.removeOffering\(row\.id\);/);
+    assert.doesNotMatch(view, /Delete provider|Delete records/);
 });
 
 test('Provider Area shares the registration fields and omits developer response panels', () => {

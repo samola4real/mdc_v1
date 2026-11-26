@@ -37,7 +37,8 @@ export const resolveEndpoint = (segments, method) => {
     else if (collection === 'offerings' && !nested) resource = 'offering';
     else return null;
 
-    return { path, id, resource, methods: lifecycleMethods[resource], roles: providerRoles, write: method !== 'GET' };
+    const roles = resource === 'provider' && method === 'DELETE' ? ['admin'] : providerRoles;
+    return { path, id, resource, methods: lifecycleMethods[resource], roles, write: method !== 'GET' };
 };
 
 export const allowsDisposableWrite = (route, body) => {

@@ -3,8 +3,10 @@ import { Button } from 'primereact/button';
 import { Message } from 'primereact/message';
 import { getCatalogFilters, normalizeCatalogFilters } from '@/services/mdc/catalog.service';
 import { DISPOSABLE_PROVIDER_PREFIX } from '@/services/mdc/stage1bScope';
+import { ProviderActionToast, useProviderActionToast } from './ProviderActionResult';
 import ProviderManagement from './ProviderManagement';
 import ProviderRegistration, { RegistrationOutcome } from './ProviderRegistration';
+import { managementFeedback, registrationFeedback } from './providerActionFeedback';
 import { emptyRegistrationForm, hasRegistrationDraft } from './providerRegistrationPayload';
 import { useProviderManagement } from './useProviderManagement';
 
@@ -16,9 +18,13 @@ export default function ProviderDemoPanel() {
     const [filters, setFilters] = useState(null);
     const [filterError, setFilterError] = useState(null);
     const [catalogueAttempt, setCatalogueAttempt] = useState(0);
+    const { toast, notify } = useProviderActionToast();
     const management = useProviderManagement(filters, (snapshot) => {
-        setRegistrationOutcome((current) => current && { ...current, readBack: { kind: 'matching', snapshot } });
-    });
+        if (!registrationOutcome || registrationOutcome.readBack.kind === 'matching') return;
+        const verified = { ...registrationOutcome, readBack: { kind: 'matching', snapshot } };
+        setRegistrationOutcome(verified);
+        notify(registrationFeedback(verified));
+    }, (result) => notify(managementFeedback(result)));
     const busy = registrationBusy || Boolean(management.busy);
 
     useEffect(() => {
@@ -57,6 +63,7 @@ export default function ProviderDemoPanel() {
 
     return (
         <div className="flex flex-column gap-4">
+            <ProviderActionToast toast={toast} />
             <Message severity="info" text={'Provider and offering writes are limited to disposable IDs starting with ' + DISPOSABLE_PROVIDER_PREFIX + '.'}
                 className="w-full justify-content-start" />
             <div className="flex flex-wrap gap-2">
@@ -68,12 +75,10 @@ export default function ProviderDemoPanel() {
             {mode === 'register' ? (
                 <ProviderRegistration form={registrationForm} onChange={setRegistrationForm} filters={filters}
                     filterError={filterError} retryFilters={retryCatalogue} onBusyChange={setRegistrationBusy}
-                    onAccepted={acceptRegistration} />
+                    onAccepted={acceptRegistration} onActionResult={(result) => notify(registrationFeedback(result))} />
             ) : (
-                <>
-                    <ProviderManagement model={management} filters={filters} filterError={filterError} retryFilters={retryCatalogue} />
-                    <RegistrationOutcome result={registrationOutcome} />
-                </>
+                <ProviderManagement model={management} filters={filters} filterError={filterError} retryFilters={retryCatalogue}
+                    registrationContext={<RegistrationOutcome result={registrationOutcome} />} />
             )}
         </div>
     );

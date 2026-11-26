@@ -200,6 +200,54 @@ test('offline transport preserves exact ETag and receipt, strips identity header
     assert.equal(options.redirect, 'error');
 });
 
+test('offline relay requires signed Admin for provider deletion and retains disposable scope for every role', async (t) => {
+    const jwk = { ...await exportJWK(publicKey), kid, alg: 'RS256' };
+    const config = { MDC_KEYCLOAK_AUDIENCE: audience, MDC_KEYCLOAK_ROLE_SOURCE: 'client', MDC_VERCEL_PROTECTION_BYPASS: 'offline-fixture-only' };
+    const previous = Object.keys(config).map((key) => [key, process.env[key]]);
+    t.after(() => previous.forEach(([key, value]) => {
+        if (value === undefined) delete process.env[key];
+        else process.env[key] = value;
+    }));
+    Object.assign(process.env, config);
+
+    const forwarded = [];
+    t.mock.method(globalThis, 'fetch', async (url, options) => {
+        if (String(url) === issuer + '/protocol/openid-connect/certs') return Response.json({ keys: [jwk] });
+        forwarded.push({ url, method: options.method, etag: options.headers['X-MDC-If-Match'] });
+        return Response.json({ contract_version: '1.0' });
+    });
+    const signed = async (role) => 'Bearer ' + await fixture({
+        resource_access: { myClient: { roles: [role] } }
+    });
+    const providerPath = ['providers', providerId];
+    const offeringPath = ['offerings', offeringId];
+    const tag = '"current-revision"';
+    const remove = (path, authorization) => invoke({
+        method: 'DELETE', path, authorization, extraHeaders: { 'if-match': tag, 'x-mdc-role': 'admin' }
+    });
+    const provider = await signed('mdc_provider');
+    const consumer = await signed('mdc_consumer');
+    const admin = await signed('mdc_admin');
+    for (const [path, authorization] of [[providerPath, provider], [providerPath, consumer], [offeringPath, consumer]]) {
+        const reply = await remove(path, authorization);
+        assert.equal(reply.statusCode, 403);
+        assert.equal(reply.data.error.code, 'mdc_role_forbidden');
+    }
+    for (const path of [['providers', 'tasowheel'], ['providers', 'precipart'], ['offerings', 'tasowheel_precision_gears']]) {
+        const reply = await remove(path, admin);
+        assert.equal(reply.statusCode, 403);
+        assert.equal(reply.data.error.code, 'disposable_identity_required');
+    }
+    assert.equal(forwarded.length, 0);
+    assert.equal((await remove(providerPath, admin)).statusCode, 200);
+    assert.equal((await remove(offeringPath, provider)).statusCode, 200);
+    assert.equal((await remove(offeringPath, admin)).statusCode, 200);
+    const preview = 'https://maasai-mdc-v1-2ps4wdme5-mdc19.vercel.app/api/';
+    assert.deepEqual(forwarded, [providerPath, offeringPath, offeringPath].map((path) => ({
+        url: preview + path.join('/'), method: 'DELETE', etag: tag
+    })));
+});
+
 test('offline detail reads preserve the strong Preview revision through registration handoff and offering reload', async (t) => {
     const jwk = { ...await exportJWK(publicKey), kid, alg: 'RS256' };
     const config = { MDC_KEYCLOAK_AUDIENCE: audience, MDC_KEYCLOAK_ROLE_SOURCE: 'client', MDC_VERCEL_PROTECTION_BYPASS: 'offline-fixture-only' };

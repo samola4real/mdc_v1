@@ -4,6 +4,11 @@ import { registrationValidationFeedback, safeText } from './providerRegistration
 
 export const strongEtag = (value) => typeof value === 'string' && /^"[\x21\x23-\x7e\x80-\xff]+"$/.test(value);
 
+export const isDisposableOfferingRow = (providerId, row) => (
+    isDisposableMdcId(providerId) && isDisposableOfferingId(row?.offering_id, providerId)
+    && (!row.provider_id || row.provider_id === providerId)
+);
+
 export async function exactProvider(id, services) {
     const result = await services.getProvider(id);
     if (result?.data?.provider_id !== id) throw new Error('The provider response did not match the requested ID.');
@@ -57,6 +62,42 @@ export async function observeManagementTarget(request, services) {
 export const observedWrite = (request, observed) => (
     request.operation === 'delete' ? observed?.kind === 'absent' : observed?.kind === 'present' && observed.matches
 );
+
+export function deletionRequest(entity, resource) {
+    const { provider_id: providerId, offering_id: offeringId } = resource.data;
+    return { entity, operation: 'delete', providerId, offeringId: entity === 'offering' ? offeringId : undefined, etag: resource.etag };
+}
+
+export function confirmDeletionText(request, record) {
+    if (request.entity === 'provider') {
+        return 'Permanently delete provider ' + record.provider_name + ' (' + request.providerId
+            + ') and all of its offerings?';
+    }
+    return 'Permanently delete offering ' + record.offering_name + ' (' + request.offeringId
+        + ') from provider ' + request.providerId + '?';
+}
+
+export const canResumeDeletion = (recovery) => Boolean(
+    recovery?.checked && recovery.observed?.kind === 'present' && strongEtag(recovery.observed.resource.etag)
+);
+
+export function clearOfferingDeletion(deletions, id) {
+    const next = { ...deletions };
+    delete next[id];
+    return next;
+}
+
+export function afterVerifiedOfferingDeletion(workspace, outcome) {
+    if (!observedWrite(outcome.request, outcome.observed)) return workspace;
+    const { offeringId } = outcome.request;
+    return {
+        ...workspace,
+        ...(workspace.selection === offeringId && { selection: null, offering: null }),
+        offerings: workspace.offerings.filter((row) => row.offering_id !== offeringId),
+        offeringDeletions: clearOfferingDeletion(workspace.offeringDeletions, offeringId),
+        result: outcome
+    };
+}
 
 const receiptDetails = (data, error) => ({
     publicationId: safeText(data?.publication_id ?? error?.publicationId),
