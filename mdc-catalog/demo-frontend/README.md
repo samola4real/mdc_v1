@@ -34,7 +34,8 @@ policy to that claim. The relay is available on loopback only.
 
 The browser sends its Keycloak access token to `/api/mdc` on the same origin.
 The server checks the verified role and forwards only the canonical routes to
-the pinned protected Preview. Writes use disposable provider IDs starting with
+the protected Stage 2 eligibility Preview at
+`https://maasai-mdc-v1-y1vib2sq7-mdc19.vercel.app`. Writes use disposable provider IDs starting with
 `mdc_stage1b_` and offering IDs prefixed by their provider ID. The client uses
 canonical `If-Match` with the current resource ETag. The server uses the
 existing `X-MDC-If-Match` header alias upstream. Successful Stage 2 lifecycle
@@ -51,6 +52,10 @@ npm run build
 Use unique disposable IDs, confirm each persisted change, and delete the test
 records with fresh ETags. The Consumer page uses current catalogue filters and
 canonical results. Admin health checks API liveness.
+
+Consumer discovery returns offerings with confirmed support for the selected
+part type and every supplied requirement. The MaaS Recommendation System ranks
+those eligible offerings. [Discovery contract](../docs/Partner_API/MaaSAI_MDC_API_Documentation.md#6-service-discovery-search)
 
 ## Repository and release boundary
 

@@ -123,7 +123,9 @@ class M6AMarketplaceHandoffTests(SimpleTestCase):
         serialized = json.dumps(collection)
 
         self.assertEqual(collection["info"]["name"], "MaaSAI MDC M6 Marketplace Integration")
-        self.assertEqual(len(requests), 29)
+        self.assertEqual(len(requests), 30)
+        self.assertIn("Immediate search excludes offering missing a required field", serialized)
+        self.assertIn("Retained horizontal capability remains eligible", serialized)
         self.assertNotIn("Authorization", serialized)
         self.assertNotIn("X-MDC-Actor", serialized)
         self.assertNotIn("maasai-mdc-v1.vercel.app", serialized)
