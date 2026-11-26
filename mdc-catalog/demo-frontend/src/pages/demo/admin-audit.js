@@ -8,9 +8,9 @@ const AdminAudit = () => {
         <div className="flex flex-column gap-4">
             <Card>
                 <div className="text-sm text-600 mb-2">MDC Demo Console</div>
-                <h1 className="mt-0 mb-2 text-900">Demo Admin Console</h1>
+                <h1 className="mt-0 mb-2 text-900">Admin Dashboard</h1>
                 <p className="text-600 line-height-3 mb-0">
-                    Check MDC API liveness and the current catalogue vocabulary.
+                    Manage providers and check system availability.
                 </p>
             </Card>
             <DemoRoleGuard allowedRoles={['admin']} pageLabel="Admin">
