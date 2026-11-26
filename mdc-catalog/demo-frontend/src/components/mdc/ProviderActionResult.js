@@ -1,50 +1,71 @@
-import React from 'react';
-import { Card } from 'primereact/card';
-import { Message } from 'primereact/message';
-import { Panel } from 'primereact/panel';
-import { Tag } from 'primereact/tag';
+import React, { useRef } from 'react';
+import { Button } from 'primereact/button';
+import { Toast } from 'primereact/toast';
+import { actionToastMessage, managementFeedback } from './providerActionFeedback';
+import { readableCode } from './providerManagementDraft';
+import { canResumeDeletion, strongEtag } from './providerManagementFlow';
 
-const errorDetails = {
-    400: 'Review the rejected fields and submit a valid payload.',
-    401: 'Sign in with MaaSAI Keycloak.',
-    403: 'Check your verified role and the disposable ID scope.',
-    404: 'The requested resource is absent.',
-    409: 'Load the existing record before deciding what to change.',
-    412: 'A newer revision exists. Reload the resource and review your changes.',
-    428: 'Load the resource again to get its current strong ETag.',
-    503: 'Service or publication is unavailable. Read the resource and receipt before retrying a write.'
-};
+export function useProviderActionToast() {
+    const toast = useRef(null);
+    const notify = (feedback) => {
+        if (!feedback) return;
+        toast.current?.clear();
+        toast.current?.show(actionToastMessage(feedback));
+    };
+    return { toast, notify };
+}
 
-const ProviderActionResult = ({ result }) => {
-    if (!result) return null;
-    const { action, response, error } = result;
-    const publicationId = response?.publication_id || error?.publicationId;
-    const publicationStatus = response?.publication_status || error?.publicationStatus;
-    const syncStatus = response?.sync_status || error?.syncStatus;
-    const success = publicationId ? action + ' accepted' : action + ' completed';
-    const description = error && (errorDetails[error.status] || (error.status == null || error.status >= 500
-        ? 'Check current state before retrying a write.' : ''));
-    const message = error ? [action + ' failed.', error.message, description].filter(Boolean).join(' ') : success;
+export function ProviderActionToast({ toast, className }) {
+    return <Toast ref={toast} position="top-right" className={className} />;
+}
 
+export default function ProviderActionResult({ result, feedback = managementFeedback(result), label = 'Latest action' }) {
+    if (!feedback) return null;
+    const { receipt, messages } = result;
+    const { providerId, offeringId } = result.request || result.identity || result.target || {};
     return (
-        <Card>
-            <div className="flex flex-column gap-3">
-                <Message severity={error ? 'error' : 'success'} text={message} className="w-full justify-content-start" />
-                {publicationId && (
-                    <div className="flex gap-2 flex-wrap align-items-center">
-                        <span>Publication {publicationId}</span>
-                        {publicationStatus && <Tag value={publicationStatus} severity={syncStatus === 'pending' ? 'warning' : 'info'} />}
-                        {syncStatus === 'pending' && <span>Semantic synchronization pending</span>}
-                    </div>
-                )}
-                {(response || error?.details) && (
-                    <Panel header="MDC response details" toggleable collapsed>
-                        <pre className="m-0 white-space-pre-wrap">{JSON.stringify(response || error.details, null, 2)}</pre>
-                    </Panel>
+        <div role="group" aria-label={label} className="my-2 text-sm line-height-3" style={{ overflowWrap: 'anywhere' }}>
+            <p className="m-0">
+                <strong>{feedback.summary}.</strong>{feedback.detail && ' ' + feedback.detail}
+            </p>
+            {(providerId || offeringId) && (
+                <p className="m-0">{[providerId && 'Provider ID ' + providerId, offeringId && 'Offering ID ' + offeringId]
+                    .filter(Boolean).join(' · ')}</p>
+            )}
+            {receipt?.publicationId && <p className="m-0">Publication receipt {receipt.publicationId}</p>}
+            {(receipt?.publicationStatus || receipt?.syncStatus) && (
+                <p className="m-0">{[receipt.publicationStatus && 'Publication ' + readableCode(receipt.publicationStatus),
+                    receipt.syncStatus && 'Synchronization ' + readableCode(receipt.syncStatus)].filter(Boolean).join(' · ')}</p>
+            )}
+            {messages?.map((message) => <p className="m-0" key={message}>{message}</p>)}
+        </div>
+    );
+}
+
+export function DeletionReview({ recovery, busy, onCheck, onResume }) {
+    if (!recovery) return null;
+    const { request, observed, checked } = recovery;
+    const { entity } = request;
+    const id = request.offeringId || request.providerId;
+    const latest = observed?.resource;
+    const name = latest?.data[entity + '_name'];
+    const guidance = recovery.kind === 'conflict' ? 'The revision changed. Review the current record before trying again.'
+        : 'Check the current record to verify the deletion outcome.';
+    return (
+        <div role="group" aria-label={'Review ' + entity + ' deletion for ' + id} className="my-2 text-sm line-height-3">
+            <p className="m-0"><strong>Review deletion of {id}.</strong> {guidance}</p>
+            {checked && (
+                <p className="my-1" role="status">{latest
+                    ? 'Current ' + entity + ' ' + name + ' (' + id + ').'
+                        + (strongEtag(latest.etag) ? '' : ' A current strong revision is required.')
+                    : 'The current record could not be verified.'}</p>
+            )}
+            <div className="flex flex-wrap gap-2">
+                <Button type="button" label={'Check current ' + entity} size="small" outlined disabled={busy} onClick={onCheck} />
+                {canResumeDeletion(recovery) && (
+                    <Button type="button" label={'Resume ' + entity + ' actions'} size="small" outlined disabled={busy} onClick={onResume} />
                 )}
             </div>
-        </Card>
+        </div>
     );
-};
-
-export default ProviderActionResult;
+}

@@ -14,6 +14,7 @@ export const normalizeCatalogFilters = (data) => {
 
     return {
         partFamilies: toOptions(data.part_families),
+        serviceCategories: toOptions(data.service_categories),
         partTypes: Object.fromEntries(Object.entries(data.part_types).map(([family, items]) => [family, toOptions(items)])),
         materials: toOptions(data.materials),
         processes: toOptions(data.processes),
