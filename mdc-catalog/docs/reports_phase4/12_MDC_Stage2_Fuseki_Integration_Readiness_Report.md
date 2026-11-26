@@ -1,10 +1,10 @@
 # Task 12 — Stage 2 Fuseki integration readiness
 
-**BLOCKED · 2026-11-26.** The original industrial Fuseki dataset is verified locally. A separate local validation dataset still needs provisioning, and cloud runtime access remains unverified. Keep both synchronization flags disabled.
+**PARTIAL · 2026-11-26.** The isolated validation dataset is running and persistent. The existing MDC clients verified query and authenticated default-graph writes over Cloudflare HTTPS. A probe from the intended Vercel runtime remains the Task 13 pre-enable gate. Both synchronization flags remain disabled.
 
 Reviewed `origin/main` at `f3365b3e9339598624675dc6ff3abee3ed752bc4`. The accepted Stage 1B closure is `5304d1c9ba22c230e22b580b53f7aad573867959`, including merge `30a0b10acb0ca7168d55923d3cdc29e71213a07b`. [Task 12 prompt](../prompts_phase4/12_MDC_Stage2_Fuseki_Integration_Readiness_Prompt.md) · [Task 11 closure](11_MDC_Stage1B_Closure_and_Consolidation_Report.md)
 
-The incremental check resumed from report commit `9d3ee81` after Docker Desktop started. It was limited to local Fuseki and the repository’s AWS plan. The Neon and Stage 1B evidence below is carried forward from the initial pass.
+Option A provisioning resumed from report commit `827b220`. Vercel, Neon, Docker Desktop and Cloudflare remain the development and demonstration environment. AWS hosting is deferred until MaaSAI infrastructure is available. The Neon and Stage 1B evidence below is carried forward from the initial pass.
 
 ## Readiness gates
 
@@ -12,10 +12,10 @@ The incremental check resumed from report commit `9d3ee81` after Docker Desktop 
 | --- | --- | --- |
 | Validation PostgreSQL identity and schema | Verified | An authorized read-only transaction on Neon returned `current_database() = mdc_validation`, `transaction_read_only = on`, PostgreSQL 18.7, and all 22 recorded Django migrations, including the four provider migrations through `0004_cataloguesynclease`. |
 | Pinned Stage 1B and production alias | Verified | The same Preview and production deployment IDs were present before and after. All nine pinned Preview reads returned HTTP 200 in both checks. Both project Preview sync flags read `false`. |
-| Local industrial Fuseki | Verified | Apache Jena Fuseki 5.1.0. The original `mdc` TDB2 dataset has 731 default-graph triples and zero triples in named graphs. SPARQL and authenticated Graph Store reads returned HTTP 200. |
-| Separate local validation dataset | Pending | The running server lists only `mdc` and `mdc-service-discovery`. The former `mdc_validation` dataset, container and volume are absent. Provisioning the isolated local target requires approval. |
-| Validation TLS, authorization and default-graph writes | Blocked | A validation HTTPS route, dataset-scoped credential, verified query and Graph Store pairing, and evidence of actual default-graph write permission are still required. |
-| Reachability from the intended Stage 2 runtime | Blocked | The local Docker checks used loopback. The intended Vercel Python runtime in `mdc19/maasai-mdc-v1` still needs an approved network path to a durable validation target and a server-side probe. |
+| Local industrial Fuseki | Verified | The original `mdc-fuseki` container, start time and volume match the pre-provision checks. Sorted RDF bindings match before and after, with 731 default-graph triples. |
+| Local validation and persistence | Verified | The new container serves only `mdc_validation` on loopback. A disposable default-graph triple survived a restart on its own volume. Cleanup restored zero default and named graph triples. |
+| Cloudflare HTTPS and MDC clients | Verified | Trusted TLS 1.3. The existing SPARQL client queried the validation graph. The Graph Store client received HTTP 401 anonymously and HTTP 200 with validation Basic authentication. Admin, industrial, and update paths returned HTTP 404. |
+| Connectivity from the intended Stage 2 runtime | Pending | The HTTPS checks ran from the local workstation. A protected diagnostic in the intended Vercel Python runtime still needs to verify outbound query and Graph Store access. |
 
 ## Local Fuseki verification
 
@@ -24,15 +24,34 @@ The incremental check resumed from report commit `9d3ee81` after Docker Desktop 
 | Running container and volume | `mdc-fuseki`, ID `5628d636d7e3`, matches the M5-B record. Docker publishes container port 3030 as host port 3030 on `0.0.0.0` and `::`. The same local-driver volume `22e7cf0eca0b31e96a9dcf9fd9d591d4c87dcfd97bea029365525ef7fc3d5dd0` remains mounted read-write at `/fuseki`. |
 | Version and service inventory | The image label and authenticated `GET /$/server` both reported 5.1.0. `GET /$/datasets` returned HTTP 200 with two active datasets. Their assemblers map `mdc` to `/fuseki/databases/mdc` and `mdc-service-discovery` to `/fuseki/databases/mdc-service-discovery`. Both are TDB2 and both directories are on the mounted volume. |
 | Industrial query and Graph Store | `GET /$/ping` returned HTTP 200. Two read-only SPARQL `SELECT COUNT` requests to `http://127.0.0.1:3030/mdc/sparql` returned HTTP 200 and parsed to 731 default-graph triples and zero named-graph triples. The default count matches M5-B. `HEAD /mdc/data?default` returned HTTP 401 anonymously and HTTP 200 with the existing local credential. This verifies Graph Store read access. |
-| Former validation target | The authenticated `GET /$/datasets/mdc_validation` returned HTTP 404. The mounted configuration and database directory lists contain only the two active datasets. Exact Docker lookups also found neither `mdc-fuseki-validation` nor `mdc_m5b_fuseki_validation_data`. |
+| Isolation baseline | Before provisioning, the original container's authenticated `GET /$/datasets/mdc_validation` returned HTTP 404. Its mounted configuration and database directory lists contained only `mdc` and `mdc-service-discovery`. The retired M5-B container and volume were absent. |
 
-The incremental checks used only Docker inspection, configuration reads, and read-only HTTP operations against the existing loopback service. No credentials or stored graph data changed. [M5-B baseline and teardown](../codex/Reports/M5B_fuseki_immediate_discovery_validation_report.md) · [Fuseki administration protocol](https://jena.apache.org/documentation/fuseki2/fuseki-server-protocol.html)
+Before and after provisioning, the original `mdc` returned 731 default-graph triples and the same SHA-256 over sorted RDF result bindings, `513a1f00d138dec9edaa7de0d740397fdce0d8f1c1b939d2752007601c65e2d5`. The container retained its existing volume, port binding and start time. All requests to the industrial container were read-only. [M5-B baseline and teardown](../codex/Reports/M5B_fuseki_immediate_discovery_validation_report.md) · [Fuseki administration protocol](https://jena.apache.org/documentation/fuseki2/fuseki-server-protocol.html)
 
-## Minimum local validation configuration
+## Provisioned validation dataset
 
-Reuse the cached Fuseki 5.1.0 image for one separate container bound to `127.0.0.1:3031`, forwarding to its port 3030. There was no host listener on port 3031 during this check. The available image digest is `stain/jena-fuseki@sha256:b1d0c96f19adddef417520184471ac816cf36c6e72936a88ea02b29f4305929a`. Give the container its own named volume mounted at `/fuseki`. Persist the assembler in that volume and point `tdb2:location` at `/fuseki/databases/mdc_validation`.
+| Item | Verified configuration |
+| --- | --- |
+| Container and image | `mdc-fuseki-validation` (`0c0377423cb1`), cached Fuseki 5.1.0 from `stain/jena-fuseki@sha256:b1d0c96f19adddef417520184471ac816cf36c6e72936a88ea02b29f4305929a` |
+| Host binding | `127.0.0.1:3031:3030` |
+| Volume and dataset | `mdc_stage2_fuseki_validation_data` mounted at `/fuseki`. The authenticated inventory listed only `mdc_validation`. Its persisted assembler and TDB2 store are under `/fuseki/configuration` and `/fuseki/databases/mdc_validation`. |
+| SPARQL | `http://127.0.0.1:3031/mdc_validation/sparql`, read-only query. Fuseki returned HTTP 422 with an explicit denial of federated `SERVICE` execution. |
+| Graph Store | `http://127.0.0.1:3031/mdc_validation/data?default`, using the image's existing HTTP Basic mechanism and a generated validation-only credential. |
 
-Configure a single `mdc_validation` service with `fuseki:query` at `/mdc_validation/sparql` and `fuseki:gsp-rw` at `/mdc_validation/data`. Use `?default` for the existing synchronization client and require its Basic authentication with validation-scoped access. Keep the default graph separate from any named graph, and restrict access to the loopback service. This layout preserves both existing datasets and their shared industrial volume. The container, volume and dataset are proposed only. [Apache Jena TDB2 service configuration](https://jena.apache.org/documentation/tdb2/tdb2_fuseki.html) · [Fuseki access control](https://jena.apache.org/documentation/fuseki2/fuseki-data-access-control.html)
+Local SPARQL counted zero triples before the probe. Anonymous Turtle `PUT` returned HTTP 401. Authenticated `PUT` returned HTTP 200, and SPARQL found the exact probe triple. Docker recorded a restart of `mdc-fuseki-validation` at `2026-11-26T13:52:07Z` with the same container ID and volume. The original probe connection dropped during restart. After reconnecting, the default graph contained only the probe triple. Authenticated local Graph Store cleanup returned HTTP 204, and SPARQL confirmed the marker absent with zero default and named graph triples. [Apache Jena TDB2 service configuration](https://jena.apache.org/documentation/tdb2/tdb2_fuseki.html) · [ARQ federation control](https://jena.apache.org/documentation/query/service.html#controlling-service-requests)
+
+## Cloudflare HTTPS verification
+
+The existing `cloudflared` 2026.9.3 installation is running one dedicated Quick Tunnel. Its origin is a loopback route filter on `127.0.0.1:3032`, which forwards only to validation Fuseki on `127.0.0.1:3031`. The filter permits form-encoded SPARQL POST and default-graph Graph Store GET, HEAD and Turtle PUT. It forwards Fuseki's Basic challenge and credentials on the Graph Store route. This keeps admin, UI, update, named-graph and both industrial dataset paths outside the tunnel. The filter and tunnel were still running at the end of the checks. [Cloudflare Quick Tunnels](https://developers.cloudflare.com/tunnel/get-started/quick-tunnels/)
+
+| Check | Result |
+| --- | --- |
+| Trusted public TLS and query | TLS 1.3 certificate validation passed. The HTTPS SPARQL POST returned HTTP 200 with a parsed count of zero. Federated `SERVICE` returned HTTP 422. |
+| Excluded routes | HTTP 404 for `/`, `/$/server`, `/$/datasets`, `/mdc/sparql`, `/mdc-service-discovery/sparql`, `/mdc_validation/update` and a named-graph selector. |
+| Existing MDC clients | Executed `execute_fuseki_sparql_query` and `replace_service_discovery_graph_in_fuseki` in an isolated Python process with Django's dummy database driver and both sync flags `false`. The existing paired-endpoint validator passed. The HTTPS Graph Store rejected anonymous HEAD and PUT with HTTP 401. Authenticated PUT and HEAD returned HTTP 200, and the SPARQL client read the exact marker back. |
+| Probe cleanup | The verified isolated one-triple graph was cleared through local authenticated Graph Store, HTTP 204. Both local and HTTPS default-graph counts returned zero. Local named-graph count was zero, and HTTPS read-back confirmed the marker absent. |
+
+The temporary HTTPS origin is saved locally in `%LOCALAPPDATA%\MaaSAI\mdc-stage2-fuseki\tunnel-url.txt`. The Quick Tunnel depends on the Windows host and gets a new hostname when restarted.
 
 ## AWS hosting plan
 
@@ -63,18 +82,36 @@ Reuse the existing synchronization implementation. It validates the same scheme,
 | Setting | Intended use and verification |
 | --- | --- |
 | `DATABASE_URL` | Existing server-only validation connection to `mdc_validation` on the verified Neon compute. Sensitive entry present. |
-| `SERVICE_DISCOVERY_FUSEKI_QUERY_ENDPOINT` | Stable approved HTTPS origin with `/mdc_validation/sparql`. Unassigned and unverified. |
-| `SERVICE_DISCOVERY_FUSEKI_GRAPH_STORE_ENDPOINT` | Same approved origin with `/mdc_validation/data?default`. Unassigned and unverified. |
-| `SERVICE_DISCOVERY_FUSEKI_USERNAME`, `SERVICE_DISCOVERY_FUSEKI_PASSWORD` | Dataset-scoped Basic credentials delivered through the server-side secret store. No validation credential entries found in Preview. |
+| `SERVICE_DISCOVERY_FUSEKI_QUERY_ENDPOINT` | Current validation HTTPS origin from `tunnel-url.txt` plus `/mdc_validation/sparql`. Verified from the workstation. |
+| `SERVICE_DISCOVERY_FUSEKI_GRAPH_STORE_ENDPOINT` | Same origin plus `/mdc_validation/data?default`. Verified from the workstation with the existing client. |
+| `SERVICE_DISCOVERY_FUSEKI_USERNAME`, `SERVICE_DISCOVERY_FUSEKI_PASSWORD` | Provisioned locally in the restricted runtime directory's `validation.env`. Use its `SERVICE_DISCOVERY_FUSEKI_USERNAME` and `ADMIN_PASSWORD` values as the two deployment-scoped server-side secrets. |
 | `FUSEKI_TIMEOUT_SECONDS`, `FUSEKI_SYNC_TIMEOUT_SECONDS` | Existing query and Graph Store timeout settings. Source defaults to 10 seconds, with sync inheriting the query timeout when unset. Current project metadata has a query-timeout entry. Validate both against the actual runtime path. |
 | `MDC_CATALOG_SYNC_ENABLED`, `MDC_CATALOG_AUTO_SYNC_ENABLED` | Keep both `false` through the readiness checks. Both current Preview project values verified. |
 | `FUSEKI_BASE_URL`, `FUSEKI_DATASET`, `FUSEKI_QUERY_ENDPOINT`, `FUSEKI_UPDATE_ENDPOINT` | Legacy settings. Leave existing routing alone. The explicit service-discovery endpoints select the validation sync target. |
 
-## Required owner action and rollback
+## Task 13 pre-enable gate
 
-1. **Local validation.** Authorize the one loopback-only container, named volume and TDB2 dataset described above. Verify the isolated storage mapping and query and Graph Store routes with both sync flags off.
-2. **Cloud runtime.** Have the Fuseki owner nominate a managed host for the isolated dataset and supply the persistent mount, assembler, route mapping and access-policy evidence. Provide the protected HTTPS endpoint pair, a validation-scoped Graph Store credential through the server-side secret store, and an approved path from the intended Vercel runtime. Use an approved server-side diagnostic to verify TLS, query and Graph Store connectivity. If the diagnostic needs a Task 13 deployment, treat it as a pre-enable gate.
+The existing private Vercel diagnostic checks the PostgreSQL binding. The pinned application's health route is liveness-only. A query to its service-discovery API cannot establish which endpoint handled retrieval. There was no configured diagnostic that could verify the new Fuseki origin from that runtime.
 
-After isolation and access are verified, use an explicitly authorized unique marker in a disposable named graph, if supported, to verify query and Graph Store pairing. Confirm initial absence, exact SPARQL read-back and absence after removing only that graph. Obtain separate evidence of write permission for the actual `?default` target. Keep that gate pending until it can be verified safely.
+Authorize a separate protected diagnostic Preview in `mdc19/maasai-mdc-v1`, matching the intended Python 3.12 Preview execution network and `iad1` region. Give that deployment only the current HTTPS endpoint pair and its validation-only Basic secrets. With both sync flags `false`, verify TLS and parse an outbound SPARQL count, then confirm anonymous Graph Store HEAD returns 401 and authenticated HEAD returns 200. Record the diagnostic deployment ID, execution region and statuses without publishing the credential. Preserve the accepted Stage 1B deployment, its variables and production alias. This probe is the remaining runtime condition before any authorized activation.
 
-Preserve the pinned Stage 1B deployment and production alias. If a later authorized activation fails, stop synchronization, set both flags back to `false`, and restore the prior runtime routing and settings before resuming validation. Task 12 made no container, volume, dataset, endpoint, secret, database, backend, frontend, or deployment changes.
+## Restart and rollback
+
+Start Docker Desktop and use `docker start mdc-fuseki-validation` if the container is stopped. Use `docker restart mdc-fuseki-validation` to restart it with the same volume. A Fuseki-only restart leaves the running Quick Tunnel hostname in place.
+
+If the route filter has stopped, start it in a PowerShell terminal.
+
+```powershell
+$runtime = Join-Path $env:LOCALAPPDATA 'MaaSAI\mdc-stage2-fuseki'
+node.exe (Join-Path $runtime 'validation-routes.cjs')
+```
+
+To restart the Quick Tunnel, stop its existing process first. The initial background launch recorded its PID in `cloudflared.pid`. Verify that PID still belongs to `cloudflared.exe` with origin `http://127.0.0.1:3032` before stopping it. Start the tunnel in a second terminal.
+
+```powershell
+cloudflared.exe tunnel --no-autoupdate --protocol http2 --metrics 127.0.0.1:0 --url http://127.0.0.1:3032
+```
+
+Save the URL printed by Cloudflare in `tunnel-url.txt`. Use the new origin for both endpoint settings and repeat the HTTPS checks before the next demonstration or runtime probe. The assembler, dataset and validation-only credential persist independently of the tunnel.
+
+If a later authorized activation fails, stop synchronization, restore both flags to `false`, and restore the prior runtime routing and settings. The industrial container and graphs, Neon records and outbox, Stage 1B configuration, and application source were preserved. All Task 12 changes were limited to the separate validation infrastructure and this report.
