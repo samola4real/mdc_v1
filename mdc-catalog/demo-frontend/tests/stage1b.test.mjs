@@ -192,7 +192,7 @@ test('offline transport preserves exact ETag and receipt, strips identity header
     assert.equal(reply.data.publication_id, 'offline-receipt');
     assert.equal(reply.data.sync_status, 'pending');
     const [{ url, options }] = upstream;
-    assert.equal(url, 'https://maasai-mdc-v1-2ps4wdme5-mdc19.vercel.app/api/providers/' + providerId);
+    assert.equal(url, 'https://maasai-mdc-v1-3eufbyaio-mdc19.vercel.app/api/providers/' + providerId);
     assert.equal(options.headers['X-MDC-If-Match'], tag);
     assert.equal(options.headers['x-vercel-protection-bypass'], 'offline-fixture-only');
     assert.equal(options.headers.Authorization, undefined);
@@ -242,7 +242,7 @@ test('offline relay requires signed Admin for provider deletion and retains disp
     assert.equal((await remove(providerPath, admin)).statusCode, 200);
     assert.equal((await remove(offeringPath, provider)).statusCode, 200);
     assert.equal((await remove(offeringPath, admin)).statusCode, 200);
-    const preview = 'https://maasai-mdc-v1-2ps4wdme5-mdc19.vercel.app/api/';
+    const preview = 'https://maasai-mdc-v1-3eufbyaio-mdc19.vercel.app/api/';
     assert.deepEqual(forwarded, [providerPath, offeringPath, offeringPath].map((path) => ({
         url: preview + path.join('/'), method: 'DELETE', etag: tag
     })));
@@ -334,7 +334,7 @@ test('offline default relay verifies session before forwarding and fails closed 
     const health = { method: 'GET', path: ['health'], authorization: provider, extraHeaders: { 'x-mdc-actor-id': 'offline-actor' } };
     assert.equal((await invoke(health)).statusCode, 200);
     assert.equal(forwarded.length, 1);
-    assert.equal(forwarded[0].url, 'https://maasai-mdc-v1-2ps4wdme5-mdc19.vercel.app/api/health');
+    assert.equal(forwarded[0].url, 'https://maasai-mdc-v1-3eufbyaio-mdc19.vercel.app/api/health');
     assert.equal(forwarded[0].options.headers.Authorization, undefined);
     assert.equal(forwarded[0].options.headers['x-mdc-actor-id'], undefined);
 

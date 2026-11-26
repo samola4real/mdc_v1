@@ -1,9 +1,9 @@
 # MDC Demo Frontend
 
 This existing Next.js Pages Router application uses the MaaSAI Keycloak login and
-Provider, Consumer and Admin pages to exercise the accepted Stage 1 MDC Preview.
+Provider, Consumer and Admin pages to exercise the accepted Stage 2 MDC Preview.
 
-## Local Stage 1B setup
+## Local Stage 2 setup
 
 The Docker runtime is Node.js 20.18.0. Use a compatible Node runtime and npm that
 supports the existing lockfile. Start the server on loopback.
@@ -19,7 +19,7 @@ loads the approved Preview credential from the server environment or the
 Git-ignored `.env.local`.
 
 ```dotenv
-MDC_VERCEL_PROTECTION_BYPASS=<approved-Stage-1-Preview-bypass>
+MDC_VERCEL_PROTECTION_BYPASS=<approved-Stage-2-Preview-bypass>
 ```
 
 The loopback session policy verifies the signed MAASAI Keycloak access token,
@@ -37,8 +37,8 @@ The server checks the verified role and forwards only the canonical routes to
 the pinned protected Preview. Writes use disposable provider IDs starting with
 `mdc_stage1b_` and offering IDs prefixed by their provider ID. The client uses
 canonical `If-Match` with the current resource ETag. The server uses the
-Stage 1 Vercel header alias upstream. Registration and editing leave semantic
-publication pending while catalogue sync is disabled.
+existing `X-MDC-If-Match` header alias upstream. Successful Stage 2 lifecycle
+requests return `completed / synced / succeeded` after automatic publication.
 
 ## Verification
 
