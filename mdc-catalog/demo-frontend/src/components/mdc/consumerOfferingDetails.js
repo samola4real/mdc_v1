@@ -42,26 +42,45 @@ const groupedValues = (values, key, publishedValues) => {
 const materialGrades = (item) => textList(item?.available_grades);
 const processModes = (item) => Object.hasOwn(DELIVERY_MODES, item?.delivery_mode) ? [DELIVERY_MODES[item.delivery_mode]] : [];
 const certificationCodes = (values) => [...groupedValues(values, 'code', () => []).keys()];
-const applicableEvidence = (criterion, group) => {
+const applicableEvidence = (criterion, group, discoveryMode) => {
+    const provided = records(criterion.provided);
+    // The lenient matcher scopes material and process evidence to each preference.
+    // For a material alternative, it may return a published subtype of the requested material.
+    if (discoveryMode === 'lenient' && (group.field === 'materials' || group.field === 'processes')) return provided;
     const requested = new Set(textList(criterion.requested));
-    return records(criterion.provided).filter((value) => requested.has(typeof value === 'string' ? value : value?.[group.valueKey]));
+    return provided.filter((value) => requested.has(typeof value === 'string' ? value : value?.[group.valueKey]));
 };
 
-export const buildRequirementComparison = (result, partTypeLabel, catalogue) => [
-    { field: 'part_type', label: 'Part type', requested: partTypeLabel, provided: partTypeLabel },
-    ...result.matched_capabilities.map((criterion) => {
-        const { field, requested, provided } = criterion;
-        const group = EVIDENCE_GROUPS.find((entry) => entry.field === field);
-        return {
-            field, label: formatFieldLabel(field),
-            requested: group ? formatEvidenceList(requested, group, catalogue[field]) : formatCapabilityRange(requested),
-            provided: group ? formatEvidenceList(applicableEvidence(criterion, group), group, catalogue[field]) : formatCapabilityRange(provided)
-        };
-    })
-];
+const PREFERENCE_LABELS = {
+    materials: 'Material alternative',
+    processes: 'Process preference',
+    delivery: 'Delivery preference (weeks)'
+};
+
+export const buildRequirementComparison = (result, partTypeLabel, catalogue, discoveryMode) => {
+    const rows = [[result.matched_capabilities, 'Matched']];
+    if (discoveryMode === 'lenient') {
+        rows.push([result.unmatched_capabilities, 'Not matched'], [result.unknown_capabilities, 'Not confirmed']);
+    }
+    return [
+        { field: 'part_type', label: 'Part type', requested: partTypeLabel, provided: partTypeLabel, status: 'Matched' },
+        ...rows.flatMap(([criteria, status]) => criteria.map((criterion) => {
+            const { field, requested, provided } = criterion;
+            const group = EVIDENCE_GROUPS.find((entry) => entry.field === field);
+            const label = discoveryMode === 'lenient' && Object.hasOwn(PREFERENCE_LABELS, field)
+                ? PREFERENCE_LABELS[field] : formatFieldLabel(field);
+            return {
+                field, label, status,
+                requested: group ? formatEvidenceList(requested, group, catalogue[field]) : formatCapabilityRange(requested),
+                provided: group ? formatEvidenceList(applicableEvidence(criterion, group, discoveryMode), group, catalogue[field])
+                    : formatCapabilityRange(provided)
+            };
+        }))
+    ];
+};
 
 const consistentWithSearchEvidence = (result, context, provider, offering) => {
-    const { partType, requirements } = context;
+    const { partType, requirements, discoveryMode } = context;
     const generic = offering.generic_capabilities || {};
     const currentLists = {
         materials: groupedValues(generic.materials, 'material', materialGrades),
@@ -71,12 +90,15 @@ const consistentWithSearchEvidence = (result, context, provider, offering) => {
     const family = offering.family_capabilities || {};
     const typed = offering.part_type_capabilities?.[partType] || {};
 
-    return result.matched_capabilities.every((criterion) => {
+    const confirmedEvidence = discoveryMode === 'lenient'
+        ? [...result.matched_capabilities, ...result.unmatched_capabilities]
+        : result.matched_capabilities;
+    return confirmedEvidence.every((criterion) => {
         const { field, provided } = criterion;
         const group = EVIDENCE_GROUPS.find((entry) => entry.field === field);
         if (group) {
             const details = field === 'materials' ? materialGrades : field === 'processes' ? processModes : () => [];
-            const searchValues = groupedValues(applicableEvidence(criterion, group), group.valueKey, details);
+            const searchValues = groupedValues(applicableEvidence(criterion, group, discoveryMode), group.valueKey, details);
             return [...searchValues].every(([code, values]) => {
                 const current = currentLists[field].get(code);
                 return current && [...values].every((value) => current.has(value));

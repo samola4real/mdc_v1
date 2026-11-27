@@ -260,6 +260,39 @@ test('signed Consumer can read only the two exact lifecycle details and cannot u
     }
 });
 
+test('only signed lenient discovery uses the new fixed Preview origin', async (t) => {
+    const jwk = { ...await exportJWK(publicKey), kid, alg: 'RS256' };
+    const config = { MDC_KEYCLOAK_AUDIENCE: audience, MDC_KEYCLOAK_ROLE_SOURCE: 'client', MDC_VERCEL_PROTECTION_BYPASS: 'offline-fixture-only' };
+    const previous = Object.keys(config).map((key) => [key, process.env[key]]);
+    t.after(() => previous.forEach(([key, value]) => {
+        if (value === undefined) delete process.env[key];
+        else process.env[key] = value;
+    }));
+    Object.assign(process.env, config);
+    const requests = [];
+    t.mock.method(globalThis, 'fetch', async (url, options) => {
+        if (String(url) === issuer + '/protocol/openid-connect/certs') return Response.json({ keys: [jwk] });
+        requests.push({ url: String(url), options });
+        return Response.json({ contract_version: '1.0' });
+    });
+    const path = ['service-discovery', 'search'];
+    const body = { match_policy: { discovery_mode: 'lenient' } };
+    const consumer = 'Bearer ' + await fixture({ resource_access: { myClient: { roles: ['consumer'] } } });
+    assert.equal((await invoke({ method: 'POST', path, body })).statusCode, 401);
+    assert.equal((await invoke({ method: 'POST', path, body, authorization: 'Bearer ' + await fixture() })).statusCode, 403);
+    assert.equal((await invoke({ method: 'POST', path, body, authorization: consumer })).statusCode, 200);
+    assert.equal((await invoke({ method: 'POST', path, body: {}, authorization: consumer })).statusCode, 200);
+    assert.deepEqual(requests.map(({ url }) => url), [
+        'https://maasai-mdc-v1-ei6ijogqi-mdc19.vercel.app/api/service-discovery/search',
+        'https://maasai-mdc-v1-y1vib2sq7-mdc19.vercel.app/api/service-discovery/search'
+    ]);
+    for (const { options } of requests) {
+        assert.equal(options.headers.Authorization, undefined);
+        assert.equal(options.headers['x-vercel-protection-bypass'], 'offline-fixture-only');
+        assert.equal(options.redirect, 'error');
+    }
+});
+
 test('offline relay requires signed Admin for provider deletion and retains disposable scope for every role', async (t) => {
     const jwk = { ...await exportJWK(publicKey), kid, alg: 'RS256' };
     const config = { MDC_KEYCLOAK_AUDIENCE: audience, MDC_KEYCLOAK_ROLE_SOURCE: 'client', MDC_VERCEL_PROTECTION_BYPASS: 'offline-fixture-only' };

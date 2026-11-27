@@ -146,8 +146,11 @@ export function buildOfferingPdf(details, comparison, font, referenceDate = new 
     paragraph('Reference date · ' + date, 10, 5, muted);
     y += 3;
     heading('Requirement Comparison');
-    table(comparison.map(({ label, requested, provided }) => [label, requested, provided, 'Matched']),
-        [45, 47, width - 45 - 47 - 21, 21], ['Specification', 'Your requirement', 'Provider capability', 'Status'], 'Requirement Comparison');
+    table(comparison.map(({ label, requested, provided, status }) => [label, requested, provided, status]),
+        [42, 44, width - 42 - 44 - 30, 30], ['Specification', 'Your requirement', 'Provider capability', 'Status'], 'Requirement Comparison');
+    if (comparison.some(({ label }) => label === 'Material alternative')) {
+        paragraph('One supported alternative satisfies the material preference.', 10, 5, muted);
+    }
     if (comparison.length === 1) paragraph('No additional requirements were specified.', 10, 5, muted);
     y += 4;
     heading('Manufacturing Capability Overview');
@@ -156,7 +159,11 @@ export function buildOfferingPdf(details, comparison, font, referenceDate = new 
         ensureRoom(18);
         y += 3;
         paragraph(title, 12, 6, navy);
-        table(rows.map(({ label, value }) => [label, value]), [59, width - 59], null, title);
+        if (rows.every(({ value }) => !value)) {
+            table(rows.map(({ label }) => [label]), [width], null, title);
+        } else {
+            table(rows.map(({ label, value }) => [label, value]), [59, width - 59], null, title);
+        }
     }
 
     const total = doc.getNumberOfPages();

@@ -5,7 +5,7 @@ import {
     buildSearchPayload, changePartSelection, getSpecificationProfile, resetSearchForm, validateSearchCatalogue
 } from '../src/components/mdc/consumerSearchCriteria.js';
 import {
-    EVIDENCE_GROUPS, formatCapabilityRange, formatEvidenceList, NOT_PROVIDED, offeringKey, validateSearchResponse
+    EVIDENCE_GROUPS, formatCapabilityRange, formatEvidenceList, formatSuitability, NOT_PROVIDED, offeringKey, validateSearchResponse
 } from '../src/components/mdc/searchResultFormatters.js';
 
 const options = (...values) => values.map((value) => ({ value, label: value }));
@@ -17,9 +17,9 @@ const catalog = {
         metal_part: options('block', 'plate', 'bracket', 'bushing', 'roller', 'collar')
     },
     serviceCategoryByFamily: { gear: 'precision_gears', shaft: 'precision_shafts', metal_part: 'precision_metal_parts' },
-    materials: options('steel', 'aluminium'),
+    materials: options('steel', 'aluminum'),
     processes: options('milling', 'drilling'),
-    certifications: options('ISO9001_2015')
+    certifications: options('ISO9001_2015', 'ISO14001_2015')
 };
 const formFor = (partFamily, partType, specifications = {}) => ({
     ...resetSearchForm(catalog), partFamily, partType, specifications
@@ -44,7 +44,7 @@ test('catalogue selections use valid live options and derive the default when ge
     assert.equal(resetSearchForm(noGears).partType, 'plain_shaft');
     assert.throws(() => validateSearchCatalogue({ ...catalog, partTypes: {} }));
     assert.throws(() => validateSearchCatalogue({ ...catalog, materials: [{}] }));
-    assert(build({ ...formFor('gear', 'spur_gear'), material: 'not-in-catalogue' }).errors.selection);
+    assert(build({ ...formFor('gear', 'spur_gear'), materials: ['not-in-catalogue'] }).errors.selection);
     assert(build(formFor('gear', 'plain_shaft')).errors.selection);
 });
 
@@ -58,18 +58,20 @@ test('gear submits exact, inclusive range, maximum, quality and generic criteria
             qualityStandard: '  DIN 3962 ', qualityClass: '5.25',
             materialGrade: 'unsubmitted grade', technicalRequirements: 'unsupported'
         }),
-        material: 'steel', processes: ['milling', 'drilling'], certification: 'ISO9001_2015'
+        materials: ['steel', 'aluminum', 'steel'], processes: ['milling', 'drilling'], certifications: ['ISO9001_2015', 'ISO14001_2015']
     };
     const { payload } = build(form);
     assert.equal(payload.consumer_id, 'keycloak-subject-fixture');
     assert.equal(payload.contract_version, '1.0');
     assert.equal(payload.service_category, 'precision_gears');
-    assert.deepEqual(payload.match_policy, { unknown_policy: 'reject_unknown', optional_match_mode: 'all' });
+    assert.deepEqual(payload.match_policy, { discovery_mode: 'lenient' });
     assert.deepEqual(payload.requirements, expected({
         module: exact(2.125), diametral_pitch: { min: 4.75, max: 4.75 },
         outside_diameter_mm: max(120.125), tolerance_mm: max(0.0005625),
         gear_quality: { standard: 'DIN 3962', max_class: 5.25 }
-    }, { face_width_mm: exact(18.75) }, { materials: ['steel'], processes: ['milling', 'drilling'], certifications: ['ISO9001_2015'] }));
+    }, { face_width_mm: exact(18.75) }, {
+        materials: ['steel', 'aluminum'], processes: ['milling', 'drilling'], certifications: ['ISO9001_2015', 'ISO14001_2015']
+    }));
 });
 
 test('each submitted search generates a unique request ID and uses a neutral fallback only without a subject', () => {
@@ -154,21 +156,32 @@ for (const [type, requirements] of Object.entries(metalCases)) {
 test('changing type or family clears all specification values and reset also clears selections', () => {
     const original = {
         ...formFor('metal_part', 'block', metalSpecifications),
-        material: 'steel', processes: ['milling'], certification: 'ISO9001_2015'
+        materials: ['steel', 'aluminum'], processes: ['milling'], certifications: ['ISO9001_2015']
     };
     for (const [family, type] of [['metal_part', 'plate'], ['shaft', 'hollow_shaft']]) {
         const next = changePartSelection(original, family, type);
         assert.deepEqual(next.specifications, {});
         assert.deepEqual(build(next).payload.requirements, expected({}, {}, {
-            materials: ['steel'], processes: ['milling'], certifications: ['ISO9001_2015']
+            materials: ['steel', 'aluminum'], processes: ['milling'], certifications: ['ISO9001_2015']
         }));
     }
     assert.deepEqual(resetSearchForm(catalog), {
-        partFamily: 'gear', partType: 'spur_gear', material: null, processes: [], certification: null, specifications: {}
+        partFamily: 'gear', partType: 'spur_gear', materials: [], processes: [], certifications: [], specifications: {}
     });
 });
 
-const request = build(resetSearchForm(catalog)).payload;
+test('materials can be selected, removed and cleared while preserving other search requirements', () => {
+    const form = { ...formFor('gear', 'spur_gear', { module: '4' }), certifications: ['ISO9001_2015'] };
+    for (const materials of [['steel', 'aluminum'], ['steel'], []]) {
+        const { requirements } = build({ ...form, materials }).payload;
+        assert.deepEqual(requirements.part_family_specifications, { module: exact(4) });
+        assert.deepEqual(requirements.generic_requirements, {
+            ...(materials.length ? { materials } : {}), certifications: form.certifications
+        });
+    }
+});
+
+const request = { ...build(resetSearchForm(catalog)).payload, match_policy: { discovery_mode: 'strict' } };
 const offer = {
     provider_id: 'manufacturer', provider_name: 'Manufacturer', offering_id: 'service-one', offering_name: 'Service 1',
     service_category: request.service_category, part_family: request.part_family, match: { status: 'full_match', score: 1 },
@@ -201,6 +214,23 @@ test('ineligible, mixed, stale and malformed responses are errors instead of rec
     ]) {
         assert.throws(() => validateSearchResponse(invalid, request));
     }
+});
+
+test('lenient validation accepts unresolved alternatives and partial preferences, and rejects unresolved hard evidence', () => {
+    const lenient = { ...request, match_policy: { discovery_mode: 'lenient' } };
+    const steel = { field: 'materials', requested: ['steel'], provided: [{ material: 'steel' }] };
+    const titanium = { field: 'materials', requested: ['titanium'], provided: null };
+    const delivery = { field: 'delivery', requested: 2, provided: { max: 5 } };
+    const mixed = { ...offer, matched_capabilities: [steel], unknown_capabilities: [titanium] };
+    const partial = { ...mixed, match: { status: 'partial_match', score: 0.5 }, unmatched_capabilities: [delivery] };
+    assert.deepEqual(validateSearchResponse(response([mixed]), lenient).results, [mixed]);
+    assert.deepEqual(validateSearchResponse(response([partial]), lenient).results, [partial]);
+    assert.equal(formatSuitability('partial_match', 'lenient', lenient.requirements), 'Partial preference match');
+    assert.equal(formatSuitability('full_match', 'lenient', lenient.requirements), 'Requirements met');
+    assert.throws(() => validateSearchResponse(response([{ ...mixed, matched_capabilities: [] }]), lenient));
+    assert.throws(() => validateSearchResponse(response([{ ...partial, unknown_capabilities: [{ ...titanium, field: 'module' }] }]), lenient));
+    assert.throws(() => validateSearchResponse(response([{ ...partial, match: { ...partial.match, score: 2 } }]), lenient));
+    assert.throws(() => validateSearchResponse(response([partial]), request));
 });
 
 test('rendering formats only returned evidence, including grades and dimensional bounds', () => {

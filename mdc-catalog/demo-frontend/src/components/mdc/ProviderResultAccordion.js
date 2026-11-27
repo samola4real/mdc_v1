@@ -11,25 +11,30 @@ import { formatSuitability, offeringKey } from './searchResultFormatters';
 const columns = ['Specification', 'Your requirement', 'Provider capability', 'Status'];
 const contactMessage = 'Future implementation: contacting providers will be available in a future release.';
 
-function RequirementComparison({ rows }) {
+function RequirementComparison({ rows, lenient }) {
     return (
         <section aria-label="Requirement Comparison">
             <h3>Requirement Comparison</h3>
-            <table className="mdc-consumer-comparison" aria-label="Matched search requirements">
+            <table className="mdc-consumer-comparison" aria-label="Search requirements and preferences">
                 <thead>
                     <tr>{columns.map((label) => <th scope="col" key={label}>{label}</th>)}</tr>
                 </thead>
                 <tbody>
-                    {rows.map(({ field, label, requested, provided }) => (
-                        <tr key={field}>
+                    {rows.map(({ field, label, requested, provided, status }, index) => (
+                        <tr key={field + '-' + index}>
                             <th scope="row">{label}</th>
                             <td><span className="mdc-comparison-mobile-label" aria-hidden="true">Your requirement</span>{requested}</td>
                             <td><span className="mdc-comparison-mobile-label" aria-hidden="true">Provider capability</span>{provided}</td>
-                            <td><span className="mdc-comparison-matched"><i className="pi pi-check" aria-hidden="true" /> Matched</span></td>
+                            <td>
+                                <span className={status === 'Matched' ? 'mdc-comparison-matched' : 'mdc-comparison-unresolved'}>
+                                    {status === 'Matched' && <i className="pi pi-check" aria-hidden="true" />} {status}
+                                </span>
+                            </td>
                         </tr>
                     ))}
                 </tbody>
             </table>
+            {lenient && rows.some(({ field }) => field === 'materials') && <p>One supported alternative satisfies the material preference.</p>}
             {rows.length === 1 && <p>No additional requirements were specified.</p>}
         </section>
     );
@@ -89,6 +94,7 @@ const ProviderResultAccordion = ({ results, context }) => {
     const [entries, setEntries] = useState({});
     const [downloading, setDownloading] = useState({});
     const downloads = useRef(new Map());
+    const lenient = context.discoveryMode === 'lenient';
 
     useEffect(() => {
         const activeDownloads = downloads.current;
@@ -146,7 +152,7 @@ const ProviderResultAccordion = ({ results, context }) => {
                     const key = offeringKey(result);
                     const entry = entries[key];
                     const comparison = activeIndex === index
-                        ? buildRequirementComparison(result, context.partTypeLabel, context.catalogue)
+                        ? buildRequirementComparison(result, context.partTypeLabel, context.catalogue, context.discoveryMode)
                         : null;
                     return (
                         <AccordionTab
@@ -158,13 +164,14 @@ const ProviderResultAccordion = ({ results, context }) => {
                                         <span>{result.offering_name}</span>
                                         <span className="mdc-consumer-hint">Requested part type: {context.partTypeLabel}</span>
                                     </div>
-                                    <Tag value={formatSuitability(result.match.status)} severity="success" rounded />
+                                    <Tag value={formatSuitability(result.match.status, context.discoveryMode, context.requirements)}
+                                        severity={result.match.status === 'partial_match' ? 'warning' : 'success'} rounded />
                                 </div>
                             }
                         >
                             {comparison && (
                                 <div className="mdc-consumer-evidence">
-                                    <RequirementComparison rows={comparison} />
+                                    <RequirementComparison rows={comparison} lenient={lenient} />
                                     <PublishedOverview entry={entry} onRetry={() => load(result, true)} />
                                     <div className="mdc-consumer-actions mdc-offering-actions">
                                         <Button type="button" label="Download Offering" icon="pi pi-download" loading={Boolean(downloading[key])}

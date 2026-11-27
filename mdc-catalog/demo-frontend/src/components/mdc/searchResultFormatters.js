@@ -62,7 +62,15 @@ export const formatEvidenceList = (values, { valueKey }, options = []) => {
     return [...new Set(labels)].join(', ') || NOT_PROVIDED;
 };
 
-export const formatSuitability = (status) => {
+const PREFERENCE_FIELDS = new Set(['materials', 'processes', 'delivery']);
+
+export const formatSuitability = (status, discoveryMode, requirements) => {
+    if (discoveryMode === 'lenient') {
+        if (status === 'partial_match') return 'Partial preference match';
+        const generic = requirements.generic_requirements;
+        return [...PREFERENCE_FIELDS].some((field) => generic[field])
+            ? 'Preferences satisfied' : 'Requirements met';
+    }
     if (status === 'matched' || status === 'full_match') return 'Eligible';
     if (status === 'unmatched' || status === 'partial_match') return 'Requirements unmet';
     return 'Evidence incomplete';
@@ -72,6 +80,23 @@ export const offeringKey = (result) => JSON.stringify([result.provider_id, resul
 
 const nonemptyString = (value) => typeof value === 'string' && Boolean(value.trim());
 const emptyArray = (value) => Array.isArray(value) && value.length === 0;
+const validEvidence = (value) => Array.isArray(value)
+    && value.every((item) => nonemptyString(item?.field) && item.requested != null);
+
+const validMatch = (result, lenient) => {
+    const { match, matched_capabilities: matched, unmatched_capabilities: unmatched, unknown_capabilities: unknown } = result;
+    if (!validEvidence(matched)) return false;
+    if (!lenient) return match?.status === 'full_match' && emptyArray(unmatched) && emptyArray(unknown);
+    if (!validEvidence(unmatched) || !validEvidence(unknown)
+        || !Number.isFinite(match?.score) || match.score < 0 || match.score > 1) return false;
+
+    const unresolved = [...unmatched, ...unknown];
+    if (unresolved.some(({ field }) => !PREFERENCE_FIELDS.has(field))) return false;
+    // Materials are alternatives, so other unresolved material values do not undo a match.
+    const matchedMaterial = matched.some(({ field }) => field === 'materials');
+    const partial = unresolved.some(({ field }) => field !== 'materials' || !matchedMaterial);
+    return match.status === (partial ? 'partial_match' : 'full_match');
+};
 
 export const validateSearchResponse = (response, request) => {
     const matchesRequest = response?.contract_version === '1.0'
@@ -80,13 +105,12 @@ export const validateSearchResponse = (response, request) => {
         throw new Error('Invalid service-discovery response.');
     }
     const seenOfferings = new Set();
+    const lenient = request.match_policy?.discovery_mode === 'lenient';
     for (const result of response.results) {
-        if (result?.match?.status !== 'full_match'
+        if (!result
             || !['provider_id', 'provider_name', 'offering_id', 'offering_name'].every((field) => nonemptyString(result[field]))
             || result.service_category !== response.service_category || result.part_family !== response.part_family
-            || !emptyArray(result.unmatched_capabilities) || !emptyArray(result.unknown_capabilities)
-            || !Array.isArray(result.matched_capabilities)
-            || result.matched_capabilities.some((item) => !nonemptyString(item?.field) || item.requested == null)
+            || !validMatch(result, lenient)
             || seenOfferings.has(offeringKey(result))) {
             throw new Error('Invalid eligible offering in the service-discovery response.');
         }

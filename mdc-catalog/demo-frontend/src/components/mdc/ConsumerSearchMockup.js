@@ -23,6 +23,26 @@ import { validateSearchResponse } from './searchResultFormatters';
 import SearchErrorMessage from './SearchErrorMessage';
 import SearchResultsList from './SearchResultsList';
 
+const selectionClearButton = (label) => function ClearSelectionButton({ iconProps, props: { inputId } }) {
+    return (
+        <button
+            {...iconProps}
+            type="button"
+            aria-label={label}
+            onClick={(event) => {
+                event.stopPropagation();
+                iconProps.onClick(event);
+                document.getElementById(inputId)?.focus();
+            }}
+        >
+            <i className="pi pi-times" aria-hidden="true" />
+        </button>
+    );
+};
+
+const clearMaterials = selectionClearButton('Clear selected materials');
+const clearCertifications = selectionClearButton('Clear selected certifications');
+
 const SpecificationField = ({ field, value, error, onChange }) => {
     const { id, label, text, integer, placeholder, hint } = field;
     const hintId = hint ? id + '-hint' : undefined;
@@ -101,7 +121,7 @@ const ConsumerSearchMockup = () => {
         try {
             const response = validateSearchResponse(await searchServiceDiscovery(payload), payload);
             if (activeSearch.current === job && !job.obsolete) {
-                setOutcome({ response, requirements: payload.requirements });
+                setOutcome({ response, requirements: payload.requirements, discoveryMode: payload.match_policy.discovery_mode });
             }
         } catch (error) {
             if (activeSearch.current === job && !job.obsolete) setOutcome({ error });
@@ -174,20 +194,28 @@ const ConsumerSearchMockup = () => {
                         <h3 id="material-requirements">Material and Manufacturing Requirements</h3>
                         <div className="mdc-consumer-grid">
                             <div className="mdc-consumer-field">
-                                <label htmlFor="material">Material</label>
-                                <Dropdown
+                                <label htmlFor="materials">Material preferences</label>
+                                <MultiSelect
                                     {...selectOptions}
-                                    inputId="material"
-                                    value={form?.material}
+                                    inputId="materials"
+                                    value={form?.materials || []}
                                     options={catalogue?.materials || []}
-                                    placeholder="Select a material"
+                                    placeholder="Select materials"
+                                    aria-describedby="material-preference-hint"
+                                    className="mdc-consumer-chips"
+                                    display="chip"
+                                    filter
+                                    resetFilterOnHide
+                                    showSelectAll={false}
                                     showClear
+                                    clearIcon={clearMaterials}
                                     disabled={!catalogue}
-                                    onChange={({ value }) => changeCriteria({ ...form, material: value })}
+                                    onChange={({ value }) => changeCriteria({ ...form, materials: value || [] })}
                                 />
+                                <small id="material-preference-hint" className="mdc-consumer-hint">Selected materials are alternatives.</small>
                             </div>
                             <div className="mdc-consumer-field">
-                                <label htmlFor="processes">Manufacturing processes</label>
+                                <label htmlFor="processes">Preferred manufacturing processes</label>
                                 <MultiSelect
                                     {...selectOptions}
                                     inputId="processes"
@@ -202,16 +230,22 @@ const ConsumerSearchMockup = () => {
                                 />
                             </div>
                             <div className="mdc-consumer-field">
-                                <label htmlFor="certification">Certifications</label>
-                                <Dropdown
+                                <label htmlFor="certifications">Required certifications</label>
+                                <MultiSelect
                                     {...selectOptions}
-                                    inputId="certification"
-                                    value={form?.certification}
+                                    inputId="certifications"
+                                    value={form?.certifications || []}
                                     options={catalogue?.certifications || []}
-                                    placeholder="Select a certification"
+                                    placeholder="Select certifications"
+                                    className="mdc-consumer-chips"
+                                    display="chip"
+                                    filter
+                                    resetFilterOnHide
+                                    showSelectAll={false}
                                     showClear
+                                    clearIcon={clearCertifications}
                                     disabled={!catalogue}
-                                    onChange={({ value }) => changeCriteria({ ...form, certification: value })}
+                                    onChange={({ value }) => changeCriteria({ ...form, certifications: value || [] })}
                                 />
                             </div>
                         </div>
@@ -251,13 +285,14 @@ const ConsumerSearchMockup = () => {
                             disabled={loading || !validSelection}
                         />
                         <Button type="button" label="Reset" outlined disabled={!catalogue} onClick={() => changeCriteria(resetSearchForm(catalogue))} />
-                        {loading && <span role="status">Finding eligible manufacturing services...</span>}
+                        {loading && <span role="status">Finding manufacturing services...</span>}
                     </div>
                 </form>
             </Card>
 
             <SearchErrorMessage error={outcome?.error} />
-            <SearchResultsList response={outcome?.response} catalogue={catalogue} requirements={outcome?.requirements} />
+            <SearchResultsList response={outcome?.response} catalogue={catalogue}
+                requirements={outcome?.requirements} discoveryMode={outcome?.discoveryMode} />
         </>
     );
 };

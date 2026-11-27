@@ -63,6 +63,27 @@
 
     .mdc-consumer-hint { color: var(--text-medium); }
 
+    .mdc-consumer-chips .p-multiselect-label {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.25rem;
+    }
+
+    .mdc-consumer-chips button.p-multiselect-clear-icon {
+        display: grid;
+        place-items: center;
+        width: 1.75rem;
+        height: 1.75rem;
+        margin-top: -0.875rem;
+        padding: 0;
+        border: 0;
+        border-radius: 4px;
+        background: transparent;
+        cursor: pointer;
+
+        &:focus-visible { outline: 2px solid var(--brand-orange); }
+    }
+
     .mdc-consumer-specifications {
         border: 1px solid var(--border);
         border-radius: var(--border-radius, 6px);
@@ -121,6 +142,7 @@
             background: #e7f5eb;
             color: #215c36;
         }
+        .p-tag-warning { background: #fff0dd; color: #794507; }
     }
 
     .mdc-consumer-evidence {
@@ -139,13 +161,13 @@
 
         th, td { padding: 0.625rem; text-align: start; vertical-align: top; border-bottom: 1px solid var(--border); }
         thead th { background: var(--surface-ground); font-weight: 600; }
-        thead th:last-child { width: 7rem; }
+        thead th:last-child { width: 9rem; }
         tbody th { font-weight: 500; }
     }
 
     .mdc-comparison-mobile-label { display: none; }
 
-    .mdc-comparison-matched {
+    .mdc-comparison-matched, .mdc-comparison-unresolved {
         display: inline-flex;
         gap: 0.375rem;
         align-items: center;
@@ -155,6 +177,8 @@
         color: #215c36;
         white-space: nowrap;
     }
+
+    .mdc-comparison-unresolved { background: #fff0dd; color: #794507; }
 
     .mdc-offering-overview, .mdc-offering-actions {
         border-top: 1px solid var(--border);

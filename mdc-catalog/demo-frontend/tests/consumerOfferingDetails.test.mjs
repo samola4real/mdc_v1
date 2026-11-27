@@ -14,7 +14,8 @@ const catalogue = {
         gear: [option('spur_gear', 'Spur gear'), option('bevel_gear', 'Bevel gear')],
         metal_part: [option('plate', 'Plate')]
     },
-    materials: [option('steel', 'Steel'), option('aluminum', 'Aluminum')],
+    materials: [option('steel', 'Steel'), option('aluminum', 'Aluminum'), option('titanium', 'Titanium'),
+        option('alloyed_carburizing_steel', 'Alloyed carburizing steel')],
     processes: [option('hobbing', 'Hobbing'), option('milling', 'Milling')],
     certifications: [option('ISO9001_2015', 'ISO 9001:2015'), option('ISO14001_2015', 'ISO 14001:2015')]
 };
@@ -70,11 +71,38 @@ test('requirement comparison contains the confirmed type and every requested cri
         { field: 'materials', label: 'Materials', requested: 'Steel', provided: 'Steel (16MnCr5, 42CrMo4)' },
         { field: 'processes', label: 'Manufacturing processes', requested: 'Hobbing', provided: 'Hobbing' },
         { field: 'certifications', label: 'Certifications', requested: 'ISO 14001:2015', provided: 'ISO 14001:2015' }
-    ]);
+    ].map((row) => ({ ...row, status: 'Matched' })));
     const missing = buildRequirementComparison({ ...result, matched_capabilities: [{ field: 'module', requested: { exact: 4 } }] }, 'Spur gear', catalogue);
     assert.equal(missing[1].provided, NOT_PROVIDED);
     const typeOnly = buildRequirementComparison({ ...result, matched_capabilities: [] }, 'Spur gear', catalogue);
     assert.deepEqual(typeOnly, rows.slice(0, 1));
+});
+
+test('lenient comparison keeps semantic material evidence and shows unresolved preferences independently', () => {
+    const publishedMaterial = { material: 'alloyed_carburizing_steel', available_grades: ['16MnCr5'] };
+    const lenient = {
+        ...result,
+        matched_capabilities: [{ field: 'materials', requested: ['steel'], provided: [publishedMaterial] }],
+        unmatched_capabilities: [{ field: 'delivery', requested: 2, provided: { max: 5 } }],
+        unknown_capabilities: [
+            { field: 'materials', requested: ['titanium'], provided: null },
+            { field: 'processes', requested: ['milling'], provided: null }
+        ]
+    };
+    const lenientContext = { ...context, discoveryMode: 'lenient' };
+    assert.deepEqual(buildRequirementComparison(lenient, 'Spur gear', catalogue, 'lenient').slice(1), [
+        { field: 'materials', label: 'Material alternative', requested: 'Steel', provided: 'Alloyed carburizing steel (16MnCr5)', status: 'Matched' },
+        { field: 'delivery', label: 'Delivery preference (weeks)', requested: '2', provided: '≤ 5', status: 'Not matched' },
+        { field: 'materials', label: 'Material alternative', requested: 'Titanium', provided: NOT_PROVIDED, status: 'Not confirmed' },
+        { field: 'processes', label: 'Process preference', requested: 'Milling', provided: NOT_PROVIDED, status: 'Not confirmed' }
+    ]);
+    const details = { ...offering, generic_capabilities: { materials: [publishedMaterial], lead_time_weeks: { max: 5 } } };
+    const view = buildPublishedOffering(lenient, lenientContext, provider, details);
+    assert.deepEqual(rowsOf(view, 'Materials and grades'), { 'Alloyed carburizing steel': '16MnCr5' });
+    assert.equal(buildPublishedOffering(lenient, lenientContext, provider, offering), null);
+    assert.equal(buildPublishedOffering(lenient, lenientContext, provider, {
+        ...details, generic_capabilities: { ...details.generic_capabilities, lead_time_weeks: { max: 2 } }
+    }), null);
 });
 
 test('one publishable offering model keeps ranges, type-specific values, service facts, grades and certification scopes', () => {
