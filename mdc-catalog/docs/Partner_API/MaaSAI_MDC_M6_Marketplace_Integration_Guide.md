@@ -1,10 +1,14 @@
 # MaaSAI MDC M6 Marketplace integration guide
 
-Status: frozen integration contract for M6-A. Contract version: `1.0`.
+Contract version `1.0`. The temporary Marketplace integration profile is live at
+`https://maasai-mdc-v1.vercel.app`. Import the current Postman environment and
+select **No Auth**. Make the requests from the Marketplace server without a
+bearer token, actor header, Vercel bypass or Vercel session cookie. Keycloak
+authenticates users in Marketplace. The MDC endpoint is public and serves the
+approved demo catalogue. [Marketplace Postman environment](MaaSAI_MDC_Marketplace_Demo.postman_environment.json)
 
-Use a deployment URL supplied by the MDC operator as `{{base_url}}`. No
-`/api/v1/` partner routes exist. All canonical routes are directly below
-`/api/`.
+Use the stable URL as `{{base_url}}` for these examples. All canonical routes
+are directly below `/api/`.
 
 ## Contract rules that Marketplace must preserve
 
@@ -49,11 +53,10 @@ Use a deployment URL supplied by the MDC operator as `{{base_url}}`. No
 | `PATCH /api/offerings/{offering_id}` | Optional `offering_name`, `support_status`, `supported_part_types`, capability/custom maps, `is_active`; identity/classification are immutable | `200` receipt plus new strong `ETag` | Updates offering, publication and outbox; automatic success verifies Fuseki | `400`, `401`, `403`, `404`, `412`, `428`, `503`; GET current state/ETag before retry |
 | `DELETE /api/offerings/{offering_id}` | No body; current strong `If-Match` is always required | `200` deletion receipt | Permanently removes only that operational offering; siblings remain; audit/outbox retained; automatic success verifies semantic absence | `400`, `404`, `412`, `428`, `503`; do not repeat after confirmed absence |
 
-Lifecycle read/write authentication is deployment-configurable. The approved
-pilot/plenary profile may set lifecycle auth and actor requirements off, but the
-secure implementation and secure defaults remain. Do not send invented bearer
-or actor values in that no-auth profile. PATCH requires `If-Match` when
-`MDC_PROVIDER_CONCURRENCY_REQUIRED=True`; DELETE always requires it.
+The current demo profile requires a strong precondition for every PATCH and
+DELETE. On detail reads, send `Accept-Encoding: identity` and use the latest
+strong `ETag` as `If-Match` or `X-MDC-If-Match`. Automatic synchronization
+is enabled on the stable URL.
 
 ## Quick start
 

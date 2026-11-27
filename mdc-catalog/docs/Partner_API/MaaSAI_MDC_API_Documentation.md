@@ -1,7 +1,7 @@
 # MaaSAI MaaS Dynamic Catalogue API
 
 **Component name:** MaaS Dynamic Catalogue (MDC)  
-**Partner-facing API document revision:** 1.1.0  
+**Partner-facing API document revision:** 1.2.0\
 **API contract version:** `1.0`  
 **Authored by:** TAU  
 **Current pilot production base URL:** `https://maasai-mdc-v1.vercel.app`
@@ -14,6 +14,7 @@
 |---|---:|---|
 | 2026-08-31 | 1.0.0 | Initial partner-facing API document |
 | 2026-09-09 | 1.1.0 | Aligned documentation with the verified M6.1 production contract: stable `/api/...` routes, `contract_version`, public response shaping, and current three-endpoint partner scope |
+| 2026-11-27 | 1.2.0 | Recorded the temporary Marketplace release with all 13 canonical operations, strict eligibility and automatic synchronization |
 
 ---
 
@@ -21,13 +22,7 @@
 
 The MaaS Dynamic Catalogue (MDC) provides the Cloud MaaS Marketplace and other MaaSAI components with a structured interface for discovering manufacturing/service offerings.
 
-The current partner-facing API supports three functions:
-
-1. check whether the MDC API is available;
-2. retrieve controlled catalogue/filter values for Marketplace forms;
-3. submit a structured service-discovery request and receive matching provider offerings.
-
-The current public API is intentionally limited to these three endpoints while provider registration, provider publication, provider update, and provider/offering retrieval are moved to a durable PostgreSQL-backed lifecycle in the next development phase.
+The partner API covers health, controlled catalogue filters, strict service discovery, and provider and offering lifecycle operations. The stable URL currently serves the approved validation catalogue for temporary Marketplace integration and demonstration use.
 
 ---
 
@@ -40,6 +35,11 @@ https://maasai-mdc-v1.vercel.app
 ```
 
 All paths in this document are relative to that base URL.
+
+Use **No Auth** for this profile. Send Marketplace server requests without an
+MDC bearer token, actor header or Vercel bypass. MaaSAI Keycloak authenticates
+Marketplace users. The MDC URL itself is directly callable, so use approved
+demo records. [Postman environment](MaaSAI_MDC_Marketplace_Demo.postman_environment.json)
 
 ## 2.2 Stable URL strategy
 
@@ -76,7 +76,8 @@ The previously documented `/api/v1/...` routes are not part of the current API a
 | `GET` | `/api/catalog/filters` | Retrieve controlled values used by Marketplace forms and request validation |
 | `POST` | `/api/service-discovery/search` | Submit a structured manufacturing/service request and receive matching provider offerings |
 
-These are the only endpoints that should currently be used for new Marketplace/partner integration.
+For the ten provider and offering lifecycle operations, see the
+[endpoint matrix](MaaSAI_MDC_M6_Marketplace_Integration_Guide.md#frozen-endpoint-matrix).
 
 ---
 
@@ -545,81 +546,46 @@ curl -X POST https://maasai-mdc-v1.vercel.app/api/service-discovery/search \
 
 # 10. Integration Guidance
 
-Marketplace integrations should:
+Marketplace integrations use the following discovery rules.
 
-1. call `/api/catalog/filters` rather than hard-code controlled values;
-2. keep `service_category`, `part_family`, and `part_type` mutually consistent using the filter relationships;
-3. generate a stable unique `request_id` for each logical service-discovery request;
-4. submit only supported requirement fields for the selected part type;
-5. treat `unknown_capabilities` as missing/insufficient confirmed catalogue information rather than automatically assuming incompatibility;
-6. treat `unmatched_capabilities` as known incompatibilities for the corresponding requested criteria;
-7. use the returned `match.status` and `match.score` together with capability arrays when presenting results to the user;
-8. use `/api/...` routes only and do not call `/api/v1/...`.
+1. Load controlled values from `/api/catalog/filters`.
+2. Keep `service_category`, `part_family` and `part_type` consistent using the filter relationships.
+3. Generate a unique `request_id` for each logical search and submit supported fields for the selected part type.
+4. Send the returned eligible offerings to the MaaS Recommendation System for ranking.
+5. Treat HTTP 200 with `results: []` as a successful search with zero eligible offerings.
+6. Use the canonical unversioned `/api/...` routes.
 
 ---
 
-# 11. Current Scope and Deferred Provider APIs
+# 11. Provider and Offering Lifecycle
 
-The current partner-facing contract intentionally does **not** expose provider lifecycle APIs.
+Validate the registration body with `POST /api/provider-publication/validation` before registering through `POST /api/provider-publication`. Use the provider and offering IDs returned by MDC in subsequent detail, list, add, update and delete calls.
 
-The following functions are planned for a later PostgreSQL-backed phase:
+Use a current strong `ETag` for PATCH and DELETE. Request detail with `Accept-Encoding: identity` to preserve the strong ETag through Vercel. Send it with `If-Match` or the existing `X-MDC-If-Match` alias. HTTP 428 means the precondition is missing, and HTTP 412 means the revision changed. Reload the resource and review the new state before using a fresh ETag.
 
-- provider registration/publication;
-- provider-publication validation;
-- provider edit/update;
-- provider retrieval/listing;
-- offering retrieval/update;
-- publication/version history;
-- controlled synchronization from PostgreSQL to RDF/Fuseki.
-
-They are deferred because state-changing provider workflows require durable persistence, authorization, version/history management, transactional consistency, and reliable RDF/Fuseki synchronization.
-
-Partners should therefore not integrate against legacy/internal provider routes at this stage.
+Automatic writes are complete when the receipt says `completed / synced / succeeded`. A timeout or HTTP 503 can follow a committed PostgreSQL write. Retain any `publication_id`, read the exact resource and coordinate with the operator before retrying the write. [Lifecycle request examples and recovery](MaaSAI_MDC_M6_Marketplace_Integration_Guide.md)
 
 ---
 
 # 12. Current Security and Deployment Notes
 
-The current MDC deployment is a MaaSAI pilot deployment.
-
-Current production safety configuration includes:
-
-```text
-/api/demo/*                -> unavailable
-/api/provider-publication  -> disabled
-```
-
-Authentication/authorization for broader production partner access is a later hardening/integration concern. Integrators should not assume that anonymous access is a permanent production contract.
-
-The current search runtime preserves the harmonized MDC service-discovery stack and may use RDFLib/YAML fallback when an external Fuseki endpoint is not configured. Backend/fallback implementation details are intentionally not exposed in the public search response.
+The temporary public integration profile uses the validation database and its
+isolated Fuseki dataset. Lifecycle validation, conditional writes and automatic
+publication are active. Discovery checks the current synchronized Fuseki
+revision and returns HTTP 503 if the authoritative catalogue is unavailable.
+Demo routes remain disabled. The operator retains the internal Graph Store
+credentials and handles synchronization recovery.
 
 ---
 
 # 13. Production Verification Status
 
-The M6.1 contract was verified on Vercel Preview and Production before this document revision.
-
-Verified production behavior:
-
-```text
-GET  /api/health                       -> 200
-GET  /api/catalog/filters              -> 200
-POST /api/service-discovery/search     -> 200
-
-GET  /api/v1/health                    -> 404
-GET  /api/v1/catalog/filters           -> 404
-POST /api/v1/service-discovery/search  -> 404
-
-GET  /api/demo/health                  -> 404
-POST /api/provider-publication         -> 403
-```
-
-A verified service-discovery smoke request returned:
-
-```text
-contract_version = 1.0
-result_count = 2
-```
+Task 15 verified all 13 canonical operations on the staged production build.
+After cutover, the stable URL returned canonical JSON for health, filters,
+search, exact detail reads and validation. A disposable registration and
+cascade deletion both completed automatic synchronization using a clean client.
+The Module 4 search returned only `tasowheel_precision_gears` after cleanup.
+[Task 15 release evidence](../reports_phase4/15_MDC_Vercel_Production_Release_and_Marketplace_API_Access_Report.md)
 
 ---
 
@@ -637,7 +603,7 @@ MaaS Dynamic Catalogue API
 Provider offering matches
 ```
 
-Current public endpoints:
+Catalogue discovery endpoints:
 
 ```text
 GET  /api/health
@@ -651,4 +617,4 @@ Current API contract version:
 1.0
 ```
 
-Provider lifecycle APIs will be added only after the durable PostgreSQL-backed provider lifecycle is implemented and verified.
+The [canonical lifecycle matrix](MaaSAI_MDC_M6_Marketplace_Integration_Guide.md#frozen-endpoint-matrix) covers provider validation and publication, exact provider and offering reads, updates and deletion.
