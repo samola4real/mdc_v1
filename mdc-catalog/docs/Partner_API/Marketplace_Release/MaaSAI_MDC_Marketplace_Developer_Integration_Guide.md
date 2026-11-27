@@ -183,7 +183,11 @@ Send the complete provider publication body to:
 
 ~~~http
 POST {{base_url}}/api/provider-publication/validation
+Content-Type: application/json
+Accept: application/json
 ~~~
+
+**Request body:** In Postman, select **Body → raw → JSON** and paste the complete provider JSON payload shown in Section 6. Do not send only the provider ID or only the offering object. The validation request uses the full provider object, including its offerings.
 
 The validation endpoint does not register the provider or create an offering.
 
@@ -209,7 +213,11 @@ After validation succeeds, send the same JSON body to:
 
 ~~~http
 POST {{base_url}}/api/provider-publication
+Content-Type: application/json
+Accept: application/json
 ~~~
+
+**Request body:** Use **Body → raw → JSON** and paste the same complete payload from Section 6. Do not change the provider or offering IDs between validation and registration.
 
 A successful registration returns HTTP 201 and a publication receipt.
 
@@ -342,9 +350,11 @@ Use:
 
 ~~~http
 POST {{base_url}}/api/providers/{{provider_id}}/offerings
+Content-Type: application/json
+Accept: application/json
 ~~~
 
-The body contains one offering object, not the complete provider object.
+**Request body:** In Postman, select **Body → raw → JSON** and paste the complete single-offering payload shown below. The body contains one offering object, not the complete provider object.
 
 Example:
 
@@ -394,13 +404,15 @@ GET {{base_url}}/api/providers/{{provider_id}}
 Accept-Encoding: identity
 ~~~
 
-Copy the strong ETag response header. Then send:
+The GET response includes an **ETag** header. Think of this as the current version label for the provider. In Postman, the script in Section 10.3 saves it as `provider_etag`. Then send the PATCH request with:
 
 ~~~http
 PATCH {{base_url}}/api/providers/{{provider_id}}
-If-Match: "the-current-provider-etag"
+If-Match: {{provider_etag}}
 Content-Type: application/json
 ~~~
+
+Do not type an ETag yourself. Postman inserts the value returned by MDC, including any quotation marks that are part of it.
 
 Example body:
 
@@ -424,13 +436,15 @@ GET {{base_url}}/api/offerings/{{offering_id}}
 Accept-Encoding: identity
 ~~~
 
-Copy the strong ETag response header. Then send:
+The GET response includes an **ETag** header. In Postman, the script in Section 10.3 saves it as `offering_etag`. Then send the PATCH request with:
 
 ~~~http
 PATCH {{base_url}}/api/offerings/{{offering_id}}
-If-Match: "the-current-offering-etag"
+If-Match: {{offering_etag}}
 Content-Type: application/json
 ~~~
+
+Postman reuses the complete value returned by MDC. You do not need to type the value or add quotation marks yourself.
 
 Example body:
 
@@ -456,6 +470,28 @@ The service category, part family and offering ID cannot be changed through PATC
 
 A successful update returns HTTP 200, a publication receipt and a new ETag.
 
+### 8.3 Delete a provider
+
+First retrieve the provider again and save its latest ETag as `provider_etag`. Then send:
+
+~~~http
+DELETE {{base_url}}/api/providers/{{provider_id}}
+If-Match: {{provider_etag}}
+~~~
+
+No request body is required. The ETag is required for deletion. Deleting a provider also deletes all its offerings.
+
+### 8.4 Delete one offering
+
+First retrieve the offering and save its latest ETag as `offering_etag`. Then send:
+
+~~~http
+DELETE {{base_url}}/api/offerings/{{offering_id}}
+If-Match: {{offering_etag}}
+~~~
+
+No request body is required. Only the selected offering is deleted.
+
 ## 9. Consumer service discovery
 
 ### Step 1 — Prepare the consumer request
@@ -473,6 +509,8 @@ POST {{base_url}}/api/service-discovery/search
 Content-Type: application/json
 Accept: application/json
 ~~~
+
+**Request body:** In Postman, select **Body → raw → JSON** and paste the complete search payload below.
 
 Complete block search example:
 
@@ -601,33 +639,51 @@ Choose **No Auth** for the collection or individual requests. Do not add a beare
 
 For requests 3 and 4, use the complete provider payload from Section 6. For request 8, use the block search payload from Section 9.
 
-### 10.3 Capture ETags in Postman
+### 10.3 Save and reuse ETags in Postman
 
-After GET provider details, use this script in the Postman Tests tab to save the ETag:
+You do not need to understand or manually create an ETag. MDC returns it in the GET response headers. The following scripts save the complete value automatically, including the quotation marks returned by MDC.
 
-~~~javascript
-const etag = pm.response.headers.get("ETag");
-if (etag) {
-  pm.environment.set("provider_etag", etag);
-}
-~~~
-
-After GET offering details, use:
+After **GET provider details**, add this script in the Postman **Scripts → Post-response** (or **Tests**) tab:
 
 ~~~javascript
 const etag = pm.response.headers.get("ETag");
-if (etag) {
-  pm.environment.set("offering_etag", etag);
+if (!etag) {
+  throw new Error("MDC did not return an ETag for this provider.");
 }
+pm.environment.set("provider_etag", etag);
 ~~~
 
-For PATCH or DELETE requests, set the If-Match header to the corresponding environment variable.
+After **GET offering details**, use:
+
+~~~javascript
+const etag = pm.response.headers.get("ETag");
+if (!etag) {
+  throw new Error("MDC did not return an ETag for this offering.");
+}
+pm.environment.set("offering_etag", etag);
+~~~
+
+For a provider PATCH or DELETE request, add this request header:
+
+~~~http
+If-Match: {{provider_etag}}
+~~~
+
+For an offering PATCH or DELETE request, add:
+
+~~~http
+If-Match: {{offering_etag}}
+~~~
+
+Do not put quotation marks around the Postman variable. The variable already contains the complete value returned by MDC.
+
+**In simple terms:** GET retrieves the current record and saves its version label; PATCH or DELETE sends that same label back to MDC. If the record has changed in the meantime, retrieve it again and use the new value.
 
 ### 10.4 Clean up test data
 
 Provider registration creates a real provider record and makes its eligible offering available to search. Use a unique test provider ID and delete that provider when testing is complete.
 
-Before deleting, retrieve the provider again and use its latest strong ETag. Provider deletion also deletes the provider's offerings.
+Before deleting, retrieve the provider again and use its latest ETag. Provider deletion also deletes the provider's offerings.
 
 Do not use an existing production provider ID for integration tests.
 
@@ -641,7 +697,7 @@ Do not use an existing production provider ID for integration tests.
 | 404 | Provider or offering does not exist | Check the ID and endpoint |
 | 409 | The provider or offering ID already exists | Use a new unique ID or retrieve the existing record |
 | 412 | The ETag is no longer current | GET the resource and use its latest ETag |
-| 428 | If-Match is missing | GET the resource and include its strong ETag |
+| 428 | If-Match is missing | GET the resource and include its latest ETag |
 | 503 | The operation or publication could not be confirmed | Read the response receipt and GET the resource before retrying |
 
 Do not blindly repeat a provider registration or offering creation after an HTTP 503. The request may have been accepted even if the final response could not confirm publication. Check the provider or offering first.
@@ -659,7 +715,7 @@ Before completing the Marketplace integration, confirm that:
 - [ ] Each supported part-type record contains part_type, support_status, source_type and confidence.
 - [ ] The provider publication validation endpoint is called before registration.
 - [ ] Provider and offering IDs are stored and reused for subsequent requests.
-- [ ] PATCH and DELETE requests use the latest strong ETag in If-Match.
+- [ ] PATCH and DELETE requests send the latest ETag in the If-Match header (PATCH is recommended; DELETE requires it).
 - [ ] Service-discovery requests use the correct requirements group for each field.
 - [ ] The Marketplace treats MDC results as technically eligible offerings and sends them to the Recommendation System for ranking.
 - [ ] Test providers are deleted after integration testing.
