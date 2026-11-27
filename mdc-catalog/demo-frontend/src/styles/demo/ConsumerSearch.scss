@@ -63,6 +63,13 @@
 
     .mdc-consumer-hint { color: var(--text-medium); }
 
+    .mdc-consumer-certifications {
+        .p-multiselect-label { white-space: normal; }
+        .p-multiselect-token { max-width: 100%; margin: 0.125rem 0.25rem 0.125rem 0; }
+        .p-multiselect-token-label { overflow-wrap: anywhere; }
+        .p-multiselect-token-icon { flex-shrink: 0; }
+    }
+
     .mdc-consumer-specifications {
         border: 1px solid var(--border);
         border-radius: var(--border-radius, 6px);
@@ -90,8 +97,6 @@
         align-items: center;
         gap: 0.75rem;
 
-        .p-button { min-height: 2.75rem; }
-        .p-button-outlined { color: var(--brand-navy); border-color: var(--brand-navy); }
         [role='status'] { color: var(--text-medium); }
     }
 

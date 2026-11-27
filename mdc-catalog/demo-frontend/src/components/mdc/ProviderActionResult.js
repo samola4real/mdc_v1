@@ -1,5 +1,5 @@
 import React, { useRef } from 'react';
-import { Button } from 'primereact/button';
+import Button from './MaaSAIButton';
 import { Toast } from 'primereact/toast';
 import { actionToastMessage, managementFeedback } from './providerActionFeedback';
 import { readableCode } from './providerManagementDraft';

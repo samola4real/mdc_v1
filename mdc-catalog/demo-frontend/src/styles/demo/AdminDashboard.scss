@@ -181,36 +181,6 @@
         padding: 9px 13px;
         font-size: 15px;
         white-space: nowrap;
-
-        .p-button-label { font-weight: 600; }
-
-        &--load {
-            background: var(--brand-orange);
-            border-color: var(--brand-orange);
-            color: var(--brand-ink);
-            &:enabled:hover { background: var(--brand-sand); border-color: var(--brand-sand); color: var(--brand-ink); }
-        }
-
-        &--view {
-            background: var(--brand-navy);
-            border-color: var(--mdc-admin-outline);
-            color: #fff;
-            &:enabled:hover { background: #2e527a; border-color: var(--mdc-admin-outline); color: #fff; }
-        }
-
-        &--delete {
-            background: #a82736;
-            border-color: #a82736;
-            color: #fff;
-            &:enabled:hover { background: #87202c; border-color: #87202c; color: #fff; }
-        }
-    }
-
-    .p-button.p-button-outlined {
-        background: transparent;
-        border-color: var(--mdc-admin-outline);
-        color: var(--mdc-admin-emphasis);
-        &:enabled:hover { background: var(--mdc-admin-icon-bg); color: var(--mdc-admin-emphasis); }
     }
 
     .mdc-admin-metrics {
@@ -289,7 +259,6 @@
     .p-dialog-header,
     .p-dialog-content { background: var(--bg-card); color: var(--text-dark); }
     .p-dialog-title { font-size: 20px; }
-    .p-dialog-header .p-dialog-header-icon:focus-visible { box-shadow: var(--focus-ring); }
     .mdc-admin-view-details,
     .mdc-admin-view-offering { display: grid; gap: 12px; }
     .mdc-admin-view-offering { max-width: 400px; gap: 6px; font-size: 15px; font-weight: 600; }

@@ -1,5 +1,4 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Button } from 'primereact/button';
 import { Card } from 'primereact/card';
 import { Dropdown } from 'primereact/dropdown';
 import { InputText } from 'primereact/inputtext';
@@ -22,6 +21,7 @@ import {
 import { validateSearchResponse } from './searchResultFormatters';
 import SearchErrorMessage from './SearchErrorMessage';
 import SearchResultsList from './SearchResultsList';
+import Button from './MaaSAIButton';
 
 const SpecificationField = ({ field, value, error, onChange }) => {
     const { id, label, text, integer, placeholder, hint } = field;
@@ -202,16 +202,22 @@ const ConsumerSearchMockup = () => {
                                 />
                             </div>
                             <div className="mdc-consumer-field">
-                                <label htmlFor="certification">Certifications</label>
-                                <Dropdown
+                                <label htmlFor="certifications">Certifications</label>
+                                <MultiSelect
                                     {...selectOptions}
-                                    inputId="certification"
-                                    value={form?.certification}
+                                    inputId="certifications"
+                                    value={form?.certifications || []}
                                     options={catalogue?.certifications || []}
-                                    placeholder="Select a certification"
+                                    placeholder="Select certifications"
+                                    filter
+                                    filterPlaceholder="Search certifications"
+                                    resetFilterOnHide
+                                    showSelectAll={false}
+                                    display="chip"
                                     showClear
                                     disabled={!catalogue}
-                                    onChange={({ value }) => changeCriteria({ ...form, certification: value })}
+                                    className="mdc-consumer-certifications"
+                                    onChange={({ value }) => changeCriteria({ ...form, certifications: value || [] })}
                                 />
                             </div>
                         </div>

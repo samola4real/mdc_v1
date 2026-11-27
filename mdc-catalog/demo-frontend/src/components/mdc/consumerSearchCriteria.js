@@ -95,7 +95,7 @@ export const defaultPartType = (catalogue, family) => (
 export const resetSearchForm = (catalogue) => {
     const families = availableSearchFamilies(catalogue);
     const partFamily = hasOption(families, 'gear') ? 'gear' : families[0]?.value ?? null;
-    return { partFamily, partType: defaultPartType(catalogue, partFamily), material: null, processes: [], certification: null, specifications: {} };
+    return { partFamily, partType: defaultPartType(catalogue, partFamily), material: null, processes: [], certifications: [], specifications: {} };
 };
 
 export const changePartSelection = (form, partFamily, partType) => ({
@@ -138,18 +138,18 @@ const numericRequirement = (value, bound) => {
 export const buildSearchPayload = (form, catalogue, subject) => {
     const errors = {};
     const requirements = { [FAMILY_SPECS]: {}, [TYPE_SPECS]: {}, [GENERIC]: {} };
-    const { partFamily, partType, material, processes, certification, specifications } = form;
+    const { partFamily, partType, material, processes, certifications, specifications } = form;
     const { fields } = getSpecificationProfile(partFamily, partType);
 
     if (!hasValidPartSelection(form, catalogue)
         || (material && !hasOption(catalogue.materials, material))
         || processes.some((process) => !hasOption(catalogue.processes, process))
-        || (certification && !hasOption(catalogue.certifications, certification))) {
+        || certifications.some((certification) => !hasOption(catalogue.certifications, certification))) {
         errors.selection = INVALID_REQUIREMENTS;
     }
     if (material) requirements[GENERIC].materials = [material];
     if (processes.length) requirements[GENERIC].processes = processes;
-    if (certification) requirements[GENERIC].certifications = [certification];
+    if (certifications.length) requirements[GENERIC].certifications = certifications;
 
     for (const { id, key, group, bound, integer } of fields) {
         const raw = specifications[id];

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Button } from 'primereact/button';
+import Button from './MaaSAIButton';
 import { Message } from 'primereact/message';
 import { getCatalogFilters, normalizeCatalogFilters } from '@/services/mdc/catalog.service';
 import { DISPOSABLE_PROVIDER_PREFIX } from '@/services/mdc/stage1bScope';

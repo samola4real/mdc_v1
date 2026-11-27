@@ -19,7 +19,7 @@ const catalog = {
     serviceCategoryByFamily: { gear: 'precision_gears', shaft: 'precision_shafts', metal_part: 'precision_metal_parts' },
     materials: options('steel', 'aluminium'),
     processes: options('milling', 'drilling'),
-    certifications: options('ISO9001_2015')
+    certifications: options('ISO9001_2015', 'ISO14001_2015', 'APQP')
 };
 const formFor = (partFamily, partType, specifications = {}) => ({
     ...resetSearchForm(catalog), partFamily, partType, specifications
@@ -58,7 +58,7 @@ test('gear submits exact, inclusive range, maximum, quality and generic criteria
             qualityStandard: '  DIN 3962 ', qualityClass: '5.25',
             materialGrade: 'unsubmitted grade', technicalRequirements: 'unsupported'
         }),
-        material: 'steel', processes: ['milling', 'drilling'], certification: 'ISO9001_2015'
+        material: 'steel', processes: ['milling', 'drilling'], certifications: ['ISO9001_2015']
     };
     const { payload } = build(form);
     assert.equal(payload.consumer_id, 'keycloak-subject-fixture');
@@ -70,6 +70,20 @@ test('gear submits exact, inclusive range, maximum, quality and generic criteria
         outside_diameter_mm: max(120.125), tolerance_mm: max(0.0005625),
         gear_quality: { standard: 'DIN 3962', max_class: 5.25 }
     }, { face_width_mm: exact(18.75) }, { materials: ['steel'], processes: ['milling', 'drilling'], certifications: ['ISO9001_2015'] }));
+});
+
+test('certification requirements send canonical arrays for one or several selections and omit an empty array', () => {
+    const form = resetSearchForm(catalog);
+    const selected = ['ISO9001_2015', 'ISO14001_2015', 'APQP'];
+    for (const certifications of [selected.slice(0, 1), selected.slice(0, 2), selected]) {
+        const { payload } = build({ ...form, certifications });
+        assert.deepEqual(payload.requirements.generic_requirements.certifications, certifications);
+        assert.deepEqual(payload.match_policy, { unknown_policy: 'reject_unknown', optional_match_mode: 'all' });
+    }
+    const reduced = build({ ...form, certifications: selected.filter((code) => code !== 'ISO14001_2015') });
+    assert.deepEqual(reduced.payload.requirements.generic_requirements.certifications, ['ISO9001_2015', 'APQP']);
+    assert(!Object.hasOwn(build(form).payload.requirements.generic_requirements, 'certifications'));
+    assert(build({ ...form, certifications: ['ISO9001_2015', 'ISO 14001:2015'] }).errors.selection);
 });
 
 test('each submitted search generates a unique request ID and uses a neutral fallback only without a subject', () => {
@@ -154,17 +168,17 @@ for (const [type, requirements] of Object.entries(metalCases)) {
 test('changing type or family clears all specification values and reset also clears selections', () => {
     const original = {
         ...formFor('metal_part', 'block', metalSpecifications),
-        material: 'steel', processes: ['milling'], certification: 'ISO9001_2015'
+        material: 'steel', processes: ['milling'], certifications: ['ISO9001_2015', 'ISO14001_2015']
     };
     for (const [family, type] of [['metal_part', 'plate'], ['shaft', 'hollow_shaft']]) {
         const next = changePartSelection(original, family, type);
         assert.deepEqual(next.specifications, {});
         assert.deepEqual(build(next).payload.requirements, expected({}, {}, {
-            materials: ['steel'], processes: ['milling'], certifications: ['ISO9001_2015']
+            materials: ['steel'], processes: ['milling'], certifications: ['ISO9001_2015', 'ISO14001_2015']
         }));
     }
     assert.deepEqual(resetSearchForm(catalog), {
-        partFamily: 'gear', partType: 'spur_gear', material: null, processes: [], certification: null, specifications: {}
+        partFamily: 'gear', partType: 'spur_gear', material: null, processes: [], certifications: [], specifications: {}
     });
 });
 
