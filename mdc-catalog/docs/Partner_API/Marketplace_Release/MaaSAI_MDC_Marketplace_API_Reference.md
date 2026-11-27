@@ -135,6 +135,18 @@ For a supported part type, both source_type and confidence are required. For cap
 
 Use source_type = not_confirmed together with confidence = unknown.
 
+Provider-level certifications are objects with a required code and optional evidence metadata:
+
+~~~json
+{
+  "code": "ISO9001_2015",
+  "source_type": "provider_confirmed",
+  "confidence": "declared"
+}
+~~~
+
+The code must be one of the current values returned by GET /api/catalog/filters. Duplicate certification codes are not accepted for the same provider.
+
 ### 4.5 Unsupported legacy publication fields
 
 The current provider publication contract does not accept the old top-level **description** or **capabilities** fields.
@@ -450,6 +462,44 @@ The structure of material, process and certification records is different from t
 - Provider certification capability: an array of objects containing code.
 
 For provider material records, available_grades is a list of grade strings. Material grades are provider capability information; they are not a separate consumer search criterion.
+
+The provider capability record shapes are:
+
+~~~json
+{
+  "materials": [
+    {
+      "material": "steel",
+      "available_grades": ["18CrNiMo7-6"],
+      "source_type": "provider_confirmed",
+      "confidence": "declared"
+    }
+  ],
+  "processes": [
+    {
+      "process": "machining",
+      "delivery_mode": "in_house",
+      "source_type": "provider_confirmed",
+      "confidence": "declared"
+    }
+  ],
+  "certifications": [
+    {
+      "code": "ISO9001_2015",
+      "source_type": "provider_confirmed",
+      "confidence": "declared"
+    }
+  ],
+  "batch_size": {"min": 100, "max": 2000},
+  "lead_time_weeks": {"min": 8, "max": 12},
+  "surface_finish_ra_um": {"max": 1.6},
+  "tolerance_mm": {"max": 0.05},
+  "weight_kg": {"max": 200},
+  "quality": {"standard": "DIN", "max_class": 4}
+}
+~~~
+
+The example shows the shape of each supported field; include only the capabilities that the provider actually confirms. Numeric capability values are objects using positive min, max and/or exact values.
 
 The accepted delivery_mode values are in_house, subcontracted and unspecified.
 
@@ -954,15 +1004,22 @@ MDC applies strict technical eligibility:
 - Partial matches are not returned as eligible results.
 - An omitted requirement does not impose a constraint.
 
-The optional match_policy object accepts optional_match_mode, unknown_policy and minimum_score. The current service applies strict eligibility regardless of legacy permissive policy values. For normal Marketplace requests, omit match_policy or send the strict values:
+The optional match_policy object accepts:
+
+| Field | Accepted values |
+|---|---|
+| optional_match_mode | any, all, score_only |
+| unknown_policy | keep_as_unknown, reject_unknown |
+| minimum_score | A number from 0 to 1, or null |
+
+The current service applies strict eligibility regardless of legacy permissive policy values. A permissive value does not allow a partial or unknown offering to be returned as eligible. For normal Marketplace requests, omit match_policy or send the strict values:
 
 ~~~json
 {
   "optional_match_mode": "all",
   "unknown_policy": "reject_unknown",
   "minimum_score": null
-}
-~~~
+}~~~
 
 ### 10.7 Complete example: search for block manufacturing
 
