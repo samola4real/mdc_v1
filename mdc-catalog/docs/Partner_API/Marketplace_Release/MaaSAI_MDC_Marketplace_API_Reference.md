@@ -500,6 +500,98 @@ The actual details identify the field or value that needs correction.
 
 Registers one provider and one or more offerings in a single request.
 
+**Request headers:**
+
+~~~http
+Content-Type: application/json
+Accept: application/json
+~~~
+
+**Request body (Postman: Body → raw → JSON):**
+
+The following example uses a provider with a confirmed block-manufacturing offering. Use a unique provider ID when testing. If the ID already exists, registration returns a conflict.
+
+~~~json
+{
+  "contract_version": "1.0",
+  "provider_id": "marketplace_api_test_20261127_01",
+  "provider_name": "Marketplace API Test Works",
+  "country": "Finland",
+  "certifications": [],
+  "offerings": [
+    {
+      "offering_id": "marketplace_api_test_20261127_01_block_cell",
+      "service_category": "precision_metal_parts",
+      "offering_name": "Precision block manufacturing",
+      "part_family": "metal_part",
+      "support_status": "confirmed",
+      "supported_part_types": [
+        {
+          "part_type": "block",
+          "support_status": "confirmed",
+          "source_type": "provider_confirmed",
+          "confidence": "declared"
+        }
+      ],
+      "family_capabilities": {},
+      "part_type_capabilities": {
+        "block": {
+          "bounding_box_mm": {
+            "length_mm": {
+              "max": 150,
+              "source_type": "provider_confirmed",
+              "confidence": "declared"
+            },
+            "width_mm": {
+              "max": 80,
+              "source_type": "provider_confirmed",
+              "confidence": "declared"
+            },
+            "height_mm": {
+              "max": 20,
+              "source_type": "provider_confirmed",
+              "confidence": "declared"
+            }
+          },
+          "number_of_holes": {
+            "max": 4,
+            "source_type": "provider_confirmed",
+            "confidence": "declared"
+          }
+        }
+      },
+      "generic_capabilities": {
+        "materials": [
+          {
+            "material": "steel",
+            "available_grades": ["18CrNiMo7-6"],
+            "source_type": "provider_confirmed",
+            "confidence": "declared"
+          }
+        ],
+        "processes": [
+          {
+            "process": "machining",
+            "delivery_mode": "in_house",
+            "source_type": "provider_confirmed",
+            "confidence": "declared"
+          }
+        ],
+        "certifications": [
+          {
+            "code": "ISO9001_2015",
+            "source_type": "provider_confirmed",
+            "confidence": "declared"
+          }
+        ]
+      },
+      "custom_offering_fields": {},
+      "custom_capability_fields": {}
+    }
+  ]
+}
+~~~
+
 #### Top-level request fields
 
 | Field | Required | Type | Description |
@@ -616,92 +708,7 @@ The accepted delivery_mode values are in_house, subcontracted and unspecified.
 
 For quality capability records, standard may be AGMA, DIN or ISO.
 
-**Request body (Postman: Body → raw → JSON):**
 
-#### Complete example: provider offering block manufacturing
-
-The following example uses a provider with a confirmed block-manufacturing offering. Use a unique provider ID when testing. If the ID already exists, registration returns a conflict.
-
-~~~json
-{
-  "contract_version": "1.0",
-  "provider_id": "marketplace_api_test_20261127_01",
-  "provider_name": "Marketplace API Test Works",
-  "country": "Finland",
-  "certifications": [],
-  "offerings": [
-    {
-      "offering_id": "marketplace_api_test_20261127_01_block_cell",
-      "service_category": "precision_metal_parts",
-      "offering_name": "Precision block manufacturing",
-      "part_family": "metal_part",
-      "support_status": "confirmed",
-      "supported_part_types": [
-        {
-          "part_type": "block",
-          "support_status": "confirmed",
-          "source_type": "provider_confirmed",
-          "confidence": "declared"
-        }
-      ],
-      "family_capabilities": {},
-      "part_type_capabilities": {
-        "block": {
-          "bounding_box_mm": {
-            "length_mm": {
-              "max": 150,
-              "source_type": "provider_confirmed",
-              "confidence": "declared"
-            },
-            "width_mm": {
-              "max": 80,
-              "source_type": "provider_confirmed",
-              "confidence": "declared"
-            },
-            "height_mm": {
-              "max": 20,
-              "source_type": "provider_confirmed",
-              "confidence": "declared"
-            }
-          },
-          "number_of_holes": {
-            "max": 4,
-            "source_type": "provider_confirmed",
-            "confidence": "declared"
-          }
-        }
-      },
-      "generic_capabilities": {
-        "materials": [
-          {
-            "material": "steel",
-            "available_grades": ["18CrNiMo7-6"],
-            "source_type": "provider_confirmed",
-            "confidence": "declared"
-          }
-        ],
-        "processes": [
-          {
-            "process": "machining",
-            "delivery_mode": "in_house",
-            "source_type": "provider_confirmed",
-            "confidence": "declared"
-          }
-        ],
-        "certifications": [
-          {
-            "code": "ISO9001_2015",
-            "source_type": "provider_confirmed",
-            "confidence": "declared"
-          }
-        ]
-      },
-      "custom_offering_fields": {},
-      "custom_capability_fields": {}
-    }
-  ]
-}
-~~~
 
 For metal_part offerings, family_capabilities must be empty. Use the part-type-specific map for the block, plate, bracket, bushing, roller or collar capabilities.
 
