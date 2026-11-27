@@ -1,0 +1,10 @@
+{
+  "dataset": "mdc_validation",
+  "defaultTriples": 837,
+  "revision": "7c79b16dba232163baa27d0c6553c298572f9475aa4c508ad6d4ded80e4348d4",
+  "graphStoreAnonymousHead": 401,
+  "methods": [
+    "read-only query POST",
+    "HEAD"
+  ]
+}

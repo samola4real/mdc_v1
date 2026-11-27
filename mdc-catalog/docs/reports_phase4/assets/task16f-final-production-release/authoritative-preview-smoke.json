@@ -1,0 +1,1280 @@
+{
+  "preview": "https://maasai-mdc-v1-7l62onih5-mdc19.vercel.app",
+  "anonymous": 302,
+  "authorizedHealth": 200,
+  "filters": [
+    "ISO9001_2015",
+    "ISO14001_2015",
+    "ISO_TS_16949_partial",
+    "APQP",
+    "aerospace_traceability",
+    "full_traceability",
+    "ISO13485_2016",
+    "AS9100_D"
+  ],
+  "deprecatedHealth": 404,
+  "exactIdentity": "mdc_stage1b_accept_20261126_a_shaft",
+  "currentSharedSpline": {
+    "value": 2,
+    "confidence": "declared",
+    "source_type": "provider_confirmed"
+  },
+  "sharedPrecipartCertifications": [],
+  "checks": [
+    {
+      "case": "Spur baseline",
+      "expected": [
+        "precipart_precision_gears",
+        "tasowheel_precision_gears"
+      ],
+      "http": 200,
+      "request": {
+        "contract_version": "1.0",
+        "request_id": "task16f-72d91880c6ed4c0ba5bab58c8c104198",
+        "consumer_id": "task16f-verification",
+        "service_category": "precision_gears",
+        "part_family": "gear",
+        "part_type": "spur_gear",
+        "requirements": {}
+      },
+      "response": {
+        "contract_version": "1.0",
+        "request_id": "task16f-72d91880c6ed4c0ba5bab58c8c104198",
+        "service_category": "precision_gears",
+        "part_family": "gear",
+        "part_type": "spur_gear",
+        "result_count": 2,
+        "results": [
+          {
+            "provider_id": "precipart",
+            "provider_name": "Precipart",
+            "offering_id": "precipart_precision_gears",
+            "offering_name": "High-precision custom gears",
+            "service_category": "precision_gears",
+            "part_family": "gear",
+            "match": {
+              "status": "full_match",
+              "score": 1.0
+            },
+            "matched_capabilities": [],
+            "unmatched_capabilities": [],
+            "unknown_capabilities": []
+          },
+          {
+            "provider_id": "tasowheel",
+            "provider_name": "Tasowheel Oy",
+            "offering_id": "tasowheel_precision_gears",
+            "offering_name": "Precision gears",
+            "service_category": "precision_gears",
+            "part_family": "gear",
+            "match": {
+              "status": "full_match",
+              "score": 1.0
+            },
+            "matched_capabilities": [],
+            "unmatched_capabilities": [],
+            "unknown_capabilities": []
+          }
+        ]
+      }
+    },
+    {
+      "case": "Steel strict",
+      "expected": [],
+      "http": 200,
+      "request": {
+        "contract_version": "1.0",
+        "request_id": "task16f-3a63d685164b441a89ee4669d55900b0",
+        "consumer_id": "task16f-verification",
+        "service_category": "precision_gears",
+        "part_family": "gear",
+        "part_type": "spur_gear",
+        "requirements": {
+          "generic_requirements": {
+            "materials": [
+              "steel"
+            ]
+          }
+        }
+      },
+      "response": {
+        "contract_version": "1.0",
+        "request_id": "task16f-3a63d685164b441a89ee4669d55900b0",
+        "service_category": "precision_gears",
+        "part_family": "gear",
+        "part_type": "spur_gear",
+        "result_count": 0,
+        "results": []
+      }
+    },
+    {
+      "case": "Legacy any",
+      "expected": [],
+      "http": 200,
+      "request": {
+        "contract_version": "1.0",
+        "request_id": "task16f-23e89bd690bb47ef825b610391883848",
+        "consumer_id": "task16f-verification",
+        "service_category": "precision_gears",
+        "part_family": "gear",
+        "part_type": "spur_gear",
+        "requirements": {
+          "generic_requirements": {
+            "materials": [
+              "steel"
+            ]
+          }
+        },
+        "match_policy": {
+          "optional_match_mode": "any",
+          "unknown_policy": "keep_as_unknown",
+          "minimum_score": 1
+        }
+      },
+      "response": {
+        "contract_version": "1.0",
+        "request_id": "task16f-23e89bd690bb47ef825b610391883848",
+        "service_category": "precision_gears",
+        "part_family": "gear",
+        "part_type": "spur_gear",
+        "result_count": 0,
+        "results": []
+      }
+    },
+    {
+      "case": "Legacy all",
+      "expected": [],
+      "http": 200,
+      "request": {
+        "contract_version": "1.0",
+        "request_id": "task16f-fa522befc8824de7abbe32c5c1e91c84",
+        "consumer_id": "task16f-verification",
+        "service_category": "precision_gears",
+        "part_family": "gear",
+        "part_type": "spur_gear",
+        "requirements": {
+          "generic_requirements": {
+            "materials": [
+              "steel"
+            ]
+          }
+        },
+        "match_policy": {
+          "optional_match_mode": "all",
+          "unknown_policy": "keep_as_unknown",
+          "minimum_score": 1
+        }
+      },
+      "response": {
+        "contract_version": "1.0",
+        "request_id": "task16f-fa522befc8824de7abbe32c5c1e91c84",
+        "service_category": "precision_gears",
+        "part_family": "gear",
+        "part_type": "spur_gear",
+        "result_count": 0,
+        "results": []
+      }
+    },
+    {
+      "case": "Legacy score_only",
+      "expected": [],
+      "http": 200,
+      "request": {
+        "contract_version": "1.0",
+        "request_id": "task16f-d45f061334804d8aa6df69d4b0de2b79",
+        "consumer_id": "task16f-verification",
+        "service_category": "precision_gears",
+        "part_family": "gear",
+        "part_type": "spur_gear",
+        "requirements": {
+          "generic_requirements": {
+            "materials": [
+              "steel"
+            ]
+          }
+        },
+        "match_policy": {
+          "optional_match_mode": "score_only",
+          "unknown_policy": "keep_as_unknown",
+          "minimum_score": 1
+        }
+      },
+      "response": {
+        "contract_version": "1.0",
+        "request_id": "task16f-d45f061334804d8aa6df69d4b0de2b79",
+        "service_category": "precision_gears",
+        "part_family": "gear",
+        "part_type": "spur_gear",
+        "result_count": 0,
+        "results": []
+      }
+    },
+    {
+      "case": "strict gear module 1",
+      "expected": [
+        "precipart_precision_gears",
+        "tasowheel_precision_gears"
+      ],
+      "http": 200,
+      "request": {
+        "contract_version": "1.0",
+        "request_id": "task16f-f3ffd9aeec004e1f8c2aa925bfcb80af",
+        "consumer_id": "task16f-verification",
+        "service_category": "precision_gears",
+        "part_family": "gear",
+        "part_type": "spur_gear",
+        "requirements": {
+          "part_family_specifications": {
+            "module": {
+              "exact": 1
+            }
+          }
+        },
+        "match_policy": {
+          "discovery_mode": "strict"
+        }
+      },
+      "response": {
+        "contract_version": "1.0",
+        "request_id": "task16f-f3ffd9aeec004e1f8c2aa925bfcb80af",
+        "service_category": "precision_gears",
+        "part_family": "gear",
+        "part_type": "spur_gear",
+        "result_count": 2,
+        "results": [
+          {
+            "provider_id": "precipart",
+            "provider_name": "Precipart",
+            "offering_id": "precipart_precision_gears",
+            "offering_name": "High-precision custom gears",
+            "service_category": "precision_gears",
+            "part_family": "gear",
+            "match": {
+              "status": "full_match",
+              "score": 1.0
+            },
+            "matched_capabilities": [
+              {
+                "field": "module",
+                "requested": {
+                  "exact": 1.0
+                },
+                "provided": {
+                  "min": 0.125,
+                  "max": 1.5
+                }
+              }
+            ],
+            "unmatched_capabilities": [],
+            "unknown_capabilities": []
+          },
+          {
+            "provider_id": "tasowheel",
+            "provider_name": "Tasowheel Oy",
+            "offering_id": "tasowheel_precision_gears",
+            "offering_name": "Precision gears",
+            "service_category": "precision_gears",
+            "part_family": "gear",
+            "match": {
+              "status": "full_match",
+              "score": 1.0
+            },
+            "matched_capabilities": [
+              {
+                "field": "module",
+                "requested": {
+                  "exact": 1.0
+                },
+                "provided": {
+                  "min": 0.3,
+                  "max": 10
+                }
+              }
+            ],
+            "unmatched_capabilities": [],
+            "unknown_capabilities": []
+          }
+        ]
+      }
+    },
+    {
+      "case": "strict gear module 4",
+      "expected": [
+        "tasowheel_precision_gears"
+      ],
+      "http": 200,
+      "request": {
+        "contract_version": "1.0",
+        "request_id": "task16f-0bca50f50b654122a9239446cb2554d8",
+        "consumer_id": "task16f-verification",
+        "service_category": "precision_gears",
+        "part_family": "gear",
+        "part_type": "spur_gear",
+        "requirements": {
+          "part_family_specifications": {
+            "module": {
+              "exact": 4
+            }
+          }
+        },
+        "match_policy": {
+          "discovery_mode": "strict"
+        }
+      },
+      "response": {
+        "contract_version": "1.0",
+        "request_id": "task16f-0bca50f50b654122a9239446cb2554d8",
+        "service_category": "precision_gears",
+        "part_family": "gear",
+        "part_type": "spur_gear",
+        "result_count": 1,
+        "results": [
+          {
+            "provider_id": "tasowheel",
+            "provider_name": "Tasowheel Oy",
+            "offering_id": "tasowheel_precision_gears",
+            "offering_name": "Precision gears",
+            "service_category": "precision_gears",
+            "part_family": "gear",
+            "match": {
+              "status": "full_match",
+              "score": 1.0
+            },
+            "matched_capabilities": [
+              {
+                "field": "module",
+                "requested": {
+                  "exact": 4.0
+                },
+                "provided": {
+                  "min": 0.3,
+                  "max": 10
+                }
+              }
+            ],
+            "unmatched_capabilities": [],
+            "unknown_capabilities": []
+          }
+        ]
+      }
+    },
+    {
+      "case": "strict gear module 12",
+      "expected": [],
+      "http": 200,
+      "request": {
+        "contract_version": "1.0",
+        "request_id": "task16f-f5647f8f04e5459caa7672265d1f3d1c",
+        "consumer_id": "task16f-verification",
+        "service_category": "precision_gears",
+        "part_family": "gear",
+        "part_type": "spur_gear",
+        "requirements": {
+          "part_family_specifications": {
+            "module": {
+              "exact": 12
+            }
+          }
+        },
+        "match_policy": {
+          "discovery_mode": "strict"
+        }
+      },
+      "response": {
+        "contract_version": "1.0",
+        "request_id": "task16f-f5647f8f04e5459caa7672265d1f3d1c",
+        "service_category": "precision_gears",
+        "part_family": "gear",
+        "part_type": "spur_gear",
+        "result_count": 0,
+        "results": []
+      }
+    },
+    {
+      "case": "strict shared spline module 2",
+      "expected": [
+        "tasowheel_precision_shafts"
+      ],
+      "http": 200,
+      "request": {
+        "contract_version": "1.0",
+        "request_id": "task16f-c2765507d6aa4712a72e6af6ab10d426",
+        "consumer_id": "task16f-verification",
+        "service_category": "precision_shafts",
+        "part_family": "shaft",
+        "part_type": "splined_shaft",
+        "requirements": {
+          "part_type_specifications": {
+            "spline_module": {
+              "exact": 2
+            }
+          }
+        },
+        "match_policy": {
+          "discovery_mode": "strict"
+        }
+      },
+      "response": {
+        "contract_version": "1.0",
+        "request_id": "task16f-c2765507d6aa4712a72e6af6ab10d426",
+        "service_category": "precision_shafts",
+        "part_family": "shaft",
+        "part_type": "splined_shaft",
+        "result_count": 1,
+        "results": [
+          {
+            "provider_id": "tasowheel",
+            "provider_name": "Tasowheel Oy",
+            "offering_id": "tasowheel_precision_shafts",
+            "offering_name": "Precision shafts",
+            "service_category": "precision_shafts",
+            "part_family": "shaft",
+            "match": {
+              "status": "full_match",
+              "score": 1.0
+            },
+            "matched_capabilities": [
+              {
+                "field": "spline_module",
+                "requested": {
+                  "exact": 2.0
+                },
+                "provided": {
+                  "min": 0.3,
+                  "max": 10
+                }
+              }
+            ],
+            "unmatched_capabilities": [],
+            "unknown_capabilities": []
+          }
+        ]
+      }
+    },
+    {
+      "case": "strict Roller",
+      "expected": [
+        "mdc_stage1b_accept_20261126_a_metal"
+      ],
+      "http": 200,
+      "request": {
+        "contract_version": "1.0",
+        "request_id": "task16f-88c8562ad1b74e5fafd0f54818352a6d",
+        "consumer_id": "task16f-verification",
+        "service_category": "precision_metal_parts",
+        "part_family": "metal_part",
+        "part_type": "roller",
+        "requirements": {},
+        "match_policy": {
+          "discovery_mode": "strict"
+        }
+      },
+      "response": {
+        "contract_version": "1.0",
+        "request_id": "task16f-88c8562ad1b74e5fafd0f54818352a6d",
+        "service_category": "precision_metal_parts",
+        "part_family": "metal_part",
+        "part_type": "roller",
+        "result_count": 1,
+        "results": [
+          {
+            "provider_id": "mdc_stage1b_accept_20261126_a",
+            "provider_name": "Demo Metal Works Oy",
+            "offering_id": "mdc_stage1b_accept_20261126_a_metal",
+            "offering_name": "Precision metal parts manufacturing",
+            "service_category": "precision_metal_parts",
+            "part_family": "metal_part",
+            "match": {
+              "status": "full_match",
+              "score": 1.0
+            },
+            "matched_capabilities": [],
+            "unmatched_capabilities": [],
+            "unknown_capabilities": []
+          }
+        ]
+      }
+    },
+    {
+      "case": "lenient gear module 1",
+      "expected": [
+        "precipart_precision_gears",
+        "tasowheel_precision_gears"
+      ],
+      "http": 200,
+      "request": {
+        "contract_version": "1.0",
+        "request_id": "task16f-8e29a78d3fd34a8eba6644d95f8cf69c",
+        "consumer_id": "task16f-verification",
+        "service_category": "precision_gears",
+        "part_family": "gear",
+        "part_type": "spur_gear",
+        "requirements": {
+          "part_family_specifications": {
+            "module": {
+              "exact": 1
+            }
+          }
+        },
+        "match_policy": {
+          "discovery_mode": "lenient"
+        }
+      },
+      "response": {
+        "contract_version": "1.0",
+        "request_id": "task16f-8e29a78d3fd34a8eba6644d95f8cf69c",
+        "service_category": "precision_gears",
+        "part_family": "gear",
+        "part_type": "spur_gear",
+        "result_count": 2,
+        "results": [
+          {
+            "provider_id": "precipart",
+            "provider_name": "Precipart",
+            "offering_id": "precipart_precision_gears",
+            "offering_name": "High-precision custom gears",
+            "service_category": "precision_gears",
+            "part_family": "gear",
+            "match": {
+              "status": "full_match",
+              "score": 1.0
+            },
+            "matched_capabilities": [
+              {
+                "field": "module",
+                "requested": {
+                  "exact": 1.0
+                },
+                "provided": {
+                  "min": 0.125,
+                  "max": 1.5
+                }
+              }
+            ],
+            "unmatched_capabilities": [],
+            "unknown_capabilities": []
+          },
+          {
+            "provider_id": "tasowheel",
+            "provider_name": "Tasowheel Oy",
+            "offering_id": "tasowheel_precision_gears",
+            "offering_name": "Precision gears",
+            "service_category": "precision_gears",
+            "part_family": "gear",
+            "match": {
+              "status": "full_match",
+              "score": 1.0
+            },
+            "matched_capabilities": [
+              {
+                "field": "module",
+                "requested": {
+                  "exact": 1.0
+                },
+                "provided": {
+                  "min": 0.3,
+                  "max": 10
+                }
+              }
+            ],
+            "unmatched_capabilities": [],
+            "unknown_capabilities": []
+          }
+        ]
+      }
+    },
+    {
+      "case": "lenient gear module 4",
+      "expected": [
+        "tasowheel_precision_gears"
+      ],
+      "http": 200,
+      "request": {
+        "contract_version": "1.0",
+        "request_id": "task16f-1bc11fcaf4a446f09a93e5a82c48be1a",
+        "consumer_id": "task16f-verification",
+        "service_category": "precision_gears",
+        "part_family": "gear",
+        "part_type": "spur_gear",
+        "requirements": {
+          "part_family_specifications": {
+            "module": {
+              "exact": 4
+            }
+          }
+        },
+        "match_policy": {
+          "discovery_mode": "lenient"
+        }
+      },
+      "response": {
+        "contract_version": "1.0",
+        "request_id": "task16f-1bc11fcaf4a446f09a93e5a82c48be1a",
+        "service_category": "precision_gears",
+        "part_family": "gear",
+        "part_type": "spur_gear",
+        "result_count": 1,
+        "results": [
+          {
+            "provider_id": "tasowheel",
+            "provider_name": "Tasowheel Oy",
+            "offering_id": "tasowheel_precision_gears",
+            "offering_name": "Precision gears",
+            "service_category": "precision_gears",
+            "part_family": "gear",
+            "match": {
+              "status": "full_match",
+              "score": 1.0
+            },
+            "matched_capabilities": [
+              {
+                "field": "module",
+                "requested": {
+                  "exact": 4.0
+                },
+                "provided": {
+                  "min": 0.3,
+                  "max": 10
+                }
+              }
+            ],
+            "unmatched_capabilities": [],
+            "unknown_capabilities": []
+          }
+        ]
+      }
+    },
+    {
+      "case": "lenient gear module 12",
+      "expected": [],
+      "http": 200,
+      "request": {
+        "contract_version": "1.0",
+        "request_id": "task16f-c510b36c3d034eb081f597fb7be731ae",
+        "consumer_id": "task16f-verification",
+        "service_category": "precision_gears",
+        "part_family": "gear",
+        "part_type": "spur_gear",
+        "requirements": {
+          "part_family_specifications": {
+            "module": {
+              "exact": 12
+            }
+          }
+        },
+        "match_policy": {
+          "discovery_mode": "lenient"
+        }
+      },
+      "response": {
+        "contract_version": "1.0",
+        "request_id": "task16f-c510b36c3d034eb081f597fb7be731ae",
+        "service_category": "precision_gears",
+        "part_family": "gear",
+        "part_type": "spur_gear",
+        "result_count": 0,
+        "results": []
+      }
+    },
+    {
+      "case": "lenient shared spline module 2",
+      "expected": [
+        "tasowheel_precision_shafts"
+      ],
+      "http": 200,
+      "request": {
+        "contract_version": "1.0",
+        "request_id": "task16f-304afc21c4324f569bd07c1ea829c6e9",
+        "consumer_id": "task16f-verification",
+        "service_category": "precision_shafts",
+        "part_family": "shaft",
+        "part_type": "splined_shaft",
+        "requirements": {
+          "part_type_specifications": {
+            "spline_module": {
+              "exact": 2
+            }
+          }
+        },
+        "match_policy": {
+          "discovery_mode": "lenient"
+        }
+      },
+      "response": {
+        "contract_version": "1.0",
+        "request_id": "task16f-304afc21c4324f569bd07c1ea829c6e9",
+        "service_category": "precision_shafts",
+        "part_family": "shaft",
+        "part_type": "splined_shaft",
+        "result_count": 1,
+        "results": [
+          {
+            "provider_id": "tasowheel",
+            "provider_name": "Tasowheel Oy",
+            "offering_id": "tasowheel_precision_shafts",
+            "offering_name": "Precision shafts",
+            "service_category": "precision_shafts",
+            "part_family": "shaft",
+            "match": {
+              "status": "full_match",
+              "score": 1.0
+            },
+            "matched_capabilities": [
+              {
+                "field": "spline_module",
+                "requested": {
+                  "exact": 2.0
+                },
+                "provided": {
+                  "min": 0.3,
+                  "max": 10
+                }
+              }
+            ],
+            "unmatched_capabilities": [],
+            "unknown_capabilities": []
+          }
+        ]
+      }
+    },
+    {
+      "case": "lenient Roller",
+      "expected": [
+        "mdc_stage1b_accept_20261126_a_metal"
+      ],
+      "http": 200,
+      "request": {
+        "contract_version": "1.0",
+        "request_id": "task16f-8115e58799b140eab6480a07cd48e0a3",
+        "consumer_id": "task16f-verification",
+        "service_category": "precision_metal_parts",
+        "part_family": "metal_part",
+        "part_type": "roller",
+        "requirements": {},
+        "match_policy": {
+          "discovery_mode": "lenient"
+        }
+      },
+      "response": {
+        "contract_version": "1.0",
+        "request_id": "task16f-8115e58799b140eab6480a07cd48e0a3",
+        "service_category": "precision_metal_parts",
+        "part_family": "metal_part",
+        "part_type": "roller",
+        "result_count": 1,
+        "results": [
+          {
+            "provider_id": "mdc_stage1b_accept_20261126_a",
+            "provider_name": "Demo Metal Works Oy",
+            "offering_id": "mdc_stage1b_accept_20261126_a_metal",
+            "offering_name": "Precision metal parts manufacturing",
+            "service_category": "precision_metal_parts",
+            "part_family": "metal_part",
+            "match": {
+              "status": "full_match",
+              "score": 1.0
+            },
+            "matched_capabilities": [],
+            "unmatched_capabilities": [],
+            "unknown_capabilities": []
+          }
+        ]
+      }
+    },
+    {
+      "case": "Lenient Steel",
+      "expected": [
+        "precipart_precision_gears",
+        "tasowheel_precision_gears"
+      ],
+      "http": 200,
+      "request": {
+        "contract_version": "1.0",
+        "request_id": "task16f-3e27b4396f0b40f9ae6157f0b2f766c9",
+        "consumer_id": "task16f-verification",
+        "service_category": "precision_gears",
+        "part_family": "gear",
+        "part_type": "spur_gear",
+        "requirements": {
+          "generic_requirements": {
+            "materials": [
+              "steel"
+            ]
+          }
+        },
+        "match_policy": {
+          "discovery_mode": "lenient"
+        }
+      },
+      "response": {
+        "contract_version": "1.0",
+        "request_id": "task16f-3e27b4396f0b40f9ae6157f0b2f766c9",
+        "service_category": "precision_gears",
+        "part_family": "gear",
+        "part_type": "spur_gear",
+        "result_count": 2,
+        "results": [
+          {
+            "provider_id": "precipart",
+            "provider_name": "Precipart",
+            "offering_id": "precipart_precision_gears",
+            "offering_name": "High-precision custom gears",
+            "service_category": "precision_gears",
+            "part_family": "gear",
+            "match": {
+              "status": "partial_match",
+              "score": 0.0
+            },
+            "matched_capabilities": [],
+            "unmatched_capabilities": [],
+            "unknown_capabilities": [
+              {
+                "field": "materials",
+                "requested": [
+                  "steel"
+                ],
+                "reason": "This preference is not confirmed for the offering."
+              }
+            ]
+          },
+          {
+            "provider_id": "tasowheel",
+            "provider_name": "Tasowheel Oy",
+            "offering_id": "tasowheel_precision_gears",
+            "offering_name": "Precision gears",
+            "service_category": "precision_gears",
+            "part_family": "gear",
+            "match": {
+              "status": "full_match",
+              "score": 1.0
+            },
+            "matched_capabilities": [
+              {
+                "field": "materials",
+                "requested": [
+                  "steel"
+                ],
+                "provided": [
+                  {
+                    "material": "alloyed_carburizing_steel",
+                    "available_grades": [
+                      "18CrNiMo7-6",
+                      "16MnCr5",
+                      "20MnCr5"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "unmatched_capabilities": [],
+            "unknown_capabilities": []
+          }
+        ]
+      }
+    },
+    {
+      "case": "Lenient Steel and Titanium",
+      "expected": [
+        "precipart_precision_gears",
+        "tasowheel_precision_gears"
+      ],
+      "http": 200,
+      "request": {
+        "contract_version": "1.0",
+        "request_id": "task16f-dcf5a8b2d8fa4b0e84e276008a556e61",
+        "consumer_id": "task16f-verification",
+        "service_category": "precision_gears",
+        "part_family": "gear",
+        "part_type": "spur_gear",
+        "requirements": {
+          "generic_requirements": {
+            "materials": [
+              "steel",
+              "titanium"
+            ]
+          }
+        },
+        "match_policy": {
+          "discovery_mode": "lenient"
+        }
+      },
+      "response": {
+        "contract_version": "1.0",
+        "request_id": "task16f-dcf5a8b2d8fa4b0e84e276008a556e61",
+        "service_category": "precision_gears",
+        "part_family": "gear",
+        "part_type": "spur_gear",
+        "result_count": 2,
+        "results": [
+          {
+            "provider_id": "precipart",
+            "provider_name": "Precipart",
+            "offering_id": "precipart_precision_gears",
+            "offering_name": "High-precision custom gears",
+            "service_category": "precision_gears",
+            "part_family": "gear",
+            "match": {
+              "status": "partial_match",
+              "score": 0.0
+            },
+            "matched_capabilities": [],
+            "unmatched_capabilities": [],
+            "unknown_capabilities": [
+              {
+                "field": "materials",
+                "requested": [
+                  "steel"
+                ],
+                "reason": "This preference is not confirmed for the offering."
+              },
+              {
+                "field": "materials",
+                "requested": [
+                  "titanium"
+                ],
+                "reason": "This preference is not confirmed for the offering."
+              }
+            ]
+          },
+          {
+            "provider_id": "tasowheel",
+            "provider_name": "Tasowheel Oy",
+            "offering_id": "tasowheel_precision_gears",
+            "offering_name": "Precision gears",
+            "service_category": "precision_gears",
+            "part_family": "gear",
+            "match": {
+              "status": "full_match",
+              "score": 1.0
+            },
+            "matched_capabilities": [
+              {
+                "field": "materials",
+                "requested": [
+                  "steel"
+                ],
+                "provided": [
+                  {
+                    "material": "alloyed_carburizing_steel",
+                    "available_grades": [
+                      "18CrNiMo7-6",
+                      "16MnCr5",
+                      "20MnCr5"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "unmatched_capabilities": [],
+            "unknown_capabilities": [
+              {
+                "field": "materials",
+                "requested": [
+                  "titanium"
+                ],
+                "reason": "This preference is not confirmed for the offering."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "case": "Lenient Aluminum and Titanium",
+      "expected": [
+        "precipart_precision_gears",
+        "tasowheel_precision_gears"
+      ],
+      "http": 200,
+      "request": {
+        "contract_version": "1.0",
+        "request_id": "task16f-d4d50e71441a4690b361705b51cc1f80",
+        "consumer_id": "task16f-verification",
+        "service_category": "precision_gears",
+        "part_family": "gear",
+        "part_type": "spur_gear",
+        "requirements": {
+          "generic_requirements": {
+            "materials": [
+              "aluminum",
+              "titanium"
+            ]
+          }
+        },
+        "match_policy": {
+          "discovery_mode": "lenient"
+        }
+      },
+      "response": {
+        "contract_version": "1.0",
+        "request_id": "task16f-d4d50e71441a4690b361705b51cc1f80",
+        "service_category": "precision_gears",
+        "part_family": "gear",
+        "part_type": "spur_gear",
+        "result_count": 2,
+        "results": [
+          {
+            "provider_id": "precipart",
+            "provider_name": "Precipart",
+            "offering_id": "precipart_precision_gears",
+            "offering_name": "High-precision custom gears",
+            "service_category": "precision_gears",
+            "part_family": "gear",
+            "match": {
+              "status": "partial_match",
+              "score": 0.0
+            },
+            "matched_capabilities": [],
+            "unmatched_capabilities": [],
+            "unknown_capabilities": [
+              {
+                "field": "materials",
+                "requested": [
+                  "aluminum"
+                ],
+                "reason": "This preference is not confirmed for the offering."
+              },
+              {
+                "field": "materials",
+                "requested": [
+                  "titanium"
+                ],
+                "reason": "This preference is not confirmed for the offering."
+              }
+            ]
+          },
+          {
+            "provider_id": "tasowheel",
+            "provider_name": "Tasowheel Oy",
+            "offering_id": "tasowheel_precision_gears",
+            "offering_name": "Precision gears",
+            "service_category": "precision_gears",
+            "part_family": "gear",
+            "match": {
+              "status": "partial_match",
+              "score": 0.0
+            },
+            "matched_capabilities": [],
+            "unmatched_capabilities": [],
+            "unknown_capabilities": [
+              {
+                "field": "materials",
+                "requested": [
+                  "aluminum"
+                ],
+                "reason": "This preference is not confirmed for the offering."
+              },
+              {
+                "field": "materials",
+                "requested": [
+                  "titanium"
+                ],
+                "reason": "This preference is not confirmed for the offering."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "case": "Required ISO 9001 and ISO 14001",
+      "expected": [
+        "tasowheel_precision_gears"
+      ],
+      "http": 200,
+      "request": {
+        "contract_version": "1.0",
+        "request_id": "task16f-13904979f4a54540ad5fa6fd465333d1",
+        "consumer_id": "task16f-verification",
+        "service_category": "precision_gears",
+        "part_family": "gear",
+        "part_type": "spur_gear",
+        "requirements": {
+          "generic_requirements": {
+            "certifications": [
+              "ISO9001_2015",
+              "ISO14001_2015"
+            ]
+          }
+        },
+        "match_policy": {
+          "discovery_mode": "lenient"
+        }
+      },
+      "response": {
+        "contract_version": "1.0",
+        "request_id": "task16f-13904979f4a54540ad5fa6fd465333d1",
+        "service_category": "precision_gears",
+        "part_family": "gear",
+        "part_type": "spur_gear",
+        "result_count": 1,
+        "results": [
+          {
+            "provider_id": "tasowheel",
+            "provider_name": "Tasowheel Oy",
+            "offering_id": "tasowheel_precision_gears",
+            "offering_name": "Precision gears",
+            "service_category": "precision_gears",
+            "part_family": "gear",
+            "match": {
+              "status": "full_match",
+              "score": 1.0
+            },
+            "matched_capabilities": [
+              {
+                "field": "certifications",
+                "requested": [
+                  "ISO9001_2015",
+                  "ISO14001_2015"
+                ],
+                "provided": [
+                  {
+                    "code": "ISO9001_2015"
+                  },
+                  {
+                    "code": "ISO14001_2015"
+                  },
+                  {
+                    "code": "ISO_TS_16949_partial"
+                  },
+                  {
+                    "code": "APQP"
+                  }
+                ]
+              }
+            ],
+            "unmatched_capabilities": [],
+            "unknown_capabilities": []
+          }
+        ]
+      }
+    },
+    {
+      "case": "Required ISO 9001 and AS9100",
+      "expected": [],
+      "http": 200,
+      "request": {
+        "contract_version": "1.0",
+        "request_id": "task16f-ee1ec9c71f954406a20b71cff4b64fb7",
+        "consumer_id": "task16f-verification",
+        "service_category": "precision_gears",
+        "part_family": "gear",
+        "part_type": "spur_gear",
+        "requirements": {
+          "generic_requirements": {
+            "certifications": [
+              "ISO9001_2015",
+              "AS9100_D"
+            ]
+          }
+        },
+        "match_policy": {
+          "discovery_mode": "lenient"
+        }
+      },
+      "response": {
+        "contract_version": "1.0",
+        "request_id": "task16f-ee1ec9c71f954406a20b71cff4b64fb7",
+        "service_category": "precision_gears",
+        "part_family": "gear",
+        "part_type": "spur_gear",
+        "result_count": 0,
+        "results": []
+      }
+    },
+    {
+      "case": "ISO13485 remains unconfirmed",
+      "expected": [],
+      "http": 200,
+      "request": {
+        "contract_version": "1.0",
+        "request_id": "task16f-cae4cbfaec9f4006b9a5cf761fd49bc1",
+        "consumer_id": "task16f-verification",
+        "service_category": "precision_gears",
+        "part_family": "gear",
+        "part_type": "spur_gear",
+        "requirements": {
+          "generic_requirements": {
+            "certifications": [
+              "ISO13485_2016"
+            ]
+          }
+        },
+        "match_policy": {
+          "discovery_mode": "lenient"
+        }
+      },
+      "response": {
+        "contract_version": "1.0",
+        "request_id": "task16f-cae4cbfaec9f4006b9a5cf761fd49bc1",
+        "service_category": "precision_gears",
+        "part_family": "gear",
+        "part_type": "spur_gear",
+        "result_count": 0,
+        "results": []
+      }
+    },
+    {
+      "case": "AS9100 before publication",
+      "expected": [],
+      "http": 200,
+      "request": {
+        "contract_version": "1.0",
+        "request_id": "task16f-76a03941df844d56a76d337b01f9c784",
+        "consumer_id": "task16f-verification",
+        "service_category": "precision_gears",
+        "part_family": "gear",
+        "part_type": "spur_gear",
+        "requirements": {
+          "generic_requirements": {
+            "certifications": [
+              "AS9100_D"
+            ]
+          }
+        },
+        "match_policy": {
+          "discovery_mode": "lenient"
+        }
+      },
+      "response": {
+        "contract_version": "1.0",
+        "request_id": "task16f-76a03941df844d56a76d337b01f9c784",
+        "service_category": "precision_gears",
+        "part_family": "gear",
+        "part_type": "spur_gear",
+        "result_count": 0,
+        "results": []
+      }
+    },
+    {
+      "case": "Invalid lenient cutoff",
+      "expected": 400,
+      "http": 400,
+      "request": {
+        "contract_version": "1.0",
+        "request_id": "task16f-8ed578e6586f4939b6a90ebe0a40aa83",
+        "consumer_id": "task16f-verification",
+        "service_category": "precision_gears",
+        "part_family": "gear",
+        "part_type": "spur_gear",
+        "requirements": {},
+        "match_policy": {
+          "discovery_mode": "lenient",
+          "minimum_score": 0
+        }
+      },
+      "response": {
+        "contract_version": "1.0",
+        "error": {
+          "code": "invalid_service_discovery_request",
+          "message": "Invalid service-discovery search request.",
+          "details": {
+            "non_field_errors": [
+              "match_policy.minimum_score is not supported in lenient mode."
+            ]
+          }
+        }
+      }
+    }
+  ]
+}

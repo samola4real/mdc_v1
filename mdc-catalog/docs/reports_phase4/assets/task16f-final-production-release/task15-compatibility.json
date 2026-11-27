@@ -1,0 +1,8 @@
+{
+  "task15ArchiveSha256": "354f6af20dcbdd89a26a2e582e9e75343f6154aac26ddd58e76d3bd78572f210",
+  "verifiedExactSplineBodyAccepted": true,
+  "verifiedLegacySplineRollbackBodyAccepted": true,
+  "as9100InFilters": false,
+  "rejectsAs9100OfferingPayload": true,
+  "graphError": "Unsupported certification identifier: AS9100_D"
+}

@@ -1,0 +1,15 @@
+{
+  "unchangedExactResponseCount": 6,
+  "unchangedPreviewDatasetRevision": "7c79b16dba232163baa27d0c6553c298572f9475aa4c508ad6d4ded80e4348d4",
+  "unchangedGraphTripleCount": 837,
+  "stableDemoMap": {
+    "splined_shaft": {
+      "spline_module": {
+        "value": 2,
+        "confidence": "declared",
+        "source_type": "provider_confirmed"
+      }
+    }
+  },
+  "stablePrecipartGenericCapabilities": {}
+}

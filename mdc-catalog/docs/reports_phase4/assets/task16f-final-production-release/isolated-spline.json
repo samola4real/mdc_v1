@@ -1,0 +1,605 @@
+{
+  "fixture": "isolated SQLite, RDFLib and mocked Fuseki bindings",
+  "beforeMap": {
+    "splined_shaft": {
+      "spline_module": {
+        "value": 2,
+        "confidence": "declared",
+        "source_type": "provider_confirmed"
+      }
+    }
+  },
+  "patch": {
+    "part_type_capabilities": {
+      "splined_shaft": {
+        "spline_module": {
+          "confidence": "declared",
+          "source_type": "provider_confirmed",
+          "exact": 2
+        }
+      }
+    }
+  },
+  "afterMap": {
+    "splined_shaft": {
+      "spline_module": {
+        "confidence": "declared",
+        "source_type": "provider_confirmed",
+        "exact": 2
+      }
+    }
+  },
+  "before": [
+    {
+      "mode": "strict",
+      "module": null,
+      "expected_offering_ids": [
+        "mdc_stage1b_accept_20261126_a_shaft",
+        "tasowheel_precision_shafts"
+      ],
+      "actual_offering_ids": [
+        "mdc_stage1b_accept_20261126_a_shaft",
+        "tasowheel_precision_shafts"
+      ],
+      "http": 200,
+      "passed": true
+    },
+    {
+      "mode": "lenient",
+      "module": null,
+      "expected_offering_ids": [
+        "mdc_stage1b_accept_20261126_a_shaft",
+        "tasowheel_precision_shafts"
+      ],
+      "actual_offering_ids": [
+        "mdc_stage1b_accept_20261126_a_shaft",
+        "tasowheel_precision_shafts"
+      ],
+      "http": 200,
+      "passed": true
+    },
+    {
+      "mode": "strict",
+      "module": 0.299,
+      "expected_offering_ids": [],
+      "actual_offering_ids": [],
+      "http": 200,
+      "passed": true
+    },
+    {
+      "mode": "lenient",
+      "module": 0.299,
+      "expected_offering_ids": [],
+      "actual_offering_ids": [],
+      "http": 200,
+      "passed": true
+    },
+    {
+      "mode": "strict",
+      "module": 0.3,
+      "expected_offering_ids": [
+        "tasowheel_precision_shafts"
+      ],
+      "actual_offering_ids": [
+        "tasowheel_precision_shafts"
+      ],
+      "http": 200,
+      "passed": true
+    },
+    {
+      "mode": "lenient",
+      "module": 0.3,
+      "expected_offering_ids": [
+        "tasowheel_precision_shafts"
+      ],
+      "actual_offering_ids": [
+        "tasowheel_precision_shafts"
+      ],
+      "http": 200,
+      "passed": true
+    },
+    {
+      "mode": "strict",
+      "module": 1,
+      "expected_offering_ids": [
+        "tasowheel_precision_shafts"
+      ],
+      "actual_offering_ids": [
+        "tasowheel_precision_shafts"
+      ],
+      "http": 200,
+      "passed": true
+    },
+    {
+      "mode": "lenient",
+      "module": 1,
+      "expected_offering_ids": [
+        "tasowheel_precision_shafts"
+      ],
+      "actual_offering_ids": [
+        "tasowheel_precision_shafts"
+      ],
+      "http": 200,
+      "passed": true
+    },
+    {
+      "mode": "strict",
+      "module": 1.99,
+      "expected_offering_ids": [
+        "tasowheel_precision_shafts"
+      ],
+      "actual_offering_ids": [
+        "tasowheel_precision_shafts"
+      ],
+      "http": 200,
+      "passed": true
+    },
+    {
+      "mode": "lenient",
+      "module": 1.99,
+      "expected_offering_ids": [
+        "tasowheel_precision_shafts"
+      ],
+      "actual_offering_ids": [
+        "tasowheel_precision_shafts"
+      ],
+      "http": 200,
+      "passed": true
+    },
+    {
+      "mode": "strict",
+      "module": 2,
+      "expected_offering_ids": [
+        "tasowheel_precision_shafts"
+      ],
+      "actual_offering_ids": [
+        "tasowheel_precision_shafts"
+      ],
+      "http": 200,
+      "passed": true
+    },
+    {
+      "mode": "lenient",
+      "module": 2,
+      "expected_offering_ids": [
+        "tasowheel_precision_shafts"
+      ],
+      "actual_offering_ids": [
+        "tasowheel_precision_shafts"
+      ],
+      "http": 200,
+      "passed": true
+    },
+    {
+      "mode": "strict",
+      "module": 2.01,
+      "expected_offering_ids": [
+        "tasowheel_precision_shafts"
+      ],
+      "actual_offering_ids": [
+        "tasowheel_precision_shafts"
+      ],
+      "http": 200,
+      "passed": true
+    },
+    {
+      "mode": "lenient",
+      "module": 2.01,
+      "expected_offering_ids": [
+        "tasowheel_precision_shafts"
+      ],
+      "actual_offering_ids": [
+        "tasowheel_precision_shafts"
+      ],
+      "http": 200,
+      "passed": true
+    },
+    {
+      "mode": "strict",
+      "module": 3,
+      "expected_offering_ids": [
+        "tasowheel_precision_shafts"
+      ],
+      "actual_offering_ids": [
+        "tasowheel_precision_shafts"
+      ],
+      "http": 200,
+      "passed": true
+    },
+    {
+      "mode": "lenient",
+      "module": 3,
+      "expected_offering_ids": [
+        "tasowheel_precision_shafts"
+      ],
+      "actual_offering_ids": [
+        "tasowheel_precision_shafts"
+      ],
+      "http": 200,
+      "passed": true
+    },
+    {
+      "mode": "strict",
+      "module": 4,
+      "expected_offering_ids": [
+        "tasowheel_precision_shafts"
+      ],
+      "actual_offering_ids": [
+        "tasowheel_precision_shafts"
+      ],
+      "http": 200,
+      "passed": true
+    },
+    {
+      "mode": "lenient",
+      "module": 4,
+      "expected_offering_ids": [
+        "tasowheel_precision_shafts"
+      ],
+      "actual_offering_ids": [
+        "tasowheel_precision_shafts"
+      ],
+      "http": 200,
+      "passed": true
+    },
+    {
+      "mode": "strict",
+      "module": 10,
+      "expected_offering_ids": [
+        "tasowheel_precision_shafts"
+      ],
+      "actual_offering_ids": [
+        "tasowheel_precision_shafts"
+      ],
+      "http": 200,
+      "passed": true
+    },
+    {
+      "mode": "lenient",
+      "module": 10,
+      "expected_offering_ids": [
+        "tasowheel_precision_shafts"
+      ],
+      "actual_offering_ids": [
+        "tasowheel_precision_shafts"
+      ],
+      "http": 200,
+      "passed": true
+    },
+    {
+      "mode": "strict",
+      "module": 10.001,
+      "expected_offering_ids": [],
+      "actual_offering_ids": [],
+      "http": 200,
+      "passed": true
+    },
+    {
+      "mode": "lenient",
+      "module": 10.001,
+      "expected_offering_ids": [],
+      "actual_offering_ids": [],
+      "http": 200,
+      "passed": true
+    },
+    {
+      "mode": "strict",
+      "module": 12,
+      "expected_offering_ids": [],
+      "actual_offering_ids": [],
+      "http": 200,
+      "passed": true
+    },
+    {
+      "mode": "lenient",
+      "module": 12,
+      "expected_offering_ids": [],
+      "actual_offering_ids": [],
+      "http": 200,
+      "passed": true
+    }
+  ],
+  "after": [
+    {
+      "mode": "strict",
+      "module": null,
+      "expected_offering_ids": [
+        "mdc_stage1b_accept_20261126_a_shaft",
+        "tasowheel_precision_shafts"
+      ],
+      "actual_offering_ids": [
+        "mdc_stage1b_accept_20261126_a_shaft",
+        "tasowheel_precision_shafts"
+      ],
+      "http": 200,
+      "passed": true
+    },
+    {
+      "mode": "lenient",
+      "module": null,
+      "expected_offering_ids": [
+        "mdc_stage1b_accept_20261126_a_shaft",
+        "tasowheel_precision_shafts"
+      ],
+      "actual_offering_ids": [
+        "mdc_stage1b_accept_20261126_a_shaft",
+        "tasowheel_precision_shafts"
+      ],
+      "http": 200,
+      "passed": true
+    },
+    {
+      "mode": "strict",
+      "module": 0.299,
+      "expected_offering_ids": [],
+      "actual_offering_ids": [],
+      "http": 200,
+      "passed": true
+    },
+    {
+      "mode": "lenient",
+      "module": 0.299,
+      "expected_offering_ids": [],
+      "actual_offering_ids": [],
+      "http": 200,
+      "passed": true
+    },
+    {
+      "mode": "strict",
+      "module": 0.3,
+      "expected_offering_ids": [
+        "tasowheel_precision_shafts"
+      ],
+      "actual_offering_ids": [
+        "tasowheel_precision_shafts"
+      ],
+      "http": 200,
+      "passed": true
+    },
+    {
+      "mode": "lenient",
+      "module": 0.3,
+      "expected_offering_ids": [
+        "tasowheel_precision_shafts"
+      ],
+      "actual_offering_ids": [
+        "tasowheel_precision_shafts"
+      ],
+      "http": 200,
+      "passed": true
+    },
+    {
+      "mode": "strict",
+      "module": 1,
+      "expected_offering_ids": [
+        "tasowheel_precision_shafts"
+      ],
+      "actual_offering_ids": [
+        "tasowheel_precision_shafts"
+      ],
+      "http": 200,
+      "passed": true
+    },
+    {
+      "mode": "lenient",
+      "module": 1,
+      "expected_offering_ids": [
+        "tasowheel_precision_shafts"
+      ],
+      "actual_offering_ids": [
+        "tasowheel_precision_shafts"
+      ],
+      "http": 200,
+      "passed": true
+    },
+    {
+      "mode": "strict",
+      "module": 1.99,
+      "expected_offering_ids": [
+        "tasowheel_precision_shafts"
+      ],
+      "actual_offering_ids": [
+        "tasowheel_precision_shafts"
+      ],
+      "http": 200,
+      "passed": true
+    },
+    {
+      "mode": "lenient",
+      "module": 1.99,
+      "expected_offering_ids": [
+        "tasowheel_precision_shafts"
+      ],
+      "actual_offering_ids": [
+        "tasowheel_precision_shafts"
+      ],
+      "http": 200,
+      "passed": true
+    },
+    {
+      "mode": "strict",
+      "module": 2,
+      "expected_offering_ids": [
+        "mdc_stage1b_accept_20261126_a_shaft",
+        "tasowheel_precision_shafts"
+      ],
+      "actual_offering_ids": [
+        "mdc_stage1b_accept_20261126_a_shaft",
+        "tasowheel_precision_shafts"
+      ],
+      "http": 200,
+      "passed": true
+    },
+    {
+      "mode": "lenient",
+      "module": 2,
+      "expected_offering_ids": [
+        "mdc_stage1b_accept_20261126_a_shaft",
+        "tasowheel_precision_shafts"
+      ],
+      "actual_offering_ids": [
+        "mdc_stage1b_accept_20261126_a_shaft",
+        "tasowheel_precision_shafts"
+      ],
+      "http": 200,
+      "passed": true
+    },
+    {
+      "mode": "strict",
+      "module": 2.01,
+      "expected_offering_ids": [
+        "tasowheel_precision_shafts"
+      ],
+      "actual_offering_ids": [
+        "tasowheel_precision_shafts"
+      ],
+      "http": 200,
+      "passed": true
+    },
+    {
+      "mode": "lenient",
+      "module": 2.01,
+      "expected_offering_ids": [
+        "tasowheel_precision_shafts"
+      ],
+      "actual_offering_ids": [
+        "tasowheel_precision_shafts"
+      ],
+      "http": 200,
+      "passed": true
+    },
+    {
+      "mode": "strict",
+      "module": 3,
+      "expected_offering_ids": [
+        "tasowheel_precision_shafts"
+      ],
+      "actual_offering_ids": [
+        "tasowheel_precision_shafts"
+      ],
+      "http": 200,
+      "passed": true
+    },
+    {
+      "mode": "lenient",
+      "module": 3,
+      "expected_offering_ids": [
+        "tasowheel_precision_shafts"
+      ],
+      "actual_offering_ids": [
+        "tasowheel_precision_shafts"
+      ],
+      "http": 200,
+      "passed": true
+    },
+    {
+      "mode": "strict",
+      "module": 4,
+      "expected_offering_ids": [
+        "tasowheel_precision_shafts"
+      ],
+      "actual_offering_ids": [
+        "tasowheel_precision_shafts"
+      ],
+      "http": 200,
+      "passed": true
+    },
+    {
+      "mode": "lenient",
+      "module": 4,
+      "expected_offering_ids": [
+        "tasowheel_precision_shafts"
+      ],
+      "actual_offering_ids": [
+        "tasowheel_precision_shafts"
+      ],
+      "http": 200,
+      "passed": true
+    },
+    {
+      "mode": "strict",
+      "module": 10,
+      "expected_offering_ids": [
+        "tasowheel_precision_shafts"
+      ],
+      "actual_offering_ids": [
+        "tasowheel_precision_shafts"
+      ],
+      "http": 200,
+      "passed": true
+    },
+    {
+      "mode": "lenient",
+      "module": 10,
+      "expected_offering_ids": [
+        "tasowheel_precision_shafts"
+      ],
+      "actual_offering_ids": [
+        "tasowheel_precision_shafts"
+      ],
+      "http": 200,
+      "passed": true
+    },
+    {
+      "mode": "strict",
+      "module": 10.001,
+      "expected_offering_ids": [],
+      "actual_offering_ids": [],
+      "http": 200,
+      "passed": true
+    },
+    {
+      "mode": "lenient",
+      "module": 10.001,
+      "expected_offering_ids": [],
+      "actual_offering_ids": [],
+      "http": 200,
+      "passed": true
+    },
+    {
+      "mode": "strict",
+      "module": 12,
+      "expected_offering_ids": [],
+      "actual_offering_ids": [],
+      "http": 200,
+      "passed": true
+    },
+    {
+      "mode": "lenient",
+      "module": 12,
+      "expected_offering_ids": [],
+      "actual_offering_ids": [],
+      "http": 200,
+      "passed": true
+    }
+  ],
+  "receipt": {
+    "status": "completed",
+    "publication_status": "synced",
+    "sync_status": "succeeded",
+    "offering_id": "mdc_stage1b_accept_20261126_a_shaft"
+  },
+  "parentStrongEtagChanged": true,
+  "siblingUnchanged": true,
+  "preconditions": {
+    "missing": 428,
+    "stale": 412,
+    "invalidMeasurement": 400
+  },
+  "unchangedFamilySearches": {
+    "strict-spur_gear": [
+      "precipart_precision_gears",
+      "tasowheel_precision_gears"
+    ],
+    "strict-roller": [
+      "mdc_stage1b_accept_20261126_a_metal"
+    ],
+    "lenient-spur_gear": [
+      "precipart_precision_gears",
+      "tasowheel_precision_gears"
+    ],
+    "lenient-roller": [
+      "mdc_stage1b_accept_20261126_a_metal"
+    ]
+  }
+}

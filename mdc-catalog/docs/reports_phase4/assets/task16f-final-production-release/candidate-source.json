@@ -1,0 +1,31 @@
+{
+    "deployment":  "dpl_AnNpcrAY9RdN2hmDjfWAq11ricNy",
+    "source":  "ff025fd7b0b9d411cabd7a08f78362767562f6ee",
+    "archiveSha256":  "8c39e0c9cbf3eda14fc047e32101174944de3fade685864a31b851e256a76308",
+    "files":  [
+                  {
+                      "path":  "backend/apps/ontology/vocabularies.py",
+                      "sha1":  "780e966929f4307e464b9f00e0ca26559db32b0c"
+                  },
+                  {
+                      "path":  "backend/apps/search/service_discovery_runtime_search.py",
+                      "sha1":  "5b90cfc899c287eae03aa2e939648403331d848b"
+                  },
+                  {
+                      "path":  "backend/config/settings_production.py",
+                      "sha1":  "0a0f6b167ce8d26c055292e61d14ff3610405f8a"
+                  },
+                  {
+                      "path":  "data/curated/service_discovery/providers/precipart.yaml",
+                      "sha1":  "89a30652dacc4bc53d27c1af121636a312f745e5"
+                  },
+                  {
+                      "path":  "data/generated/service_discovery/mdc_service_discovery_catalog.ttl",
+                      "sha1":  "07bd007c886adc8a76221f898ce7022983acf31e"
+                  },
+                  {
+                      "path":  "data/staging/provider_sources/precipart.yaml",
+                      "sha1":  "154f8251ec00067478f0aebacb0fb51dd3f02be8"
+                  }
+              ]
+}

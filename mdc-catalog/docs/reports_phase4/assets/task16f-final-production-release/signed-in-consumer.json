@@ -1,0 +1,107 @@
+{
+  "signedIn": true,
+  "localURL": "http://localhost:3003/demo/consumer-search",
+  "sharedSpline": {
+    "required": {
+      "part_family_specifications": {},
+      "part_type_specifications": {
+        "spline_module": {
+          "exact": 2
+        }
+      },
+      "generic_requirements": {}
+    },
+    "result": [
+      "tasowheel_precision_shafts"
+    ]
+  },
+  "consumerGear": {
+    "criteria": {
+      "part_family_specifications": {
+        "module": {
+          "exact": 4
+        }
+      },
+      "part_type_specifications": {},
+      "generic_requirements": {
+        "materials": [
+          "steel",
+          "titanium"
+        ],
+        "certifications": [
+          "ISO9001_2015"
+        ]
+      }
+    },
+    "result": [
+      "tasowheel_precision_gears"
+    ],
+    "grades": [
+      "18CrNiMo7-6",
+      "16MnCr5",
+      "20MnCr5"
+    ],
+    "partials": [
+      [
+        "titanium"
+      ]
+    ]
+  },
+  "pdf": {
+    "filename": "tasowheel_precision_gears.pdf",
+    "bytes": 61400
+  },
+  "anonymousRelayStatus": 401,
+  "writes": 0,
+  "directHostedBrowserRequests": 0,
+  "calls": [
+    {
+      "method": "GET",
+      "path": "/api/mdc/catalog/filters",
+      "status": 200,
+      "strongEtag": false
+    },
+    {
+      "method": "GET",
+      "path": "/api/mdc/catalog/filters",
+      "status": 200,
+      "strongEtag": false
+    },
+    {
+      "method": "POST",
+      "path": "/api/mdc/service-discovery/search",
+      "status": 200,
+      "strongEtag": false
+    },
+    {
+      "method": "GET",
+      "path": "/api/mdc/providers/tasowheel",
+      "status": 200,
+      "strongEtag": true
+    },
+    {
+      "method": "GET",
+      "path": "/api/mdc/offerings/tasowheel_precision_shafts",
+      "status": 200,
+      "strongEtag": true
+    },
+    {
+      "method": "POST",
+      "path": "/api/mdc/service-discovery/search",
+      "status": 200,
+      "strongEtag": false
+    },
+    {
+      "method": "GET",
+      "path": "/api/mdc/providers/tasowheel",
+      "status": 200,
+      "strongEtag": true
+    },
+    {
+      "method": "GET",
+      "path": "/api/mdc/offerings/tasowheel_precision_gears",
+      "status": 200,
+      "strongEtag": true
+    }
+  ]
+}

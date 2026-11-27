@@ -1,0 +1,161 @@
+{
+  "origin": "https://maasai-mdc-v1.vercel.app",
+  "records": {
+    "/api/providers/mdc_stage1b_accept_20261126_a": {
+      "http": 200,
+      "strongEtag": true,
+      "payloadSha256": "ba27358443bd56c9c6bd4f306eebc7aff930e31557165f0df4af125b55f65b6d",
+      "data": {
+        "provider_id": "mdc_stage1b_accept_20261126_a",
+        "provider_name": "Demo Metal Works Oy",
+        "offering_ids": [
+          "mdc_stage1b_accept_20261126_a_metal",
+          "mdc_stage1b_accept_20261126_a_shaft"
+        ]
+      }
+    },
+    "/api/providers/mdc_stage1b_accept_20261126_a/offerings": {
+      "http": 200,
+      "strongEtag": false,
+      "payloadSha256": "4f4dbeefe8fcf95194bf9b14148f6db45bb2cb8036ef70586b8bd6d63e545fd6",
+      "data": {
+        "provider_id": "mdc_stage1b_accept_20261126_a",
+        "offering_ids": [
+          "mdc_stage1b_accept_20261126_a_metal",
+          "mdc_stage1b_accept_20261126_a_shaft"
+        ]
+      }
+    },
+    "/api/offerings/mdc_stage1b_accept_20261126_a_shaft": {
+      "http": 200,
+      "strongEtag": true,
+      "payloadSha256": "1edba308809e5728f6a1d1dd0e2295c4abc9c24f95aa31920e2793190419b5c6",
+      "data": {
+        "provider_id": "mdc_stage1b_accept_20261126_a",
+        "offering_id": "mdc_stage1b_accept_20261126_a_shaft",
+        "offering_name": "Precision shaft manufacturing",
+        "supported_part_types": [
+          {
+            "part_type": "plain_shaft",
+            "confidence": "declared",
+            "source_type": "provider_confirmed",
+            "support_status": "confirmed"
+          },
+          {
+            "part_type": "splined_shaft",
+            "confidence": "declared",
+            "source_type": "provider_confirmed",
+            "support_status": "confirmed"
+          }
+        ],
+        "splined_shaft": {
+          "spline_module": {
+            "value": 2,
+            "confidence": "declared",
+            "source_type": "provider_confirmed"
+          }
+        }
+      }
+    },
+    "/api/offerings/mdc_stage1b_accept_20261126_a_metal": {
+      "http": 200,
+      "strongEtag": true,
+      "payloadSha256": "343fce338c73bcb73224f1ffba9adef1aeff54fd7fca7e2f364759cc87df926d",
+      "data": {
+        "provider_id": "mdc_stage1b_accept_20261126_a",
+        "offering_id": "mdc_stage1b_accept_20261126_a_metal",
+        "offering_name": "Precision metal parts manufacturing",
+        "supported_part_types": [
+          {
+            "part_type": "block",
+            "confidence": "declared",
+            "source_type": "provider_confirmed",
+            "support_status": "confirmed"
+          },
+          {
+            "part_type": "roller",
+            "confidence": "declared",
+            "source_type": "provider_confirmed",
+            "support_status": "confirmed"
+          }
+        ],
+        "splined_shaft": {}
+      }
+    },
+    "/api/offerings/tasowheel_precision_shafts": {
+      "http": 200,
+      "strongEtag": true,
+      "payloadSha256": "b66a62e0afec1aa437ddd0b951bc79ee71bdec709cc07a38ca5059703c866e1b",
+      "data": {
+        "provider_id": "tasowheel",
+        "offering_id": "tasowheel_precision_shafts",
+        "offering_name": "Precision shafts",
+        "supported_part_types": [
+          {
+            "part_type": "splined_shaft",
+            "confidence": "declared",
+            "source_type": "provider_confirmed",
+            "support_status": "confirmed"
+          },
+          {
+            "part_type": "plain_shaft",
+            "confidence": "declared",
+            "source_type": "provider_confirmed",
+            "support_status": "confirmed"
+          },
+          {
+            "part_type": "hollow_shaft",
+            "confidence": "declared",
+            "source_type": "provider_confirmed",
+            "support_status": "confirmed"
+          }
+        ],
+        "splined_shaft": {
+          "spline_module": {
+            "max": 10,
+            "min": 0.3,
+            "confidence": "declared",
+            "source_type": "provider_confirmed"
+          }
+        }
+      }
+    },
+    "/api/offerings/precipart_precision_gears": {
+      "http": 200,
+      "strongEtag": true,
+      "payloadSha256": "bfe8ffda1faadd0e2f2a3dd7238459e986795f83bff186847360d01aa38bb764",
+      "data": {
+        "provider_id": "precipart",
+        "offering_id": "precipart_precision_gears",
+        "offering_name": "High-precision custom gears",
+        "supported_part_types": [
+          {
+            "part_type": "spur_gear",
+            "confidence": "publicly_confirmed",
+            "source_type": "public_web",
+            "support_status": "confirmed"
+          },
+          {
+            "part_type": "helical_gear",
+            "confidence": "publicly_confirmed",
+            "source_type": "public_web",
+            "support_status": "confirmed"
+          },
+          {
+            "part_type": "worm_gear",
+            "confidence": "publicly_confirmed",
+            "source_type": "public_web",
+            "support_status": "confirmed"
+          },
+          {
+            "part_type": "crown_gear",
+            "confidence": "inferred",
+            "source_type": "public_web",
+            "support_status": "candidate_requiring_confirmation"
+          }
+        ],
+        "splined_shaft": {}
+      }
+    }
+  }
+}

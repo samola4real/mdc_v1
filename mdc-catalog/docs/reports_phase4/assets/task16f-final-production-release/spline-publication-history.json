@@ -1,0 +1,43 @@
+{
+  "database": {
+    "database_name": "mdc_validation",
+    "read_only": "on"
+  },
+  "current": {
+    "offering_id": "mdc_stage1b_accept_20261126_a_shaft",
+    "spline": {
+      "value": 2,
+      "confidence": "declared",
+      "source_type": "provider_confirmed"
+    },
+    "provider_id": "mdc_stage1b_accept_20261126_a"
+  },
+  "publicationEvidence": [
+    {
+      "operation": "update",
+      "status": "synced",
+      "utc": "2026-11-26T09:58:40.140Z",
+      "submitted_spline": {
+        "value": 2,
+        "confidence": "declared",
+        "source_type": "provider_confirmed"
+      },
+      "normalized_spline": {
+        "value": 2,
+        "confidence": "declared",
+        "source_type": "provider_confirmed"
+      }
+    },
+    {
+      "operation": "update",
+      "status": "synced",
+      "utc": "2026-11-26T10:01:51.945Z",
+      "submitted_spline": null,
+      "normalized_spline": {
+        "value": 2,
+        "confidence": "declared",
+        "source_type": "provider_confirmed"
+      }
+    }
+  ]
+}
