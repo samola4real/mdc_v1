@@ -1,8 +1,11 @@
 from copy import deepcopy
 from typing import Any
 
+from apps.ontology.mappings import get_material_parent_id
 from apps.providers.service_discovery_loaders import load_service_discovery_providers
 from apps.search.service_discovery_request import (
+    LENIENT_DISCOVERY_MODE,
+    LENIENT_PREFERENCE_FIELDS,
     STRICT_MATCH_POLICY,
     CanonicalServiceDiscoverySearchRequest,
 )
@@ -556,6 +559,60 @@ def _evaluate_generic_requirements(requirements: dict, provider: dict, offering:
     return evaluations
 
 
+def _material_supports_family(published: str | None, requested: str) -> bool:
+    """A published subtype can confirm a broader material request."""
+    visited = set()
+    while published is not None and published not in visited:
+        if published == requested:
+            return True
+        visited.add(published)
+        published = get_material_parent_id(published)
+    return False
+
+
+def _evaluate_preferences(requirements: dict, provider: dict, offering: dict) -> tuple[list[dict], list[float]]:
+    evaluations = []
+    group_scores = []
+    generic = offering.get("generic_capabilities", {})
+
+    for field, requested in requirements.items():
+        if field == "delivery":
+            (delivery,) = _evaluate_generic_requirements({field: requested}, provider, offering)
+            evaluations.append(delivery)
+            group_scores.append(delivery["coverage"])
+            continue
+
+        material_group = field == "materials"
+        code_key = "material" if material_group else "process"
+        records = [
+            record for record in (generic.get(field) or [])
+            if isinstance(record, dict) and isinstance(record.get(code_key), str)
+            and not _is_unknown_record(record)
+        ]
+        values = list(dict.fromkeys(requested))
+        matched_count = 0
+        for value in values:
+            if material_group:
+                evidence = [record for record in records if _material_supports_family(record[code_key], value)]
+            else:
+                evidence = [record for record in records if record[code_key] == value]
+            matched = bool(evidence)
+            matched_count += int(matched)
+            evaluations.append(
+                _base_explanation(
+                    field=field,
+                    match_type="generic_requirement",
+                    requested=[value],
+                    provided=evidence or None,
+                    status="matched" if matched else "unknown",
+                    reason=None if matched else "This preference is not confirmed for the offering.",
+                    coverage=float(matched),
+                )
+            )
+        group_scores.append(float(matched_count > 0) if material_group else matched_count / len(values))
+    return evaluations, group_scores
+
+
 def _relevant_evidence(provider: dict, offering: dict) -> dict:
     evidence = {
         "family_capabilities": deepcopy(offering.get("family_capabilities", {})),
@@ -576,6 +633,7 @@ def _build_result(
     selection: dict,
     part_type_evaluation: dict,
     evaluations: list[dict],
+    preference_scores: list[float],
 ) -> dict:
     category_evaluation = _base_explanation(
         field="service_category",
@@ -595,6 +653,8 @@ def _build_result(
         reason=None,
         coverage=1.0,
     )
+    preferences_satisfied = all(score == 1.0 for score in preference_scores)
+    score = round(sum(preference_scores) / len(preference_scores), 6) if preference_scores else 1.0
     return {
         "provider": {
             "provider_id": provider["provider_id"],
@@ -607,14 +667,17 @@ def _build_result(
             "part_family": offering["part_family"],
         },
         "match": {
-            "status": "full_match",
-            "score": 1.0,
+            "status": "full_match" if preferences_satisfied else "partial_match",
+            "score": score,
             "hard_filters_passed": True,
-            "optional_policy_satisfied": True,
+            "optional_policy_satisfied": preferences_satisfied,
         },
-        "matched_attributes": [category_evaluation, family_evaluation, part_type_evaluation, *evaluations],
-        "unmatched_attributes": [],
-        "unknown_attributes": [],
+        "matched_attributes": [
+            category_evaluation, family_evaluation, part_type_evaluation,
+            *(item for item in evaluations if item["status"] == "matched"),
+        ],
+        "unmatched_attributes": [item for item in evaluations if item["status"] == "unmatched"],
+        "unknown_attributes": [item for item in evaluations if item["status"] == "unknown"],
         "evidence": _relevant_evidence(provider, offering),
     }
 
@@ -636,6 +699,14 @@ def search_service_discovery_catalog(
     selection = request["selection"]
     requirements = request["requirements"]
     match_policy = request["match_policy"]
+    lenient = match_policy.get("discovery_mode") == LENIENT_DISCOVERY_MODE
+    generic = requirements.get("generic_requirements", {})
+    mandatory = generic
+    preferences = {}
+    if lenient:
+        mandatory = {field: value for field, value in generic.items() if field not in LENIENT_PREFERENCE_FIELDS}
+        preferences = {field: value for field, value in generic.items() if field in LENIENT_PREFERENCE_FIELDS and value}
+    minimum_score = None if lenient else match_policy.get("minimum_score")
 
     results = []
     for provider, offering in _provider_offering_pairs(provider_records):
@@ -645,6 +716,8 @@ def search_service_discovery_catalog(
             continue
 
         part_type_evaluation = _evaluate_part_type(selection, offering)
+        if part_type_evaluation["status"] != "matched":
+            continue
 
         evaluations = [
             *_evaluate_family_requirements(
@@ -657,26 +730,25 @@ def search_service_discovery_catalog(
                 selection["part_type"],
             ),
             *_evaluate_generic_requirements(
-                requirements.get("generic_requirements", {}),
+                mandatory,
                 provider,
                 offering,
             ),
         ]
 
-        if part_type_evaluation["status"] != "matched" or any(
-            item["status"] != "matched" for item in evaluations
-        ):
+        if any(item["status"] != "matched" for item in evaluations):
             continue
 
+        preference_evidence, preference_scores = _evaluate_preferences(preferences, provider, offering)
         result = _build_result(
             provider=provider,
             offering=offering,
             selection=selection,
             part_type_evaluation=part_type_evaluation,
-            evaluations=evaluations,
+            evaluations=[*evaluations, *preference_evidence],
+            preference_scores=preference_scores,
         )
 
-        minimum_score = match_policy.get("minimum_score")
         if minimum_score is not None and result["match"]["score"] < minimum_score:
             continue
 
@@ -697,7 +769,8 @@ def search_service_discovery_catalog(
             "requirements": deepcopy(request["requirements"]),
             "match_policy": {
                 **STRICT_MATCH_POLICY,
-                "minimum_score": match_policy.get("minimum_score"),
+                "minimum_score": minimum_score,
+                **({"discovery_mode": LENIENT_DISCOVERY_MODE} if lenient else {}),
             },
         },
         "warnings": deepcopy(canonical_request.warnings),

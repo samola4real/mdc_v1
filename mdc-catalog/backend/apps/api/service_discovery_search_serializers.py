@@ -11,7 +11,7 @@ from apps.ontology.vocabularies import (
     get_vocabulary_values,
 )
 from apps.providers.validators import FORBIDDEN_ROUTE_KEYS
-from apps.search.service_discovery_request import STRICT_MATCH_POLICY
+from apps.search.service_discovery_request import LENIENT_DISCOVERY_MODE, STRICT_MATCH_POLICY
 
 
 ALLOWED_OPTIONAL_MATCH_MODES = {
@@ -426,12 +426,19 @@ def _validate_match_policy(value: Any) -> dict:
     if not isinstance(value, dict):
         _raise("match_policy must be an object.")
 
-    allowed = {"optional_match_mode", "unknown_policy", "minimum_score"}
+    allowed = {"optional_match_mode", "unknown_policy", "minimum_score", "discovery_mode"}
     if "primary_match_mode" in value:
         _raise("primary_match_mode is not accepted in the harmonized request contract.")
     _reject_unknown_keys(value, allowed, location="match_policy")
 
     normalized = _default_match_policy()
+    discovery_mode = value.get("discovery_mode", "strict")
+    if discovery_mode not in ("strict", LENIENT_DISCOVERY_MODE):
+        _raise("match_policy.discovery_mode must be strict or lenient.")
+    if discovery_mode == LENIENT_DISCOVERY_MODE:
+        if value.get("minimum_score") is not None:
+            _raise("match_policy.minimum_score is not supported in lenient mode.")
+        normalized["discovery_mode"] = discovery_mode
 
     optional_match_mode = value.get("optional_match_mode", normalized["optional_match_mode"])
     if (

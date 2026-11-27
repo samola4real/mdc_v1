@@ -6,6 +6,8 @@ STRICT_MATCH_POLICY = {
     "optional_match_mode": "all",
     "unknown_policy": "reject_unknown",
 }
+LENIENT_DISCOVERY_MODE = "lenient"
+LENIENT_PREFERENCE_FIELDS = frozenset({"materials", "processes", "delivery"})
 
 
 @dataclass(frozen=True)
