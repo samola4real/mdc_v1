@@ -167,7 +167,7 @@ export default function ProviderManagement({ model, filters, filterError, retryF
                 </form>
                 {providerData && <p className="mt-0"><strong>Loaded provider</strong> {providerData.provider_name} ({providerData.provider_id})</p>}
                 {provider && !manageable && (
-                    <Message severity="info" text="This provider is read-only in the Stage 1B demo." className="w-full mb-3" />
+                    <Message severity="info" text="This provider is read-only. Changes are available for designated test records only." className="w-full mb-3" />
                 )}
                 <OfferingsTable model={model} filters={filters} />
                 {offeringData && !add && <p className="mt-3 mb-0"><strong>Selected offering</strong> {offeringData.offering_name}</p>}

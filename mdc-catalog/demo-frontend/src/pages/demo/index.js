@@ -26,13 +26,13 @@ const ROLE_OPTIONS = [
         role: 'consumer',
         label: 'Consumer',
         icon: 'pi pi-search',
-        description: 'Search for suitable MaaS providers.'
+        description: 'Find manufacturing offerings that meet your requirements.'
     },
     {
         role: 'admin',
         label: 'Admin',
         icon: 'pi pi-shield',
-        description: 'Review demo status and backend checks.'
+        description: 'Manage providers and check system availability.'
     }
 ];
 
@@ -50,17 +50,17 @@ const WORKFLOW_CARDS = [
         key: 'consumer',
         title: 'Service Discovery',
         icon: 'pi pi-search',
-        description: 'Search the catalogue for suitable providers.',
+        description: 'Find manufacturing offerings that meet your requirements.',
         action: 'Open Service Discovery',
         href: '/demo/consumer-search',
         roles: ['consumer', 'admin']
     },
     {
         key: 'admin',
-        title: 'Demo Admin',
+        title: 'Admin Dashboard',
         icon: 'pi pi-shield',
-        description: 'Review demo status and technical backend checks.',
-        action: 'Open Demo Admin',
+        description: 'Manage providers and check system availability.',
+        action: 'Open Admin Dashboard',
         href: '/demo/admin-audit',
         roles: ['admin']
     }
@@ -72,7 +72,7 @@ const RoleActions = ({ role }) => {
             <div className="flex flex-wrap gap-2">
                 <Link href="/demo/provider"><Button label="Open Provider Area" icon="pi pi-building" /></Link>
                 <Link href="/demo/consumer-search"><Button label="Open Service Discovery" icon="pi pi-search" outlined /></Link>
-                <Link href="/demo/admin-audit"><Button label="Open Demo Admin" icon="pi pi-shield" outlined /></Link>
+                <Link href="/demo/admin-audit"><Button label="Open Admin Dashboard" icon="pi pi-shield" outlined /></Link>
             </div>
         );
     }
@@ -115,7 +115,7 @@ const MdcDemoDashboard = () => {
 
     const renderRoleContent = () => {
         if (!isInitialized || isLoading) {
-            return <Message severity="info" text="Checking login status..." className="w-full justify-content-start" />;
+            return <Message severity="info" text="Checking sign-in status..." className="w-full justify-content-start" />;
         }
 
         if (!authenticated) {
@@ -123,10 +123,10 @@ const MdcDemoDashboard = () => {
                 <div className="flex flex-column gap-3">
                     <Message
                         severity="info"
-                        text="Please login to continue as Provider or Consumer."
+                        text="Sign in with your MaaSAI account to continue."
                         className="w-full justify-content-start"
                     />
-                    <Button label="Login" icon="pi pi-sign-in" onClick={() => login?.()} className="w-fit" />
+                    <Button label="Sign in" icon="pi pi-sign-in" onClick={() => login?.()} className="w-fit" />
                 </div>
             );
         }
@@ -135,7 +135,7 @@ const MdcDemoDashboard = () => {
             return (
                 <Message
                     severity="warn"
-                    text="You are logged in, but no MDC demo role was found. Please use a Keycloak user with Provider, Consumer or Admin demo role."
+                    text="Your account needs a Provider, Consumer or Admin role to use the catalogue."
                     className="w-full justify-content-start"
                 />
             );
@@ -146,7 +146,7 @@ const MdcDemoDashboard = () => {
                 <div className="flex flex-column gap-3">
                     <Message
                         severity="warn"
-                        text={`The selected demo role (${roleLabel(selectedRole)}) is not available for this login.`}
+                        text={`Your account cannot use the ${roleLabel(selectedRole)} role.`}
                         className="w-full justify-content-start"
                     />
                     <Button
@@ -164,7 +164,7 @@ const MdcDemoDashboard = () => {
             return (
                 <div className="flex flex-column gap-3">
                     <div>
-                        <h2 className="mt-0 mb-2 text-900">Continue demo as:</h2>
+                        <h2 className="mt-0 mb-2 text-900">Choose a role</h2>
                     </div>
                     <div className="flex flex-column gap-3">
                         {availableRoles.map((option) => (
@@ -190,16 +190,16 @@ const MdcDemoDashboard = () => {
         }
 
         const actionText = selectedRole === 'provider'
-            ? 'Register a new provider or update existing manufacturing capabilities in the MaaS Dynamic Catalogue demo.'
+            ? 'Register providers and manage their manufacturing capabilities.'
             : selectedRole === 'consumer'
-                ? 'Search for suitable manufacturing providers using part family, part type, material, process and requirement information.'
-                : 'Open the provider, service discovery, or demo admin area.';
+                ? 'Find manufacturing offerings that meet your technical requirements.'
+                : 'Open Provider Area, Service Discovery or Admin Dashboard.';
 
         return (
             <div className="flex flex-column gap-3">
                 <div className="flex flex-column gap-2">
                     <div className="flex flex-wrap align-items-center gap-2">
-                        <span className="text-600">Current demo role:</span>
+                        <span className="text-600">Current role</span>
                         <Tag value={roleLabel(selectedRole)} severity="info" />
                     </div>
                     <h2 className="mt-0 mb-2 text-900">Welcome {roleLabel(selectedRole)}</h2>
@@ -214,7 +214,7 @@ const MdcDemoDashboard = () => {
                         onClick={clearStoredDemoRole}
                     />
                     <Button
-                        label="Logout"
+                        label="Sign out"
                         icon="pi pi-sign-out"
                         severity="secondary"
                         outlined
@@ -230,12 +230,9 @@ const MdcDemoDashboard = () => {
             <Card>
                 <div className="flex flex-column md:flex-row md:align-items-start md:justify-content-between gap-3">
                     <div>
-                        <div className="text-sm text-600 mb-2">MaaS Dynamic Catalogue</div>
-                        <h1 className="mt-0 mb-2 text-900">MaaS Dynamic Catalogue Demo Console</h1>
+                        <h1 className="mt-0 mb-2 text-900">MaaS Dynamic Catalogue</h1>
                         <p className="text-600 line-height-3 mb-0">
-                            Use this demo to show how manufacturing providers register capabilities,
-                            how existing provider information can be updated, and how consumers search
-                            for suitable MaaS providers.
+                            Manage manufacturing offerings or discover services that meet your technical requirements.
                         </p>
                     </div>
                 </div>

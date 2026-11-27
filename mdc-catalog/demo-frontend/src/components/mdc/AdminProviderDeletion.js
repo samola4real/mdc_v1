@@ -152,7 +152,7 @@ export default function AdminProviderDeletion({ filters }) {
                 </div>
             )}
             {record && <AdminProviderView providerId={record.provider_id} filters={filters} visible={viewVisible} onHide={() => setViewVisible(false)} />}
-            {record && !disposable && <Message severity="info" text="This provider is read-only in the Stage 1B demo." />}
+            {record && !disposable && <Message severity="info" text="This provider is read-only. Only designated test records can be deleted." />}
             {disposable && !strongEtag(provider.etag) && <Message severity="warn" text="Load a current provider revision to delete this provider." />}
             <ProviderActionResult result={result} />
             <DeletionReview recovery={recovery} busy={Boolean(busy)} onCheck={check} onResume={resume} />

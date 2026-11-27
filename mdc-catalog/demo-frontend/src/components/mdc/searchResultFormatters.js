@@ -1,172 +1,84 @@
-export const FIELD_LABELS = {
-    module: 'Module',
+export const NOT_PROVIDED = 'Not provided in this result';
+
+const FIELD_LABELS = {
+    module: 'Module (mm)',
     diametral_pitch: 'Diametral pitch',
-    outside_diameter_mm: 'Outside diameter',
-    outer_diameter_mm: 'Outer diameter',
-    inner_diameter_mm: 'Inner diameter',
-    internal_diameter_mm: 'Internal diameter',
-    length_mm: 'Length',
-    spline_module: 'Spline module',
-    gear_quality: 'Gear quality',
-    surface_finish_ra_um: 'Surface finish Ra',
-    tolerance_mm: 'Tolerance',
-    batch_size: 'Batch size',
-    lead_time_weeks: 'Lead time',
-    weight_kg: 'Weight',
-    face_width_mm: 'Face width',
-    wall_thickness_mm: 'Wall thickness',
-    materials: 'Material',
-    processes: 'Process',
-    certifications: 'Certification',
-    part_type: 'Part type',
-    service_category: 'Service category'
+    bounding_box_mm: 'Bounding box',
+    surface_finish_ra_um: 'Surface finish Ra (µm)',
+    delivery: 'Delivery time (weeks)',
+    weight_kg: 'Weight (kg)'
 };
 
-const CERTIFICATION_LABELS = {
-    ISO9001_2015: 'ISO 9001:2015',
-    ISO14001_2015: 'ISO 14001:2015',
-    ISO_TS_16949_partial: 'ISO/TS 16949 partial',
-    APQP: 'APQP'
-};
-
-export const snakeToTitle = (value) => {
-    if (value == null || value === '') {
-        return 'Not provided';
-    }
-
-    return String(value)
-        .replace(/_/g, ' ')
-        .replace(/\s+/g, ' ')
-        .trim()
-        .replace(/\b\w/g, (char) => char.toUpperCase());
-};
-
-export const formatFieldLabel = (value) => FIELD_LABELS[value] || snakeToTitle(value);
-
-export const formatTagLabel = (value) => {
-    if (value == null || value === '') {
-        return 'Not provided';
-    }
-    if (CERTIFICATION_LABELS[value]) {
-        return CERTIFICATION_LABELS[value];
-    }
-    return String(value).replace(/_/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase()).replace('Turn Mill', 'Turn-mill');
+export const formatFieldLabel = (field) => {
+    if (Object.hasOwn(FIELD_LABELS, field)) return FIELD_LABELS[field];
+    const label = field.replace(/_mm$/, ' (mm)').replace(/_/g, ' ');
+    return label.charAt(0).toUpperCase() + label.slice(1);
 };
 
 export const formatCapabilityRange = (value) => {
-    if (value === undefined) {
-        return 'Not provided';
-    }
-    if (value === null) {
-        return 'Unknown';
-    }
-    if (typeof value === 'number' || typeof value === 'boolean') {
-        return String(value);
-    }
-    if (typeof value === 'string') {
-        return value;
-    }
-    if (Array.isArray(value)) {
-        return value.map(formatCapabilityRange).join(', ');
-    }
-    if (typeof value === 'object') {
-        if (value.raw) {
-            return String(value.raw);
-        }
-        if (value.standard && value.max_class != null) {
-            return `${value.standard} ${value.max_class}`;
-        }
-        if (value.exact != null) {
-            return String(value.exact);
-        }
-        if (value.min != null && value.max != null) {
-            return `${value.min}-${value.max}`;
-        }
-        if (value.max != null) {
-            return `<= ${value.max}`;
-        }
-        if (value.min != null) {
-            return `>= ${value.min}`;
-        }
+    if (typeof value === 'number' || (typeof value === 'string' && value.trim())) return String(value);
+    if (!value || typeof value !== 'object') return NOT_PROVIDED;
 
-        return Object.entries(value)
-            .filter(([, item]) => item != null && item !== '')
-            .map(([key, item]) => `${formatFieldLabel(key)}: ${formatCapabilityRange(item)}`)
-            .join(', ') || 'Unknown';
-    }
+    if (value.standard && value.best_class != null) return `${value.standard}, best class ${value.best_class}`;
+    if (value.standard && value.max_class != null) return `${value.standard}, class ≤ ${value.max_class}`;
+    if (value.exact != null || (value.min != null && value.min === value.max)) return String(value.exact ?? value.min);
+    if (value.min != null && value.max != null) return `${value.min}–${value.max}`;
+    if (value.max != null) return `≤ ${value.max}`;
+    if (value.min != null) return `≥ ${value.min}`;
 
-    return String(value);
+    const dimensions = ['length_mm', 'width_mm', 'height_mm']
+        .filter((field) => value[field] != null)
+        .map((field) => `${formatFieldLabel(field)}: ${formatCapabilityRange(value[field])}`);
+    return dimensions.length ? dimensions.join(', ') : NOT_PROVIDED;
 };
 
-export const formatEvidenceValue = formatCapabilityRange;
+export const EVIDENCE_GROUPS = [
+    { field: 'materials', label: 'Materials and grades', valueKey: 'material' },
+    { field: 'processes', label: 'Manufacturing processes', valueKey: 'process' },
+    { field: 'certifications', label: 'Certifications', valueKey: 'code' }
+];
 
-export const formatLabel = (value) => {
-    if (value === undefined) return 'Not provided';
-    if (value === null) return 'Unknown';
-    if (Array.isArray(value)) return value.map(formatLabel).join(', ');
-    if (typeof value === 'object') return formatCapabilityRange(value);
-    return String(value);
-};
-
-export const getNested = (object, path, fallback = undefined) => {
-    const value = path.split('.').reduce((current, key) => current?.[key], object);
-    return value === undefined ? fallback : value;
+export const formatEvidenceList = (values, { valueKey }, options = []) => {
+    if (!Array.isArray(values)) return NOT_PROVIDED;
+    const labels = values.flatMap((item) => {
+        const value = typeof item === 'string' ? item : item?.[valueKey];
+        if (!nonemptyString(value) || item?.support_status === 'unknown' || item?.status === 'unknown') return [];
+        const label = options.find((option) => option.value === value)?.label || value.replace(/_/g, ' ');
+        const grades = Array.isArray(item?.available_grades) ? item.available_grades.filter((grade) => typeof grade === 'string' && grade.trim()) : [];
+        return [grades.length ? `${label} (${grades.join(', ')})` : label];
+    });
+    return [...new Set(labels)].join(', ') || NOT_PROVIDED;
 };
 
 export const formatSuitability = (status) => {
-    if (status === 'matched' || status === 'full_match') {
-        return 'Eligible';
-    }
-    if (status === 'unmatched' || status === 'partial_match') {
-        return 'Requirements unmet';
-    }
+    if (status === 'matched' || status === 'full_match') return 'Eligible';
+    if (status === 'unmatched' || status === 'partial_match') return 'Requirements unmet';
     return 'Evidence incomplete';
 };
 
-export const formatSupportStatus = (status) => {
-    if (status === 'matched' || status === 'confirmed') return 'Confirmed';
-    if (status === 'unknown') return 'Not confirmed';
-    if (status === 'unmatched') return 'Not matched';
-    return formatSuitability(status);
-};
+export const offeringKey = (result) => JSON.stringify([result.provider_id, result.offering_id]);
 
-export const asArray = (value) => {
-    if (!value) return [];
-    return Array.isArray(value) ? value : [value];
-};
+const nonemptyString = (value) => typeof value === 'string' && Boolean(value.trim());
+const emptyArray = (value) => Array.isArray(value) && value.length === 0;
 
-const normalizeCapabilityItems = (items, status) => (
-    asArray(items).map((item) => ({
-        ...item,
-        status: item?.status || status
-    }))
-);
-
-/**
- * Adapt the current flattened public contract to the established presentation
- * model while retaining compatibility with historical and demo-overlay data.
- */
-export const normalizeSearchResult = (result, context = {}) => {
-    const matched = result?.matched_capabilities ?? result?.matched_attributes;
-    const unmatched = result?.unmatched_capabilities ?? result?.unmatched_attributes;
-    const unknown = result?.unknown_capabilities ?? result?.unknown_attributes;
-
-    return {
-        ...result,
-        part_type: result?.part_type || context.part_type,
-        matched_attributes: normalizeCapabilityItems(matched, 'matched'),
-        unmatched_attributes: normalizeCapabilityItems(unmatched, 'unmatched'),
-        unknown_attributes: normalizeCapabilityItems(unknown, 'unknown')
-    };
-};
-
-export const normalizeSearchResults = (response) => {
-    const results = Array.isArray(response)
-        ? response
-        : response?.results || response?.data?.results || [];
-    const context = Array.isArray(response) ? {} : {
-        part_type: response?.part_type || response?.data?.part_type
-    };
-
-    return asArray(results).map((result) => normalizeSearchResult(result, context));
+export const validateSearchResponse = (response, request) => {
+    const matchesRequest = response?.contract_version === '1.0'
+        && ['request_id', 'service_category', 'part_family', 'part_type'].every((key) => response[key] === request[key]);
+    if (!matchesRequest || !Array.isArray(response.results) || response.result_count !== response.results.length) {
+        throw new Error('Invalid service-discovery response.');
+    }
+    const seenOfferings = new Set();
+    for (const result of response.results) {
+        if (result?.match?.status !== 'full_match'
+            || !['provider_id', 'provider_name', 'offering_id', 'offering_name'].every((field) => nonemptyString(result[field]))
+            || result.service_category !== response.service_category || result.part_family !== response.part_family
+            || !emptyArray(result.unmatched_capabilities) || !emptyArray(result.unknown_capabilities)
+            || !Array.isArray(result.matched_capabilities)
+            || result.matched_capabilities.some((item) => !nonemptyString(item?.field) || item.requested == null)
+            || seenOfferings.has(offeringKey(result))) {
+            throw new Error('Invalid eligible offering in the service-discovery response.');
+        }
+        seenOfferings.add(offeringKey(result));
+    }
+    return response;
 };

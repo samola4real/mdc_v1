@@ -1,0 +1,157 @@
+.mdc-consumer {
+    display: grid;
+    gap: 1.5rem;
+    min-width: 0;
+
+    > * { min-width: 0; }
+
+    h1, h2, h3 {
+        margin: 0;
+        color: var(--brand-navy);
+        line-height: 1.25;
+    }
+
+    h1 { font-size: clamp(1.75rem, 3vw, 2.25rem); font-weight: 700; }
+    h2 { font-size: 1.5rem; font-weight: 700; }
+    h3 { font-size: 1.125rem; font-weight: 600; }
+
+    p {
+        margin: 0.5rem 0 0;
+        color: var(--text-medium);
+        line-height: 1.5;
+    }
+
+    .mdc-consumer-header p { max-width: 58rem; }
+
+    .mdc-consumer-requirements {
+        border: 1px solid var(--border);
+
+        > .p-card-body { padding: 1.5rem; }
+        > .p-card-body > .p-card-content { padding: 0; }
+    }
+
+    .mdc-consumer-form, .mdc-consumer-manufacturing {
+        display: grid;
+        gap: 0.875rem;
+    }
+
+    .mdc-consumer-form { gap: 1.375rem; margin-top: 1.25rem; }
+
+    .mdc-consumer-manufacturing {
+        border-top: 1px solid var(--border);
+        padding-top: 1.125rem;
+    }
+
+    .mdc-consumer-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 0.875rem 1.125rem;
+    }
+
+    .mdc-consumer-selection { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+
+    .mdc-consumer-field {
+        display: flex;
+        flex-direction: column;
+        gap: 0.375rem;
+        min-width: 0;
+
+        > label { color: var(--text-dark); font-weight: 600; }
+        > label span { color: var(--brand-navy); }
+        > .p-inputtext, > .p-dropdown, > .p-multiselect { width: 100%; min-height: 2.75rem; }
+    }
+
+    .mdc-consumer-hint { color: var(--text-medium); }
+
+    .mdc-consumer-specifications {
+        border: 1px solid var(--border);
+        border-radius: var(--border-radius, 6px);
+        overflow: hidden;
+
+        > h3 {
+            display: flex;
+            align-items: center;
+            gap: 0.625rem;
+            padding: 0.75rem 1rem;
+            background: var(--brand-navy);
+            color: #fff;
+        }
+    }
+
+    .mdc-consumer-specifications-body {
+        padding: 1rem;
+
+        > p { margin: 0 0 0.875rem; }
+    }
+
+    .mdc-consumer-actions {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 0.75rem;
+
+        .p-button { min-height: 2.75rem; }
+        .p-button-outlined { color: var(--brand-navy); border-color: var(--brand-navy); }
+        [role='status'] { color: var(--text-medium); }
+    }
+
+    .mdc-consumer-results {
+        display: grid;
+        gap: 0.875rem;
+
+        .p-accordion-header-text { flex: 1; min-width: 0; }
+        .p-inline-message-info { background: color-mix(in srgb, var(--brand-navy) 9%, var(--bg-card)); color: var(--brand-navy); }
+    }
+
+    .mdc-consumer-offering {
+        display: flex;
+        flex: 1;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.75rem;
+        min-width: 0;
+        text-align: start;
+
+        > div { display: grid; gap: 0.25rem; overflow-wrap: anywhere; }
+        strong { color: var(--brand-navy); font-size: 1.0625rem; }
+        span { font-weight: 500; line-height: 1.4; }
+        .p-tag {
+            flex-shrink: 0;
+            padding: 0.25rem 0.625rem;
+            background: #e7f5eb;
+            color: #215c36;
+        }
+    }
+
+    .mdc-consumer-evidence .mdc-consumer-part-confirmed { margin: 0 0 0.875rem; }
+
+    .mdc-consumer-comparison {
+        width: 100%;
+        table-layout: fixed;
+        border-collapse: collapse;
+        margin-top: 0.625rem;
+        text-align: start;
+        overflow-wrap: anywhere;
+
+        th, td { padding: 0.625rem; text-align: start; vertical-align: top; border-bottom: 1px solid var(--border); }
+        thead th { background: var(--surface-ground); font-weight: 600; }
+        tbody th { font-weight: 500; }
+    }
+
+    .mdc-consumer-evidence-groups {
+        margin: 0.875rem 0 0;
+
+        > div { overflow-wrap: anywhere; }
+        dt { color: var(--brand-navy); font-weight: 600; }
+        dd { margin: 0.375rem 0 0; }
+    }
+
+    @media (max-width: 767px) {
+        gap: 1.125rem;
+
+        .mdc-consumer-requirements > .p-card-body { padding: 1rem; }
+        .mdc-consumer-grid { grid-template-columns: minmax(0, 1fr); }
+        .mdc-consumer-offering { align-items: flex-start; flex-direction: column; }
+        .mdc-consumer-comparison th, .mdc-consumer-comparison td { padding: 0.5rem 0.375rem; }
+    }
+}

@@ -17,8 +17,8 @@ const availabilityLabels = {
 };
 
 const backendDescriptions = {
-    checking: 'Waiting for the health response.',
-    available: 'The health endpoint is responding.',
+    checking: 'Checking service availability.',
+    available: 'The catalogue API is responding.',
     unavailable: 'The API reported an unavailable state.',
     error: 'The health check could not be completed.'
 };

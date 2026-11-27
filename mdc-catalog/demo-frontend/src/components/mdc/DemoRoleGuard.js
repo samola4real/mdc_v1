@@ -15,12 +15,12 @@ const LoginPrompt = ({ login }) => (
     <Card>
         <div className="flex flex-column gap-3">
             <div>
-                <h2 className="mt-0 mb-2 text-900">MDC Demo Console</h2>
+                <h2 className="mt-0 mb-2 text-900">Sign in to MaaS Dynamic Catalogue</h2>
                 <p className="text-600 line-height-3 mb-0">
-                    Please login to continue as Provider or Consumer.
+                    Sign in with your MaaSAI account to continue.
                 </p>
             </div>
-            <Button label="Login" icon="pi pi-sign-in" onClick={() => login?.()} className="w-fit" />
+            <Button label="Sign in" icon="pi pi-sign-in" onClick={() => login?.()} className="w-fit" />
         </div>
     </Card>
 );
@@ -34,7 +34,7 @@ const DemoRoleGuard = ({ allowedRoles = [], children, pageLabel }) => {
     const allowed = canUseSelectedRole && canAccessDemoRole([selectedRole], allowedRoles);
 
     if (!isInitialized || isLoading) {
-        return <Message severity="info" text="Checking login status..." className="w-full justify-content-start" />;
+        return <Message severity="info" text="Checking sign-in status..." className="w-full justify-content-start" />;
     }
 
     if (!authenticated) {
@@ -45,7 +45,7 @@ const DemoRoleGuard = ({ allowedRoles = [], children, pageLabel }) => {
         return (
             <Message
                 severity="warn"
-                text="You are logged in, but no MDC demo role was found. Please use a Keycloak user with Provider, Consumer or Admin demo role."
+                text="Your account needs a Provider, Consumer or Admin role to use the catalogue."
                 className="w-full justify-content-start"
             />
         );
@@ -55,7 +55,7 @@ const DemoRoleGuard = ({ allowedRoles = [], children, pageLabel }) => {
         return (
             <Message
                 severity="info"
-                text="Choose Provider, Consumer or Admin on the MDC Demo Console before opening this demo page."
+                text="Choose a role on the Dashboard before opening this page."
                 className="w-full justify-content-start"
             />
         );
@@ -65,7 +65,7 @@ const DemoRoleGuard = ({ allowedRoles = [], children, pageLabel }) => {
         return (
             <Message
                 severity="warn"
-                text={`Your selected demo role (${roleLabel(selectedRole)}) is not available for this Keycloak user. Switch role on the MDC Demo Console.`}
+                text={`Your account cannot use the ${roleLabel(selectedRole)} role. Switch role on the Dashboard.`}
                 className="w-full justify-content-start"
             />
         );
@@ -76,7 +76,7 @@ const DemoRoleGuard = ({ allowedRoles = [], children, pageLabel }) => {
         return (
             <Message
                 severity="warn"
-                text={`This page is for ${pageLabel || labels}. Your selected MDC demo role is ${roleLabel(selectedRole)}.`}
+                text={`This page requires the ${pageLabel || labels} role. Your selected role is ${roleLabel(selectedRole)}.`}
                 className="w-full justify-content-start"
             />
         );

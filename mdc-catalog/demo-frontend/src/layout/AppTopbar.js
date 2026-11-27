@@ -106,8 +106,8 @@ const AppTopbar = forwardRef((_, ref) => {
                     type="button"
                     className="p-link layout-topbar-profile"
                     onClick={handleProfileAction}
-                    aria-label={authenticated ? 'Logout' : 'Login'}
-                    title={authenticated ? 'Logout' : 'Login'}
+                    aria-label={authenticated ? 'Sign out' : 'Sign in'}
+                    title={authenticated ? 'Sign out' : 'Sign in'}
                 >
                     {!authenticated ? (
                         <>
@@ -116,7 +116,7 @@ const AppTopbar = forwardRef((_, ref) => {
                                     <path d="M12 12a3.25 3.25 0 1 0-3.25-3.25A3.25 3.25 0 0 0 12 12Zm0 1.75c-3.39 0-6.25 1.72-6.25 4.25a.75.75 0 0 0 1.5 0c0-1.39 1.98-2.75 4.75-2.75s4.75 1.36 4.75 2.75a.75.75 0 0 0 1.5 0c0-2.53-2.86-4.25-6.25-4.25Z" />
                                 </svg>
                             </span>
-                            <span className="layout-topbar-profile__label">Login</span>
+                            <span className="layout-topbar-profile__label">Sign in</span>
                         </>
                     ) : (
                         <>
@@ -128,7 +128,7 @@ const AppTopbar = forwardRef((_, ref) => {
                 {authenticated && layoutState.profileSidebarVisible ? (
                     <div className="layout-topbar-dropdown">
                         <button type="button" className="layout-topbar-dropdown__item" onClick={handleLogout}>
-                            Logout
+                            Sign out
                         </button>
                     </div>
                 ) : null}

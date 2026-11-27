@@ -64,7 +64,7 @@ export default function ProviderDemoPanel() {
     return (
         <div className="flex flex-column gap-4">
             <ProviderActionToast toast={toast} />
-            <Message severity="info" text={'Provider and offering writes are limited to disposable IDs starting with ' + DISPOSABLE_PROVIDER_PREFIX + '.'}
+            <Message severity="info" text={'Registration and changes are available for designated test records only. Provider IDs must start with ' + DISPOSABLE_PROVIDER_PREFIX + '.'}
                 className="w-full justify-content-start" />
             <div className="flex flex-wrap gap-2">
                 <Button label="Register New Provider" icon="pi pi-plus" outlined={mode !== 'register'}

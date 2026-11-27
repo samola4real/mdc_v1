@@ -20,7 +20,7 @@ const MENU_MODEL = [
             { label: 'Dashboard', icon: 'pi pi-fw pi-th-large', to: '/demo' },
             { label: 'Provider Area', icon: 'pi pi-fw pi-building', to: '/demo/provider', demoRoles: ['provider', 'admin'] },
             { label: 'Service Discovery', icon: 'pi pi-fw pi-search', to: '/demo/consumer-search', demoRoles: ['consumer', 'admin'] },
-            { label: 'Demo Admin', icon: 'pi pi-fw pi-shield', to: '/demo/admin-audit', demoRoles: ['admin'] }
+            { label: 'Admin Dashboard', icon: 'pi pi-fw pi-shield', to: '/demo/admin-audit', demoRoles: ['admin'] }
         ]
     }
 ];

@@ -104,5 +104,5 @@ export const roleLabel = (role) => {
     if (role === 'admin') return 'Admin';
     if (role === 'provider') return 'Provider';
     if (role === 'consumer') return 'Consumer';
-    return 'MDC demo user';
+    return 'Catalogue user';
 };
