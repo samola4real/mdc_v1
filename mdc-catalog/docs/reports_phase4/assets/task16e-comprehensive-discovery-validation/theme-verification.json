@@ -1,0 +1,430 @@
+{
+  "light": {
+    "primary": {
+      "idle": {
+        "theme": true,
+        "bg": "rgb(231, 140, 58)",
+        "border": "rgb(231, 140, 58)",
+        "fg": "rgb(38, 38, 38)",
+        "opacity": "1",
+        "disabled": false,
+        "loading": false,
+        "focus": "none",
+        "w": 238,
+        "h": 41,
+        "icon": {
+          "size": "14px",
+          "fg": "rgb(38, 38, 38)",
+          "visible": true
+        }
+      },
+      "hover": {
+        "theme": true,
+        "bg": "rgb(216, 209, 190)",
+        "border": "rgb(216, 209, 190)",
+        "fg": "rgb(38, 38, 38)",
+        "opacity": "1",
+        "disabled": false,
+        "loading": false,
+        "focus": "none",
+        "w": 238,
+        "h": 41,
+        "icon": {
+          "size": "14px",
+          "fg": "rgb(38, 38, 38)",
+          "visible": true
+        }
+      },
+      "active": {
+        "theme": true,
+        "bg": "color(srgb 0.815059 0.50102 0.218039)",
+        "border": "color(srgb 0.815059 0.50102 0.218039)",
+        "fg": "rgb(38, 38, 38)",
+        "opacity": "1",
+        "disabled": false,
+        "loading": false,
+        "focus": "none",
+        "w": 238,
+        "h": 41,
+        "icon": {
+          "size": "14px",
+          "fg": "rgb(38, 38, 38)",
+          "visible": true
+        }
+      },
+      "focus": "rgb(34, 63, 97) 0px 0px 0px 2px, rgb(231, 140, 58) 0px 0px 0px 4px"
+    },
+    "secondary": {
+      "idle": {
+        "theme": true,
+        "bg": "rgba(0, 0, 0, 0)",
+        "border": "rgb(34, 63, 97)",
+        "fg": "rgb(34, 63, 97)",
+        "opacity": "1",
+        "disabled": false,
+        "loading": false,
+        "focus": "none",
+        "w": 72,
+        "h": 41,
+        "icon": null
+      },
+      "hover": {
+        "theme": true,
+        "bg": "color(srgb 0.913333 0.924706 0.938039)",
+        "border": "rgb(34, 63, 97)",
+        "fg": "rgb(34, 63, 97)",
+        "opacity": "1",
+        "disabled": false,
+        "loading": false,
+        "focus": "none",
+        "w": 72,
+        "h": 41,
+        "icon": null
+      },
+      "active": {
+        "theme": true,
+        "bg": "color(srgb 0.844 0.864471 0.888471)",
+        "border": "rgb(34, 63, 97)",
+        "fg": "rgb(34, 63, 97)",
+        "opacity": "1",
+        "disabled": false,
+        "loading": false,
+        "focus": "none",
+        "w": 72,
+        "h": 41,
+        "icon": null
+      },
+      "focus": "rgb(34, 63, 97) 0px 0px 0px 2px, rgb(231, 140, 58) 0px 0px 0px 4px"
+    },
+    "loading": {
+      "theme": true,
+      "bg": "rgb(231, 140, 58)",
+      "border": "rgb(231, 140, 58)",
+      "fg": "rgb(38, 38, 38)",
+      "opacity": "0.75",
+      "disabled": true,
+      "loading": true,
+      "focus": "none",
+      "w": 238,
+      "h": 41,
+      "icon": {
+        "size": "14px",
+        "fg": "rgb(38, 38, 38)",
+        "visible": true
+      }
+    }
+  },
+  "modes": {
+    "dark": [
+      "rgb(231, 140, 58)",
+      "rgb(111, 176, 238)"
+    ],
+    "hmi": [
+      "rgb(231, 140, 58)",
+      "rgb(0, 176, 255)"
+    ]
+  },
+  "provider": {
+    "http": 200,
+    "strongEtag": true,
+    "register": {
+      "theme": true,
+      "bg": "rgb(231, 140, 58)",
+      "border": "rgb(231, 140, 58)",
+      "fg": "rgb(38, 38, 38)",
+      "opacity": "1",
+      "disabled": false,
+      "loading": false,
+      "focus": "none",
+      "w": 199,
+      "h": 41,
+      "icon": {
+        "size": "14px",
+        "fg": "rgb(38, 38, 38)",
+        "visible": true
+      }
+    },
+    "update": {
+      "theme": true,
+      "bg": "rgba(0, 0, 0, 0)",
+      "border": "rgb(34, 63, 97)",
+      "fg": "rgb(34, 63, 97)",
+      "opacity": "1",
+      "disabled": false,
+      "loading": false,
+      "focus": "none",
+      "w": 216,
+      "h": 41,
+      "icon": {
+        "size": "14px",
+        "fg": "rgb(34, 63, 97)",
+        "visible": true
+      }
+    },
+    "load": {
+      "theme": true,
+      "bg": "rgba(0, 0, 0, 0)",
+      "border": "rgb(34, 63, 97)",
+      "fg": "rgb(34, 63, 97)",
+      "opacity": "1",
+      "disabled": false,
+      "loading": false,
+      "focus": "none",
+      "w": 147,
+      "h": 41,
+      "icon": {
+        "size": "14px",
+        "fg": "rgb(34, 63, 97)",
+        "visible": true
+      }
+    },
+    "disabled": {
+      "theme": true,
+      "bg": "rgba(0, 0, 0, 0)",
+      "border": "rgb(34, 63, 97)",
+      "fg": "rgb(34, 63, 97)",
+      "opacity": "0.55",
+      "disabled": true,
+      "loading": false,
+      "focus": "none",
+      "w": 147,
+      "h": 41,
+      "icon": {
+        "size": "14px",
+        "fg": "rgb(34, 63, 97)",
+        "visible": true
+      }
+    },
+    "add": {
+      "theme": true,
+      "bg": "rgba(0, 0, 0, 0)",
+      "border": "rgb(34, 63, 97)",
+      "fg": "rgb(34, 63, 97)",
+      "opacity": "1",
+      "disabled": false,
+      "loading": false,
+      "focus": "none",
+      "w": 137,
+      "h": 41,
+      "icon": {
+        "size": "14px",
+        "fg": "rgb(34, 63, 97)",
+        "visible": true
+      }
+    },
+    "deleteOffering": {
+      "idle": {
+        "theme": true,
+        "bg": "rgba(0, 0, 0, 0)",
+        "border": "rgba(0, 0, 0, 0)",
+        "fg": "rgb(168, 39, 54)",
+        "opacity": "1",
+        "disabled": false,
+        "loading": false,
+        "focus": "none",
+        "w": 39,
+        "h": 39,
+        "icon": {
+          "size": "14px",
+          "fg": "rgb(168, 39, 54)",
+          "visible": true
+        }
+      },
+      "hover": {
+        "theme": true,
+        "bg": "color(srgb 0.965882 0.915294 0.921176)",
+        "border": "rgba(0, 0, 0, 0)",
+        "fg": "rgb(168, 39, 54)",
+        "opacity": "1",
+        "disabled": false,
+        "loading": false,
+        "focus": "none",
+        "w": 39,
+        "h": 39,
+        "icon": {
+          "size": "14px",
+          "fg": "rgb(168, 39, 54)",
+          "visible": true
+        }
+      },
+      "active": {
+        "theme": true,
+        "bg": "color(srgb 0.938588 0.847529 0.858118)",
+        "border": "rgba(0, 0, 0, 0)",
+        "fg": "rgb(168, 39, 54)",
+        "opacity": "1",
+        "disabled": false,
+        "loading": false,
+        "focus": "none",
+        "w": 39,
+        "h": 39,
+        "icon": {
+          "size": "14px",
+          "fg": "rgb(168, 39, 54)",
+          "visible": true
+        }
+      },
+      "focus": "rgb(34, 63, 97) 0px 0px 0px 2px, rgb(231, 140, 58) 0px 0px 0px 4px"
+    }
+  },
+  "admin": {
+    "http": 200,
+    "strongEtag": true,
+    "load": {
+      "theme": true,
+      "bg": "rgb(231, 140, 58)",
+      "border": "rgb(231, 140, 58)",
+      "fg": "rgb(38, 38, 38)",
+      "opacity": "1",
+      "disabled": false,
+      "loading": false,
+      "focus": "none",
+      "w": 138,
+      "h": 39,
+      "icon": {
+        "size": "14px",
+        "fg": "rgb(38, 38, 38)",
+        "visible": true
+      }
+    },
+    "disabled": {
+      "theme": true,
+      "bg": "rgb(231, 140, 58)",
+      "border": "rgb(231, 140, 58)",
+      "fg": "rgb(38, 38, 38)",
+      "opacity": "0.55",
+      "disabled": true,
+      "loading": false,
+      "focus": "none",
+      "w": 138,
+      "h": 39,
+      "icon": {
+        "size": "14px",
+        "fg": "rgb(38, 38, 38)",
+        "visible": true
+      }
+    },
+    "view": {
+      "theme": true,
+      "bg": "rgba(0, 0, 0, 0)",
+      "border": "rgb(34, 63, 97)",
+      "fg": "rgb(34, 63, 97)",
+      "opacity": "1",
+      "disabled": false,
+      "loading": false,
+      "focus": "none",
+      "w": 138,
+      "h": 39,
+      "icon": {
+        "size": "14px",
+        "fg": "rgb(34, 63, 97)",
+        "visible": true
+      }
+    },
+    "deleteProvider": {
+      "idle": {
+        "theme": true,
+        "bg": "rgb(168, 39, 54)",
+        "border": "rgb(168, 39, 54)",
+        "fg": "rgb(255, 255, 255)",
+        "opacity": "1",
+        "disabled": false,
+        "loading": false,
+        "focus": "none",
+        "w": 148,
+        "h": 39,
+        "icon": {
+          "size": "14px",
+          "fg": "rgb(255, 255, 255)",
+          "visible": true
+        }
+      },
+      "hover": {
+        "theme": true,
+        "bg": "rgb(135, 32, 44)",
+        "border": "rgb(135, 32, 44)",
+        "fg": "rgb(255, 255, 255)",
+        "opacity": "1",
+        "disabled": false,
+        "loading": false,
+        "focus": "none",
+        "w": 148,
+        "h": 39,
+        "icon": {
+          "size": "14px",
+          "fg": "rgb(255, 255, 255)",
+          "visible": true
+        }
+      },
+      "active": {
+        "theme": true,
+        "bg": "color(srgb 0.472353 0.12902 0.16902)",
+        "border": "color(srgb 0.472353 0.12902 0.16902)",
+        "fg": "rgb(255, 255, 255)",
+        "opacity": "1",
+        "disabled": false,
+        "loading": false,
+        "focus": "none",
+        "w": 148,
+        "h": 39,
+        "icon": {
+          "size": "14px",
+          "fg": "rgb(255, 255, 255)",
+          "visible": true
+        }
+      },
+      "focus": "rgb(34, 63, 97) 0px 0px 0px 2px, rgb(231, 140, 58) 0px 0px 0px 4px"
+    },
+    "refresh": {
+      "theme": true,
+      "bg": "rgba(0, 0, 0, 0)",
+      "border": "rgb(34, 63, 97)",
+      "fg": "rgb(34, 63, 97)",
+      "opacity": "1",
+      "disabled": false,
+      "loading": false,
+      "focus": "none",
+      "w": 143,
+      "h": 39,
+      "icon": {
+        "size": "14px",
+        "fg": "rgb(34, 63, 97)",
+        "visible": true
+      }
+    },
+    "dialogClose": {
+      "theme": true,
+      "bg": "rgba(0, 0, 0, 0)",
+      "border": "rgba(0, 0, 0, 0)",
+      "fg": "rgb(34, 63, 97)",
+      "opacity": "1",
+      "disabled": false,
+      "loading": false,
+      "focus": "none",
+      "w": 27,
+      "h": 27,
+      "icon": {
+        "size": "14px",
+        "fg": "rgb(34, 63, 97)",
+        "visible": true
+      }
+    }
+  },
+  "mutationRequests": 0,
+  "shots": {
+    "providerShot": {
+      "x": 262,
+      "y": 84,
+      "width": 1131,
+      "height": 785,
+      "scale": 1
+    },
+    "adminShot": {
+      "x": 262,
+      "y": 84,
+      "width": 1146,
+      "height": 771,
+      "scale": 1
+    }
+  }
+}

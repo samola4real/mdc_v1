@@ -1,0 +1,25 @@
+{
+  "registration": [
+    "ISO 9001:2015",
+    "ISO 14001:2015",
+    "Partial ISO/TS 16949 implementation",
+    "Advanced Product Quality Planning",
+    "Aerospace traceability",
+    "Full traceability",
+    "ISO 13485:2016",
+    "AS9100 Rev D / EN 9100:2018"
+  ],
+  "update": [
+    "ISO 9001:2015",
+    "ISO 14001:2015",
+    "Partial ISO/TS 16949 implementation",
+    "Advanced Product Quality Planning",
+    "Aerospace traceability",
+    "Full traceability",
+    "ISO 13485:2016",
+    "AS9100 Rev D / EN 9100:2018"
+  ],
+  "lookupHttp": 200,
+  "strongEtag": true,
+  "writes": 0
+}

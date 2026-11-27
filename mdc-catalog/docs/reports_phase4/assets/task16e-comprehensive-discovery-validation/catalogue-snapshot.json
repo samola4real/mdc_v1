@@ -1,0 +1,913 @@
+{
+  "origin": "https://maasai-mdc-v1-pi9dh538z-mdc19.vercel.app",
+  "vocabulary": {
+    "contract_version": "1.0",
+    "service_categories": [
+      {
+        "value": "precision_gears",
+        "label": "Precision gears",
+        "part_family": "gear"
+      },
+      {
+        "value": "precision_shafts",
+        "label": "Precision shafts",
+        "part_family": "shaft"
+      },
+      {
+        "value": "precision_metal_parts",
+        "label": "Precision metal parts",
+        "part_family": "metal_part"
+      }
+    ],
+    "part_families": [
+      {
+        "value": "gear",
+        "label": "Gear",
+        "service_category": "precision_gears"
+      },
+      {
+        "value": "shaft",
+        "label": "Shaft",
+        "service_category": "precision_shafts"
+      },
+      {
+        "value": "metal_part",
+        "label": "Metal part",
+        "service_category": "precision_metal_parts"
+      }
+    ],
+    "part_types": {
+      "gear": [
+        {
+          "value": "spur_gear",
+          "label": "Spur gear"
+        },
+        {
+          "value": "helical_gear",
+          "label": "Helical gear"
+        },
+        {
+          "value": "bevel_gear",
+          "label": "Bevel gear"
+        },
+        {
+          "value": "worm_gear",
+          "label": "Worm gear"
+        },
+        {
+          "value": "crown_gear",
+          "label": "Crown gear"
+        }
+      ],
+      "shaft": [
+        {
+          "value": "plain_shaft",
+          "label": "Plain shaft"
+        },
+        {
+          "value": "stepped_shaft",
+          "label": "Stepped shaft"
+        },
+        {
+          "value": "splined_shaft",
+          "label": "Splined shaft"
+        },
+        {
+          "value": "worm_shaft",
+          "label": "Worm shaft"
+        },
+        {
+          "value": "hollow_shaft",
+          "label": "Hollow shaft"
+        }
+      ],
+      "metal_part": [
+        {
+          "value": "block",
+          "label": "Block"
+        },
+        {
+          "value": "plate",
+          "label": "Plate"
+        },
+        {
+          "value": "bracket",
+          "label": "Bracket"
+        },
+        {
+          "value": "bushing",
+          "label": "Bushing"
+        },
+        {
+          "value": "roller",
+          "label": "Roller"
+        },
+        {
+          "value": "collar",
+          "label": "Collar"
+        }
+      ]
+    },
+    "materials": [
+      {
+        "value": "steel",
+        "label": "Steel"
+      },
+      {
+        "value": "alloyed_carburizing_steel",
+        "label": "Alloyed carburizing steel"
+      },
+      {
+        "value": "stainless_steel",
+        "label": "Stainless steel"
+      },
+      {
+        "value": "aluminum",
+        "label": "Aluminum"
+      },
+      {
+        "value": "titanium",
+        "label": "Titanium"
+      },
+      {
+        "value": "nickel_alloy",
+        "label": "Nickel alloy"
+      }
+    ],
+    "processes": [
+      {
+        "value": "machining",
+        "label": "Machining"
+      },
+      {
+        "value": "turning",
+        "label": "Turning"
+      },
+      {
+        "value": "milling",
+        "label": "Milling"
+      },
+      {
+        "value": "hobbing",
+        "label": "Hobbing"
+      },
+      {
+        "value": "gear_shaping",
+        "label": "Gear shaping"
+      },
+      {
+        "value": "deburring",
+        "label": "Deburring"
+      },
+      {
+        "value": "hard_turning",
+        "label": "Hard turning"
+      },
+      {
+        "value": "grinding",
+        "label": "Grinding"
+      },
+      {
+        "value": "tooth_grinding",
+        "label": "Tooth grinding"
+      },
+      {
+        "value": "gear_grinding",
+        "label": "Gear grinding / tooth grinding"
+      },
+      {
+        "value": "gear_cutting",
+        "label": "Gear cutting"
+      },
+      {
+        "value": "surface_grinding",
+        "label": "Surface grinding"
+      },
+      {
+        "value": "heat_treatment",
+        "label": "Heat treatment"
+      },
+      {
+        "value": "turn_mill",
+        "label": "Turn-mill"
+      },
+      {
+        "value": "inspection",
+        "label": "Inspection / quality checking"
+      }
+    ],
+    "certifications": [
+      {
+        "value": "ISO9001_2015",
+        "label": "ISO 9001:2015"
+      },
+      {
+        "value": "ISO14001_2015",
+        "label": "ISO 14001:2015"
+      },
+      {
+        "value": "ISO_TS_16949_partial",
+        "label": "Partial ISO/TS 16949 implementation"
+      },
+      {
+        "value": "APQP",
+        "label": "Advanced Product Quality Planning"
+      },
+      {
+        "value": "aerospace_traceability",
+        "label": "Aerospace traceability"
+      },
+      {
+        "value": "full_traceability",
+        "label": "Full traceability"
+      },
+      {
+        "value": "ISO13485_2016",
+        "label": "ISO 13485:2016"
+      },
+      {
+        "value": "AS9100_D",
+        "label": "AS9100 Rev D / EN 9100:2018"
+      }
+    ]
+  },
+  "records": [
+    {
+      "provider": {
+        "provider_id": "tasowheel",
+        "country": "Finland",
+        "certifications": [
+          {
+            "code": "ISO9001_2015",
+            "source_type": "provider_confirmed",
+            "confidence": "declared"
+          },
+          {
+            "code": "ISO14001_2015",
+            "source_type": "provider_confirmed",
+            "confidence": "declared"
+          },
+          {
+            "code": "ISO_TS_16949_partial",
+            "source_type": "provider_confirmed",
+            "confidence": "declared"
+          },
+          {
+            "code": "APQP",
+            "source_type": "provider_confirmed",
+            "confidence": "declared"
+          }
+        ],
+        "display_name": "Tasowheel Oy"
+      },
+      "offerings": [
+        {
+          "offering_id": "tasowheel_precision_gears",
+          "provider_id": "tasowheel",
+          "name": "Precision gears",
+          "part_family": "gear",
+          "service_category": "precision_gears",
+          "support_status": "confirmed",
+          "supported_part_types": [
+            {
+              "part_type": "spur_gear",
+              "confidence": "declared",
+              "source_type": "provider_confirmed",
+              "support_status": "confirmed"
+            },
+            {
+              "part_type": "helical_gear",
+              "confidence": "declared",
+              "source_type": "provider_confirmed",
+              "support_status": "confirmed"
+            },
+            {
+              "part_type": "bevel_gear",
+              "confidence": "declared",
+              "source_type": "provider_confirmed",
+              "support_status": "confirmed"
+            },
+            {
+              "part_type": "worm_gear",
+              "confidence": "declared",
+              "source_type": "provider_confirmed",
+              "support_status": "confirmed"
+            }
+          ],
+          "family_capabilities": {
+            "module": {
+              "max": 10,
+              "min": 0.3,
+              "confidence": "declared",
+              "source_type": "provider_confirmed"
+            },
+            "gear_quality": {
+              "standard": "DIN",
+              "best_class": 4,
+              "confidence": "declared",
+              "source_type": "provider_confirmed",
+              "comparison_rule": "lower_or_equal_is_better"
+            },
+            "diametral_pitch": {
+              "max": 85,
+              "min": 2.5,
+              "raw": "DP 85-2.5",
+              "confidence": "declared",
+              "source_type": "provider_confirmed",
+              "normalized_order": "ascending"
+            },
+            "outside_diameter_mm": {
+              "max": 450,
+              "min": 10,
+              "confidence": "declared",
+              "source_type": "provider_confirmed"
+            }
+          },
+          "part_type_capabilities": {},
+          "generic_capabilities": {
+            "materials": [
+              {
+                "material": "alloyed_carburizing_steel",
+                "confidence": "declared",
+                "source_type": "provider_confirmed",
+                "available_grades": [
+                  "18CrNiMo7-6",
+                  "16MnCr5",
+                  "20MnCr5"
+                ]
+              }
+            ],
+            "processes": [
+              {
+                "process": "machining",
+                "confidence": "declared",
+                "source_type": "provider_confirmed",
+                "delivery_mode": "unspecified"
+              },
+              {
+                "process": "hobbing",
+                "confidence": "declared",
+                "source_type": "provider_confirmed",
+                "delivery_mode": "unspecified"
+              },
+              {
+                "process": "gear_shaping",
+                "confidence": "declared",
+                "source_type": "provider_confirmed",
+                "delivery_mode": "unspecified"
+              },
+              {
+                "process": "deburring",
+                "confidence": "declared",
+                "source_type": "provider_confirmed",
+                "delivery_mode": "unspecified"
+              },
+              {
+                "process": "hard_turning",
+                "confidence": "declared",
+                "source_type": "provider_confirmed",
+                "delivery_mode": "unspecified"
+              },
+              {
+                "process": "grinding",
+                "confidence": "declared",
+                "source_type": "provider_confirmed",
+                "delivery_mode": "unspecified"
+              },
+              {
+                "process": "tooth_grinding",
+                "confidence": "declared",
+                "source_type": "provider_confirmed",
+                "delivery_mode": "unspecified"
+              },
+              {
+                "process": "gear_grinding",
+                "confidence": "declared",
+                "source_type": "provider_confirmed",
+                "delivery_mode": "unspecified"
+              },
+              {
+                "process": "gear_cutting",
+                "confidence": "declared",
+                "source_type": "provider_confirmed",
+                "delivery_mode": "unspecified"
+              },
+              {
+                "process": "surface_grinding",
+                "confidence": "declared",
+                "source_type": "provider_confirmed",
+                "delivery_mode": "unspecified"
+              },
+              {
+                "process": "milling",
+                "confidence": "declared",
+                "source_type": "provider_confirmed",
+                "delivery_mode": "unspecified"
+              },
+              {
+                "process": "turn_mill",
+                "confidence": "declared",
+                "source_type": "provider_confirmed",
+                "delivery_mode": "unspecified"
+              }
+            ],
+            "weight_kg": {
+              "max": 200,
+              "confidence": "declared",
+              "approximate": true,
+              "source_type": "provider_confirmed"
+            },
+            "batch_size": {
+              "max": 2000,
+              "min": 100,
+              "unit": "pcs",
+              "confidence": "declared",
+              "source_type": "provider_confirmed"
+            },
+            "lead_time_weeks": {
+              "max": 12,
+              "min": 8,
+              "qualifier": "normal_case_dependent",
+              "confidence": "declared",
+              "source_type": "provider_confirmed"
+            },
+            "surface_finish_ra_um": {
+              "max": null,
+              "confidence": "unknown",
+              "source_type": "not_confirmed"
+            }
+          }
+        },
+        {
+          "offering_id": "tasowheel_precision_shafts",
+          "provider_id": "tasowheel",
+          "name": "Precision shafts",
+          "part_family": "shaft",
+          "service_category": "precision_shafts",
+          "support_status": "confirmed",
+          "supported_part_types": [
+            {
+              "part_type": "splined_shaft",
+              "confidence": "declared",
+              "source_type": "provider_confirmed",
+              "support_status": "confirmed"
+            },
+            {
+              "part_type": "plain_shaft",
+              "confidence": "declared",
+              "source_type": "provider_confirmed",
+              "support_status": "confirmed"
+            },
+            {
+              "part_type": "hollow_shaft",
+              "confidence": "declared",
+              "source_type": "provider_confirmed",
+              "support_status": "confirmed"
+            }
+          ],
+          "family_capabilities": {
+            "length_mm": {
+              "max": 500,
+              "confidence": "publicly_confirmed",
+              "source_type": "public_web"
+            },
+            "outer_diameter_mm": {
+              "max": 450,
+              "min": 10,
+              "confidence": "declared",
+              "source_type": "provider_confirmed"
+            }
+          },
+          "part_type_capabilities": {
+            "splined_shaft": {
+              "spline_module": {
+                "max": 10,
+                "min": 0.3,
+                "confidence": "declared",
+                "source_type": "provider_confirmed"
+              }
+            }
+          },
+          "generic_capabilities": {
+            "materials": [
+              {
+                "material": "alloyed_carburizing_steel",
+                "confidence": "declared",
+                "source_type": "provider_confirmed",
+                "available_grades": [
+                  "18CrNiMo7-6",
+                  "16MnCr5",
+                  "20MnCr5"
+                ]
+              }
+            ],
+            "processes": [
+              {
+                "process": "machining",
+                "confidence": "declared",
+                "source_type": "provider_confirmed",
+                "delivery_mode": "unspecified"
+              },
+              {
+                "process": "hobbing",
+                "confidence": "declared",
+                "source_type": "provider_confirmed",
+                "delivery_mode": "unspecified"
+              },
+              {
+                "process": "gear_shaping",
+                "confidence": "declared",
+                "source_type": "provider_confirmed",
+                "delivery_mode": "unspecified"
+              },
+              {
+                "process": "deburring",
+                "confidence": "declared",
+                "source_type": "provider_confirmed",
+                "delivery_mode": "unspecified"
+              },
+              {
+                "process": "hard_turning",
+                "confidence": "declared",
+                "source_type": "provider_confirmed",
+                "delivery_mode": "unspecified"
+              },
+              {
+                "process": "grinding",
+                "confidence": "declared",
+                "source_type": "provider_confirmed",
+                "delivery_mode": "unspecified"
+              },
+              {
+                "process": "tooth_grinding",
+                "confidence": "declared",
+                "source_type": "provider_confirmed",
+                "delivery_mode": "unspecified"
+              },
+              {
+                "process": "gear_grinding",
+                "confidence": "declared",
+                "source_type": "provider_confirmed",
+                "delivery_mode": "unspecified"
+              },
+              {
+                "process": "gear_cutting",
+                "confidence": "declared",
+                "source_type": "provider_confirmed",
+                "delivery_mode": "unspecified"
+              },
+              {
+                "process": "surface_grinding",
+                "confidence": "declared",
+                "source_type": "provider_confirmed",
+                "delivery_mode": "unspecified"
+              },
+              {
+                "process": "milling",
+                "confidence": "declared",
+                "source_type": "provider_confirmed",
+                "delivery_mode": "unspecified"
+              },
+              {
+                "process": "turn_mill",
+                "confidence": "declared",
+                "source_type": "provider_confirmed",
+                "delivery_mode": "unspecified"
+              }
+            ],
+            "weight_kg": {
+              "max": 200,
+              "confidence": "declared",
+              "approximate": true,
+              "source_type": "provider_confirmed"
+            },
+            "batch_size": {
+              "max": 2000,
+              "min": 100,
+              "unit": "pcs",
+              "confidence": "declared",
+              "source_type": "provider_confirmed"
+            },
+            "lead_time_weeks": {
+              "max": 12,
+              "min": 8,
+              "qualifier": "normal_case_dependent",
+              "confidence": "declared",
+              "source_type": "provider_confirmed"
+            },
+            "surface_finish_ra_um": {
+              "max": null,
+              "confidence": "unknown",
+              "source_type": "not_confirmed"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "provider": {
+        "provider_id": "precipart",
+        "country": "Switzerland",
+        "certifications": [],
+        "display_name": "Precipart"
+      },
+      "offerings": [
+        {
+          "offering_id": "precipart_precision_gears",
+          "provider_id": "precipart",
+          "name": "High-precision custom gears",
+          "part_family": "gear",
+          "service_category": "precision_gears",
+          "support_status": "confirmed",
+          "supported_part_types": [
+            {
+              "part_type": "spur_gear",
+              "confidence": "publicly_confirmed",
+              "source_type": "public_web",
+              "support_status": "confirmed"
+            },
+            {
+              "part_type": "helical_gear",
+              "confidence": "publicly_confirmed",
+              "source_type": "public_web",
+              "support_status": "confirmed"
+            },
+            {
+              "part_type": "worm_gear",
+              "confidence": "publicly_confirmed",
+              "source_type": "public_web",
+              "support_status": "confirmed"
+            },
+            {
+              "part_type": "crown_gear",
+              "confidence": "inferred",
+              "source_type": "public_web",
+              "support_status": "candidate_requiring_confirmation"
+            }
+          ],
+          "family_capabilities": {
+            "module": {
+              "max": 1.5,
+              "min": 0.125,
+              "confidence": "publicly_confirmed",
+              "source_type": "public_web"
+            },
+            "gear_quality": {
+              "standard": "ISO",
+              "best_class": 5,
+              "confidence": "publicly_confirmed",
+              "source_type": "public_web",
+              "comparison_rule": "lower_or_equal_is_better"
+            },
+            "diametral_pitch": {
+              "max": 200,
+              "min": 16,
+              "confidence": "publicly_confirmed",
+              "source_type": "public_web"
+            },
+            "outside_diameter_mm": {
+              "max": 102,
+              "min": 6,
+              "confidence": "publicly_confirmed",
+              "source_type": "public_web"
+            }
+          },
+          "part_type_capabilities": {},
+          "generic_capabilities": {}
+        }
+      ]
+    },
+    {
+      "provider": {
+        "provider_id": "mdc_stage1b_accept_20261126_a",
+        "country": "Finland",
+        "certifications": [
+          {
+            "code": "ISO9001_2015",
+            "source_type": "provider_confirmed",
+            "confidence": "declared"
+          },
+          {
+            "code": "ISO14001_2015",
+            "source_type": "provider_confirmed",
+            "confidence": "declared"
+          }
+        ],
+        "display_name": "Demo Metal Works Oy"
+      },
+      "offerings": [
+        {
+          "offering_id": "mdc_stage1b_accept_20261126_a_metal",
+          "provider_id": "mdc_stage1b_accept_20261126_a",
+          "name": "Precision metal parts manufacturing",
+          "part_family": "metal_part",
+          "service_category": "precision_metal_parts",
+          "support_status": "confirmed",
+          "supported_part_types": [
+            {
+              "part_type": "block",
+              "confidence": "declared",
+              "source_type": "provider_confirmed",
+              "support_status": "confirmed"
+            },
+            {
+              "part_type": "roller",
+              "confidence": "declared",
+              "source_type": "provider_confirmed",
+              "support_status": "confirmed"
+            }
+          ],
+          "family_capabilities": {},
+          "part_type_capabilities": {
+            "block": {
+              "bounding_box_mm": {
+                "width_mm": {
+                  "max": 120,
+                  "confidence": "declared",
+                  "source_type": "provider_confirmed"
+                },
+                "height_mm": {
+                  "max": 300,
+                  "confidence": "declared",
+                  "source_type": "provider_confirmed"
+                },
+                "length_mm": {
+                  "max": 200,
+                  "confidence": "declared",
+                  "source_type": "provider_confirmed"
+                }
+              }
+            },
+            "roller": {
+              "outer_diameter_mm": {
+                "max": 100,
+                "confidence": "declared",
+                "source_type": "provider_confirmed"
+              }
+            }
+          },
+          "generic_capabilities": {
+            "materials": [
+              {
+                "material": "steel",
+                "confidence": "declared",
+                "source_type": "provider_confirmed",
+                "available_grades": [
+                  "42CrMo4",
+                  "16MnCr5"
+                ]
+              },
+              {
+                "material": "aluminum",
+                "confidence": "declared",
+                "source_type": "provider_confirmed",
+                "available_grades": [
+                  "6061-T6",
+                  "6082-T6",
+                  "7075-T6"
+                ]
+              }
+            ],
+            "processes": [
+              {
+                "process": "machining",
+                "confidence": "declared",
+                "source_type": "provider_confirmed",
+                "delivery_mode": "unspecified"
+              },
+              {
+                "process": "milling",
+                "confidence": "declared",
+                "source_type": "provider_confirmed",
+                "delivery_mode": "unspecified"
+              },
+              {
+                "process": "turning",
+                "confidence": "declared",
+                "source_type": "provider_confirmed",
+                "delivery_mode": "unspecified"
+              },
+              {
+                "process": "grinding",
+                "confidence": "declared",
+                "source_type": "provider_confirmed",
+                "delivery_mode": "unspecified"
+              }
+            ],
+            "weight_kg": {
+              "max": 100,
+              "confidence": "declared",
+              "source_type": "provider_confirmed"
+            },
+            "batch_size": {
+              "max": 500,
+              "min": 10,
+              "confidence": "declared",
+              "source_type": "provider_confirmed"
+            },
+            "lead_time_weeks": {
+              "max": 9,
+              "min": 4,
+              "confidence": "declared",
+              "source_type": "provider_confirmed"
+            }
+          }
+        },
+        {
+          "offering_id": "mdc_stage1b_accept_20261126_a_shaft",
+          "provider_id": "mdc_stage1b_accept_20261126_a",
+          "name": "Precision shaft manufacturing",
+          "part_family": "shaft",
+          "service_category": "precision_shafts",
+          "support_status": "confirmed",
+          "supported_part_types": [
+            {
+              "part_type": "plain_shaft",
+              "confidence": "declared",
+              "source_type": "provider_confirmed",
+              "support_status": "confirmed"
+            },
+            {
+              "part_type": "splined_shaft",
+              "confidence": "declared",
+              "source_type": "provider_confirmed",
+              "support_status": "confirmed"
+            }
+          ],
+          "family_capabilities": {
+            "length_mm": {
+              "max": 500,
+              "confidence": "declared",
+              "source_type": "provider_confirmed"
+            },
+            "outer_diameter_mm": {
+              "max": 120,
+              "min": 10,
+              "confidence": "declared",
+              "source_type": "provider_confirmed"
+            }
+          },
+          "part_type_capabilities": {
+            "splined_shaft": {
+              "spline_module": {
+                "value": 2,
+                "confidence": "declared",
+                "source_type": "provider_confirmed"
+              }
+            }
+          },
+          "generic_capabilities": {
+            "materials": [
+              {
+                "material": "alloyed_carburizing_steel",
+                "confidence": "declared",
+                "source_type": "provider_confirmed",
+                "available_grades": [
+                  "18CrNiMo7-6",
+                  "16MnCr5"
+                ]
+              }
+            ],
+            "processes": [
+              {
+                "process": "turning",
+                "confidence": "declared",
+                "source_type": "provider_confirmed",
+                "delivery_mode": "unspecified"
+              },
+              {
+                "process": "milling",
+                "confidence": "declared",
+                "source_type": "provider_confirmed",
+                "delivery_mode": "unspecified"
+              },
+              {
+                "process": "grinding",
+                "confidence": "declared",
+                "source_type": "provider_confirmed",
+                "delivery_mode": "unspecified"
+              }
+            ],
+            "weight_kg": {
+              "max": 75,
+              "confidence": "declared",
+              "source_type": "provider_confirmed"
+            },
+            "batch_size": {
+              "max": 1000,
+              "min": 100,
+              "confidence": "declared",
+              "source_type": "provider_confirmed"
+            },
+            "lead_time_weeks": {
+              "max": 8,
+              "min": 4,
+              "confidence": "declared",
+              "source_type": "provider_confirmed"
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

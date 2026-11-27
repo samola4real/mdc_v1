@@ -1,0 +1,13 @@
+{
+  "syntheticOptions": 100,
+  "totalOptions": 108,
+  "viewport": 390,
+  "filteredAndSelectedLast": true,
+  "chips": {
+    "wrapped": true,
+    "within": true,
+    "count": 3
+  },
+  "clearByKeyboard": true,
+  "searchSubmitted": false
+}

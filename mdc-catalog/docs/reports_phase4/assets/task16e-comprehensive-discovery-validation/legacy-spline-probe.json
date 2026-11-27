@@ -1,0 +1,122 @@
+{
+  "scopedDemoEvidence": {
+    "spline_module": {
+      "value": 2,
+      "confidence": "declared",
+      "source_type": "provider_confirmed"
+    }
+  },
+  "checks": [
+    {
+      "mode": "strict",
+      "request": {
+        "contract_version": "1.0",
+        "request_id": "16e-spline-5d7029c5f7634fe3b3023972d16b5b9b",
+        "consumer_id": "task16e-verification",
+        "service_category": "precision_shafts",
+        "part_family": "shaft",
+        "part_type": "splined_shaft",
+        "requirements": {
+          "part_type_specifications": {
+            "spline_module": {
+              "exact": 2
+            }
+          }
+        }
+      },
+      "response": {
+        "contract_version": "1.0",
+        "request_id": "16e-spline-5d7029c5f7634fe3b3023972d16b5b9b",
+        "service_category": "precision_shafts",
+        "part_family": "shaft",
+        "part_type": "splined_shaft",
+        "result_count": 1,
+        "results": [
+          {
+            "provider_id": "tasowheel",
+            "provider_name": "Tasowheel Oy",
+            "offering_id": "tasowheel_precision_shafts",
+            "offering_name": "Precision shafts",
+            "service_category": "precision_shafts",
+            "part_family": "shaft",
+            "match": {
+              "status": "full_match",
+              "score": 1.0
+            },
+            "matched_capabilities": [
+              {
+                "field": "spline_module",
+                "requested": {
+                  "exact": 2.0
+                },
+                "provided": {
+                  "min": 0.3,
+                  "max": 10
+                }
+              }
+            ],
+            "unmatched_capabilities": [],
+            "unknown_capabilities": []
+          }
+        ]
+      }
+    },
+    {
+      "mode": "lenient",
+      "request": {
+        "contract_version": "1.0",
+        "request_id": "16e-spline-41f7e45f9d9e432db66c26653ba2efe4",
+        "consumer_id": "task16e-verification",
+        "service_category": "precision_shafts",
+        "part_family": "shaft",
+        "part_type": "splined_shaft",
+        "requirements": {
+          "part_type_specifications": {
+            "spline_module": {
+              "exact": 2
+            }
+          }
+        },
+        "match_policy": {
+          "discovery_mode": "lenient"
+        }
+      },
+      "response": {
+        "contract_version": "1.0",
+        "request_id": "16e-spline-41f7e45f9d9e432db66c26653ba2efe4",
+        "service_category": "precision_shafts",
+        "part_family": "shaft",
+        "part_type": "splined_shaft",
+        "result_count": 1,
+        "results": [
+          {
+            "provider_id": "tasowheel",
+            "provider_name": "Tasowheel Oy",
+            "offering_id": "tasowheel_precision_shafts",
+            "offering_name": "Precision shafts",
+            "service_category": "precision_shafts",
+            "part_family": "shaft",
+            "match": {
+              "status": "full_match",
+              "score": 1.0
+            },
+            "matched_capabilities": [
+              {
+                "field": "spline_module",
+                "requested": {
+                  "exact": 2.0
+                },
+                "provided": {
+                  "min": 0.3,
+                  "max": 10
+                }
+              }
+            ],
+            "unmatched_capabilities": [],
+            "unknown_capabilities": []
+          }
+        ]
+      }
+    }
+  ]
+}

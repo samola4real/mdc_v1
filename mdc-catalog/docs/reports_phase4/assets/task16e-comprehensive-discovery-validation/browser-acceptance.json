@@ -1,0 +1,526 @@
+{
+  "checks": [
+    "Keyboard opened and selected a filtered material option",
+    "Exact details fetched once per offering for the active search",
+    "Keyboard Clear selected materials clears all chips",
+    "Changing materials clears obsolete results and re-search works without Reset",
+    "Reset restores defaults and all optional controls",
+    "All six search request IDs are distinct",
+    "Anonymous relay catalogue read returns HTTP 401",
+    "Browser sent no direct Vercel requests and performed no write operations"
+  ],
+  "screenshots": [
+    {
+      "file": "new-certifications.png",
+      "width": 1251,
+      "height": 775
+    },
+    {
+      "file": "01-material-alternatives.png",
+      "width": 1251,
+      "height": 763
+    },
+    {
+      "file": "02-mixed-or-evidence.png",
+      "width": 1214,
+      "height": 227
+    },
+    {
+      "file": "03-partial-comparison.png",
+      "width": 1214,
+      "height": 373
+    },
+    {
+      "file": "04-published-capability-overview.png",
+      "width": 1229,
+      "height": 755
+    }
+  ],
+  "newCertifications": {
+    "http": 200,
+    "requestHasSignedSubject": true,
+    "mode": "lenient",
+    "criteria": {
+      "part_family_specifications": {},
+      "part_type_specifications": {},
+      "generic_requirements": {
+        "certifications": [
+          "ISO13485_2016",
+          "AS9100_D"
+        ]
+      }
+    },
+    "offeringResults": []
+  },
+  "blank": {
+    "http": 200,
+    "requestHasSignedSubject": true,
+    "mode": "lenient",
+    "criteria": {
+      "part_family_specifications": {},
+      "part_type_specifications": {},
+      "generic_requirements": {}
+    },
+    "offeringResults": [
+      {
+        "offering_id": "precipart_precision_gears",
+        "status": "full_match",
+        "matched": [],
+        "unmatched": [],
+        "unknown": []
+      },
+      {
+        "offering_id": "tasowheel_precision_gears",
+        "status": "full_match",
+        "matched": [],
+        "unmatched": [],
+        "unknown": []
+      }
+    ]
+  },
+  "mixed": {
+    "http": 200,
+    "requestHasSignedSubject": true,
+    "mode": "lenient",
+    "criteria": {
+      "part_family_specifications": {},
+      "part_type_specifications": {},
+      "generic_requirements": {
+        "materials": [
+          "steel",
+          "titanium"
+        ]
+      }
+    },
+    "offeringResults": [
+      {
+        "offering_id": "precipart_precision_gears",
+        "status": "partial_match",
+        "matched": [],
+        "unmatched": [],
+        "unknown": [
+          {
+            "field": "materials",
+            "requested": [
+              "steel"
+            ]
+          },
+          {
+            "field": "materials",
+            "requested": [
+              "titanium"
+            ]
+          }
+        ]
+      },
+      {
+        "offering_id": "tasowheel_precision_gears",
+        "status": "full_match",
+        "matched": [
+          {
+            "field": "materials",
+            "requested": [
+              "steel"
+            ]
+          }
+        ],
+        "unmatched": [],
+        "unknown": [
+          {
+            "field": "materials",
+            "requested": [
+              "titanium"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "mixedComparison": [
+    [
+      "Part type",
+      "Spur gear",
+      "Spur gear",
+      "Matched"
+    ],
+    [
+      "Material alternative",
+      "Steel",
+      "Alloyed carburizing steel (18CrNiMo7-6, 16MnCr5, 20MnCr5)",
+      "Matched"
+    ],
+    [
+      "Material alternative",
+      "Titanium",
+      "Not provided in this result",
+      "Not confirmed"
+    ]
+  ],
+  "exactMixed": {
+    "provider": {
+      "offering": "tasowheel_precision_gears",
+      "provider": "Tasowheel Oy",
+      "country": "Finland",
+      "fields": [
+        "module",
+        "gear_quality",
+        "diametral_pitch",
+        "outside_diameter_mm"
+      ],
+      "name": "Precision gears",
+      "processes": 12,
+      "grades": [
+        "18CrNiMo7-6",
+        "16MnCr5",
+        "20MnCr5"
+      ],
+      "certs": 4,
+      "module": {
+        "min": 0.3,
+        "max": 10
+      },
+      "outerDiameter": {
+        "min": 10,
+        "max": 450
+      }
+    },
+    "providerETag": true,
+    "offeringETag": true
+  },
+  "oneRemoved": {
+    "http": 200,
+    "requestHasSignedSubject": true,
+    "mode": "lenient",
+    "criteria": {
+      "part_family_specifications": {},
+      "part_type_specifications": {},
+      "generic_requirements": {
+        "materials": [
+          "steel"
+        ]
+      }
+    },
+    "offeringResults": [
+      {
+        "offering_id": "precipart_precision_gears",
+        "status": "partial_match",
+        "matched": [],
+        "unmatched": [],
+        "unknown": [
+          {
+            "field": "materials",
+            "requested": [
+              "steel"
+            ]
+          }
+        ]
+      },
+      {
+        "offering_id": "tasowheel_precision_gears",
+        "status": "full_match",
+        "matched": [
+          {
+            "field": "materials",
+            "requested": [
+              "steel"
+            ]
+          }
+        ],
+        "unmatched": [],
+        "unknown": []
+      }
+    ]
+  },
+  "keyboardClearFocusRestored": true,
+  "cleared": {
+    "http": 200,
+    "requestHasSignedSubject": true,
+    "mode": "lenient",
+    "criteria": {
+      "part_family_specifications": {},
+      "part_type_specifications": {},
+      "generic_requirements": {}
+    },
+    "offeringResults": [
+      {
+        "offering_id": "precipart_precision_gears",
+        "status": "full_match",
+        "matched": [],
+        "unmatched": [],
+        "unknown": []
+      },
+      {
+        "offering_id": "tasowheel_precision_gears",
+        "status": "full_match",
+        "matched": [],
+        "unmatched": [],
+        "unknown": []
+      }
+    ]
+  },
+  "partial": {
+    "http": 200,
+    "requestHasSignedSubject": true,
+    "mode": "lenient",
+    "criteria": {
+      "part_family_specifications": {
+        "module": {
+          "exact": 4
+        }
+      },
+      "part_type_specifications": {},
+      "generic_requirements": {
+        "materials": [
+          "aluminum",
+          "titanium"
+        ],
+        "processes": [
+          "hobbing",
+          "turning"
+        ],
+        "certifications": [
+          "ISO9001_2015",
+          "ISO14001_2015"
+        ]
+      }
+    },
+    "offeringResults": [
+      {
+        "offering_id": "tasowheel_precision_gears",
+        "status": "partial_match",
+        "matched": [
+          {
+            "field": "module",
+            "requested": {
+              "exact": 4
+            }
+          },
+          {
+            "field": "certifications",
+            "requested": [
+              "ISO9001_2015",
+              "ISO14001_2015"
+            ]
+          },
+          {
+            "field": "processes",
+            "requested": [
+              "hobbing"
+            ]
+          }
+        ],
+        "unmatched": [],
+        "unknown": [
+          {
+            "field": "materials",
+            "requested": [
+              "aluminum"
+            ]
+          },
+          {
+            "field": "materials",
+            "requested": [
+              "titanium"
+            ]
+          },
+          {
+            "field": "processes",
+            "requested": [
+              "turning"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "partialComparison": [
+    [
+      "Part type",
+      "Spur gear",
+      "Spur gear",
+      "Matched"
+    ],
+    [
+      "Module (mm)",
+      "4",
+      "0.3–10",
+      "Matched"
+    ],
+    [
+      "Certifications",
+      "ISO 9001:2015, ISO 14001:2015",
+      "ISO 9001:2015, ISO 14001:2015",
+      "Matched"
+    ],
+    [
+      "Process preference",
+      "Hobbing",
+      "Hobbing",
+      "Matched"
+    ],
+    [
+      "Material alternative",
+      "Aluminum",
+      "Not provided in this result",
+      "Not confirmed"
+    ],
+    [
+      "Material alternative",
+      "Titanium",
+      "Not provided in this result",
+      "Not confirmed"
+    ],
+    [
+      "Process preference",
+      "Turning",
+      "Not provided in this result",
+      "Not confirmed"
+    ]
+  ],
+  "exactPartial": {
+    "provider": {
+      "offering": "tasowheel_precision_gears",
+      "provider": "Tasowheel Oy",
+      "country": "Finland",
+      "fields": [
+        "module",
+        "gear_quality",
+        "diametral_pitch",
+        "outside_diameter_mm"
+      ],
+      "name": "Precision gears",
+      "processes": 12,
+      "grades": [
+        "18CrNiMo7-6",
+        "16MnCr5",
+        "20MnCr5"
+      ],
+      "certs": 4,
+      "module": {
+        "min": 0.3,
+        "max": 10
+      },
+      "outerDiameter": {
+        "min": 10,
+        "max": 450
+      }
+    },
+    "providerETag": true,
+    "offeringETag": true
+  },
+  "pdf": {
+    "filename": "tasowheel_precision_gears.pdf",
+    "bytes": 61502
+  },
+  "contact": {
+    "futureMessage": true,
+    "networkRequests": 0,
+    "file": "05-contact-provider-flash.png"
+  },
+  "reset": {
+    "http": 200,
+    "requestHasSignedSubject": true,
+    "mode": "lenient",
+    "criteria": {
+      "part_family_specifications": {},
+      "part_type_specifications": {},
+      "generic_requirements": {}
+    },
+    "offeringResults": [
+      {
+        "offering_id": "precipart_precision_gears",
+        "status": "full_match",
+        "matched": [],
+        "unmatched": [],
+        "unknown": []
+      },
+      {
+        "offering_id": "tasowheel_precision_gears",
+        "status": "full_match",
+        "matched": [],
+        "unmatched": [],
+        "unknown": []
+      }
+    ]
+  },
+  "localRoutes": [
+    {
+      "method": "GET",
+      "path": "/api/mdc/catalog/filters",
+      "status": 200,
+      "strongEtag": false
+    },
+    {
+      "method": "GET",
+      "path": "/api/mdc/catalog/filters",
+      "status": 200,
+      "strongEtag": false
+    },
+    {
+      "method": "POST",
+      "path": "/api/mdc/service-discovery/search",
+      "status": 200,
+      "strongEtag": false
+    },
+    {
+      "method": "POST",
+      "path": "/api/mdc/service-discovery/search",
+      "status": 200,
+      "strongEtag": false
+    },
+    {
+      "method": "POST",
+      "path": "/api/mdc/service-discovery/search",
+      "status": 200,
+      "strongEtag": false
+    },
+    {
+      "method": "GET",
+      "path": "/api/mdc/providers/tasowheel",
+      "status": 200,
+      "strongEtag": true
+    },
+    {
+      "method": "GET",
+      "path": "/api/mdc/offerings/tasowheel_precision_gears",
+      "status": 200,
+      "strongEtag": true
+    },
+    {
+      "method": "POST",
+      "path": "/api/mdc/service-discovery/search",
+      "status": 200,
+      "strongEtag": false
+    },
+    {
+      "method": "POST",
+      "path": "/api/mdc/service-discovery/search",
+      "status": 200,
+      "strongEtag": false
+    },
+    {
+      "method": "POST",
+      "path": "/api/mdc/service-discovery/search",
+      "status": 200,
+      "strongEtag": false
+    },
+    {
+      "method": "GET",
+      "path": "/api/mdc/providers/tasowheel",
+      "status": 200,
+      "strongEtag": true
+    },
+    {
+      "method": "GET",
+      "path": "/api/mdc/offerings/tasowheel_precision_gears",
+      "status": 200,
+      "strongEtag": true
+    },
+    {
+      "method": "POST",
+      "path": "/api/mdc/service-discovery/search",
+      "status": 200,
+      "strongEtag": false
+    }
+  ]
+}
