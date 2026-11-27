@@ -4,7 +4,7 @@ import { normalizeDemoRoles } from '../../../components/mdc/demoAuth.js';
 import { isDisposableMdcId, isDisposableOfferingId } from '../../../services/mdc/stage1bScope.js';
 
 const preview = 'https://maasai-mdc-v1-y1vib2sq7-mdc19.vercel.app';
-const lenientPreview = 'https://maasai-mdc-v1-ei6ijogqi-mdc19.vercel.app';
+const discoveryPreview = 'https://maasai-mdc-v1-pi9dh538z-mdc19.vercel.app';
 const { realmUrl: issuer, clientId } = getDefaultRuntimeConfig().keycloak;
 const issuerKeys = createRemoteJWKSet(new URL(issuer + '/protocol/openid-connect/certs'), { timeoutDuration: 5000 });
 const userInfoEndpoint = new URL(issuer + '/protocol/openid-connect/userinfo');
@@ -167,8 +167,8 @@ export default async function stage1bMdc(req, res) {
         headers['Content-Type'] = 'application/json';
     }
     try {
-        const upstreamOrigin = endpoint.path === 'service-discovery/search'
-            && req.body?.match_policy?.discovery_mode === 'lenient' ? lenientPreview : preview;
+        const readOperation = req.method === 'GET' || endpoint.path === 'service-discovery/search';
+        const upstreamOrigin = readOperation ? discoveryPreview : preview;
         const upstream = await fetch(upstreamOrigin + '/api/' + endpoint.path, {
             method: req.method, headers, redirect: 'error', signal: AbortSignal.timeout(12000),
             body: sendsBody ? JSON.stringify(req.body) : undefined

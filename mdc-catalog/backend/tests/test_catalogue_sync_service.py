@@ -133,7 +133,7 @@ class CatalogueSyncServiceTests(TestCase):
         records = load_service_discovery_providers()
         import_service_discovery_provider_records(records)
         expected = build_service_discovery_graph(provider_records=records)
-        self.assertEqual(len(expected), 673)
+        self.assertEqual(len(expected), 681)
         captured = {}
 
         def fake_urlopen(request, timeout):
@@ -146,7 +146,7 @@ class CatalogueSyncServiceTests(TestCase):
         with patch("apps.providers.catalogue_sync_service.urlopen", side_effect=fake_urlopen):
             result = rebuild_service_discovery_catalogue()
 
-        self.assertEqual(result["triple_count"], 673)
+        self.assertEqual(result["triple_count"], 681)
         self.assertEqual(captured["method"], "PUT")
         self.assertIn("text/turtle", captured["content_type"])
         self.assertEqual(captured["timeout"], 2)
@@ -293,7 +293,7 @@ class CatalogueSyncServiceTests(TestCase):
             "apps.providers.catalogue_sync_service.replace_service_discovery_graph_in_fuseki"
         ):
             call_command("sync_service_discovery_catalogue", "--rebuild", stdout=out)
-        self.assertIn("triples synchronized: 673", out.getvalue())
+        self.assertIn("triples synchronized: 681", out.getvalue())
         self.assertEqual(ProviderPublication.objects.count(), 0)
         self.assertEqual(CatalogueSyncEvent.objects.count(), 0)
 

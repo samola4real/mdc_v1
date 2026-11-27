@@ -53,7 +53,16 @@ offerings:
         confidence: publicly_confirmed
         source_note: Source lists ISO 5 among supported gear quality references.
     part_type_capabilities: {}
-    generic_capabilities: {}
+    generic_capabilities:
+      certifications:
+        - code: AS9100_D
+          source_type: public_web
+          confidence: publicly_confirmed
+          source_note: >-
+            SQS 42929, Precipart SA, Werkstrasse 37, Lyss, Switzerland.
+            EN 9100:2018 (AS9100 D equivalent), precision and gearing scope.
+            Issued 2026-01-30, valid to 2029-01-29.
+            https://www.precipart.com/wp-content/uploads/2026/03/102353_de_EN9100_42929_25.pdf
 publication_metadata:
   source_type: public_web
   confidence: publicly_confirmed

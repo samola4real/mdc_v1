@@ -321,6 +321,14 @@ mdc:material_evidence_tasowheel_precision_shafts_alloyed_carburizing_steel a mdc
     mdc:sourceNote "Additional commonly used alloyed carburizing steels are supported, but individual additional grades are not enumerated in the current evidence." ;
     mdc:sourceType "provider_confirmed" .
 
+mdc:offering_certification_evidence_precipart_precision_gears_AS9100_D a mdc:CertificationEvidence ;
+    mdc:certification mdc:AS9100D ;
+    mdc:certificationCode "AS9100_D" ;
+    mdc:confidence "publicly_confirmed" ;
+    mdc:sequenceIndex 0 ;
+    mdc:sourceNote "SQS 42929, Precipart SA, Werkstrasse 37, Lyss, Switzerland. EN 9100:2018 (AS9100 D equivalent), precision and gearing scope. Issued 2026-01-30, valid to 2029-01-29. https://www.precipart.com/wp-content/uploads/2026/03/102353_de_EN9100_42929_25.pdf" ;
+    mdc:sourceType "public_web" .
+
 mdc:offering_demo_machining_provider_precision_shafts a mdc:ProviderOffering ;
     mdc:displayName "Precision shafts" ;
     mdc:hasFamilyCapability mdc:family_capability_demo_machining_provider_precision_shafts_outer_diameter_mm ;
@@ -343,6 +351,7 @@ mdc:offering_demo_machining_provider_precision_shafts a mdc:ProviderOffering ;
 
 mdc:offering_precipart_precision_gears a mdc:ProviderOffering ;
     mdc:displayName "High-precision custom gears" ;
+    mdc:hasCertificationEvidence mdc:offering_certification_evidence_precipart_precision_gears_AS9100_D ;
     mdc:hasFamilyCapability mdc:family_capability_precipart_precision_gears_diametral_pitch,
         mdc:family_capability_precipart_precision_gears_gear_quality,
         mdc:family_capability_precipart_precision_gears_module,
