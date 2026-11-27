@@ -1,0 +1,88 @@
+{
+  "dataset": "mdc_validation",
+  "alignment": [
+    {
+      "case": "spur_carburizing",
+      "mode": "strict",
+      "previewMatchesConfiguredFuseki": true,
+      "modeSource": "harmonized_fuseki_with_h5_policy",
+      "configuredFuseki": [
+        "tasowheel_precision_gears"
+      ],
+      "checkedInRdfFallback": [
+        "tasowheel_precision_gears"
+      ]
+    },
+    {
+      "case": "steel_and_titanium",
+      "mode": "lenient",
+      "previewMatchesConfiguredFuseki": true,
+      "modeSource": "harmonized_fuseki_with_h5_policy",
+      "configuredFuseki": [
+        "precipart_precision_gears",
+        "tasowheel_precision_gears"
+      ],
+      "checkedInRdfFallback": [
+        "precipart_precision_gears",
+        "tasowheel_precision_gears"
+      ]
+    },
+    {
+      "case": "process_mixed",
+      "mode": "lenient",
+      "previewMatchesConfiguredFuseki": true,
+      "modeSource": "harmonized_fuseki_with_h5_policy",
+      "configuredFuseki": [
+        "tasowheel_precision_gears"
+      ],
+      "checkedInRdfFallback": [
+        "tasowheel_precision_gears"
+      ]
+    },
+    {
+      "case": "pinned_rollover_probe",
+      "mode": "lenient",
+      "previewMatchesConfiguredFuseki": true,
+      "modeSource": "harmonized_fuseki_with_h5_policy",
+      "configuredFuseki": [
+        "mdc_stage1b_accept_20261126_a_metal"
+      ],
+      "checkedInRdfFallback": []
+    }
+  ],
+  "tasowheel": {
+    "offering": "tasowheel_precision_gears",
+    "publishedEqualsGraph": true,
+    "graphMaterials": [
+      {
+        "material": "alloyed_carburizing_steel",
+        "available_grades": [
+          "18CrNiMo7-6",
+          "16MnCr5",
+          "20MnCr5"
+        ],
+        "source_type": "provider_confirmed",
+        "confidence": "declared"
+      }
+    ],
+    "supportedLookupParent": "steel"
+  },
+  "defaultTriples": 837,
+  "namedGraphTriples": 0,
+  "neon": {
+    "database": "mdc_validation",
+    "readOnlyTransaction": true,
+    "activeProviders": [
+      "mdc_stage1b_accept_20261126_a",
+      "precipart",
+      "tasowheel"
+    ],
+    "activeOfferings": [
+      "mdc_stage1b_accept_20261126_a_metal",
+      "mdc_stage1b_accept_20261126_a_shaft",
+      "precipart_precision_gears",
+      "tasowheel_precision_gears",
+      "tasowheel_precision_shafts"
+    ]
+  }
+}

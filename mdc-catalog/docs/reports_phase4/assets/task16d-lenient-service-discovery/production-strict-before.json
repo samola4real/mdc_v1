@@ -1,0 +1,573 @@
+{
+  "stable": "https://maasai-mdc-v1.vercel.app",
+  "health": {
+    "status": 200,
+    "contractVersion": "1.0"
+  },
+  "filters": {
+    "status": 200,
+    "materials": [
+      "steel",
+      "alloyed_carburizing_steel",
+      "stainless_steel",
+      "aluminum",
+      "titanium",
+      "nickel_alloy"
+    ]
+  },
+  "exact": {
+    "status": 200,
+    "offering": "tasowheel_precision_gears",
+    "provider": "tasowheel",
+    "materials": [
+      {
+        "material": "alloyed_carburizing_steel",
+        "available_grades": [
+          "18CrNiMo7-6",
+          "16MnCr5",
+          "20MnCr5"
+        ],
+        "source_type": "provider_confirmed",
+        "confidence": "declared"
+      }
+    ],
+    "module": {
+      "min": 0.3,
+      "max": 10
+    },
+    "diameter": {
+      "min": 10,
+      "max": 450
+    },
+    "batch": {
+      "min": 100,
+      "max": 2000
+    },
+    "certs": [
+      "ISO9001_2015",
+      "ISO14001_2015",
+      "ISO_TS_16949_partial",
+      "APQP"
+    ]
+  },
+  "results": [
+    {
+      "id": "spur_no_options",
+      "body": {
+        "contract_version": "1.0",
+        "request_id": "task16d-spur_no_options",
+        "consumer_id": "task16d-verification",
+        "service_category": "precision_gears",
+        "part_family": "gear",
+        "part_type": "spur_gear",
+        "requirements": {
+          "part_family_specifications": {},
+          "generic_requirements": {}
+        }
+      },
+      "response": {
+        "status": 200,
+        "contractVersion": "1.0",
+        "count": 2,
+        "results": [
+          {
+            "provider_id": "precipart",
+            "offering_id": "precipart_precision_gears",
+            "match": {
+              "status": "full_match",
+              "score": 1
+            },
+            "matched": [],
+            "unmatched": 0,
+            "unknown": 0
+          },
+          {
+            "provider_id": "tasowheel",
+            "offering_id": "tasowheel_precision_gears",
+            "match": {
+              "status": "full_match",
+              "score": 1
+            },
+            "matched": [],
+            "unmatched": 0,
+            "unknown": 0
+          }
+        ]
+      }
+    },
+    {
+      "id": "spur_steel",
+      "body": {
+        "contract_version": "1.0",
+        "request_id": "task16d-spur_steel",
+        "consumer_id": "task16d-verification",
+        "service_category": "precision_gears",
+        "part_family": "gear",
+        "part_type": "spur_gear",
+        "requirements": {
+          "part_family_specifications": {},
+          "generic_requirements": {
+            "materials": [
+              "steel"
+            ]
+          }
+        }
+      },
+      "response": {
+        "status": 200,
+        "contractVersion": "1.0",
+        "count": 0,
+        "results": []
+      }
+    },
+    {
+      "id": "spur_carburizing",
+      "body": {
+        "contract_version": "1.0",
+        "request_id": "task16d-spur_carburizing",
+        "consumer_id": "task16d-verification",
+        "service_category": "precision_gears",
+        "part_family": "gear",
+        "part_type": "spur_gear",
+        "requirements": {
+          "part_family_specifications": {},
+          "generic_requirements": {
+            "materials": [
+              "alloyed_carburizing_steel"
+            ]
+          }
+        }
+      },
+      "response": {
+        "status": 200,
+        "contractVersion": "1.0",
+        "count": 1,
+        "results": [
+          {
+            "provider_id": "tasowheel",
+            "offering_id": "tasowheel_precision_gears",
+            "match": {
+              "status": "full_match",
+              "score": 1
+            },
+            "matched": [
+              {
+                "field": "materials",
+                "requested": [
+                  "alloyed_carburizing_steel"
+                ],
+                "provided": [
+                  {
+                    "material": "alloyed_carburizing_steel",
+                    "available_grades": [
+                      "18CrNiMo7-6",
+                      "16MnCr5",
+                      "20MnCr5"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "unmatched": 0,
+            "unknown": 0
+          }
+        ]
+      }
+    },
+    {
+      "id": "spur_steel_and_carburizing",
+      "body": {
+        "contract_version": "1.0",
+        "request_id": "task16d-spur_steel_and_carburizing",
+        "consumer_id": "task16d-verification",
+        "service_category": "precision_gears",
+        "part_family": "gear",
+        "part_type": "spur_gear",
+        "requirements": {
+          "part_family_specifications": {},
+          "generic_requirements": {
+            "materials": [
+              "steel",
+              "alloyed_carburizing_steel"
+            ]
+          }
+        }
+      },
+      "response": {
+        "status": 200,
+        "contractVersion": "1.0",
+        "count": 0,
+        "results": []
+      }
+    },
+    {
+      "id": "spur_steel_and_titanium",
+      "body": {
+        "contract_version": "1.0",
+        "request_id": "task16d-spur_steel_and_titanium",
+        "consumer_id": "task16d-verification",
+        "service_category": "precision_gears",
+        "part_family": "gear",
+        "part_type": "spur_gear",
+        "requirements": {
+          "part_family_specifications": {},
+          "generic_requirements": {
+            "materials": [
+              "steel",
+              "titanium"
+            ]
+          }
+        }
+      },
+      "response": {
+        "status": 200,
+        "contractVersion": "1.0",
+        "count": 0,
+        "results": []
+      }
+    },
+    {
+      "id": "spur_aluminum_and_titanium",
+      "body": {
+        "contract_version": "1.0",
+        "request_id": "task16d-spur_aluminum_and_titanium",
+        "consumer_id": "task16d-verification",
+        "service_category": "precision_gears",
+        "part_family": "gear",
+        "part_type": "spur_gear",
+        "requirements": {
+          "part_family_specifications": {},
+          "generic_requirements": {
+            "materials": [
+              "aluminum",
+              "titanium"
+            ]
+          }
+        }
+      },
+      "response": {
+        "status": 200,
+        "contractVersion": "1.0",
+        "count": 0,
+        "results": []
+      }
+    },
+    {
+      "id": "spur_module4",
+      "body": {
+        "contract_version": "1.0",
+        "request_id": "task16d-spur_module4",
+        "consumer_id": "task16d-verification",
+        "service_category": "precision_gears",
+        "part_family": "gear",
+        "part_type": "spur_gear",
+        "requirements": {
+          "part_family_specifications": {
+            "module": {
+              "exact": 4
+            }
+          },
+          "generic_requirements": {}
+        }
+      },
+      "response": {
+        "status": 200,
+        "contractVersion": "1.0",
+        "count": 1,
+        "results": [
+          {
+            "provider_id": "tasowheel",
+            "offering_id": "tasowheel_precision_gears",
+            "match": {
+              "status": "full_match",
+              "score": 1
+            },
+            "matched": [
+              {
+                "field": "module",
+                "requested": {
+                  "exact": 4
+                }
+              }
+            ],
+            "unmatched": 0,
+            "unknown": 0
+          }
+        ]
+      }
+    },
+    {
+      "id": "spur_module1",
+      "body": {
+        "contract_version": "1.0",
+        "request_id": "task16d-spur_module1",
+        "consumer_id": "task16d-verification",
+        "service_category": "precision_gears",
+        "part_family": "gear",
+        "part_type": "spur_gear",
+        "requirements": {
+          "part_family_specifications": {
+            "module": {
+              "exact": 1
+            }
+          },
+          "generic_requirements": {}
+        }
+      },
+      "response": {
+        "status": 200,
+        "contractVersion": "1.0",
+        "count": 2,
+        "results": [
+          {
+            "provider_id": "precipart",
+            "offering_id": "precipart_precision_gears",
+            "match": {
+              "status": "full_match",
+              "score": 1
+            },
+            "matched": [
+              {
+                "field": "module",
+                "requested": {
+                  "exact": 1
+                }
+              }
+            ],
+            "unmatched": 0,
+            "unknown": 0
+          },
+          {
+            "provider_id": "tasowheel",
+            "offering_id": "tasowheel_precision_gears",
+            "match": {
+              "status": "full_match",
+              "score": 1
+            },
+            "matched": [
+              {
+                "field": "module",
+                "requested": {
+                  "exact": 1
+                }
+              }
+            ],
+            "unmatched": 0,
+            "unknown": 0
+          }
+        ]
+      }
+    },
+    {
+      "id": "spur_module12",
+      "body": {
+        "contract_version": "1.0",
+        "request_id": "task16d-spur_module12",
+        "consumer_id": "task16d-verification",
+        "service_category": "precision_gears",
+        "part_family": "gear",
+        "part_type": "spur_gear",
+        "requirements": {
+          "part_family_specifications": {
+            "module": {
+              "exact": 12
+            }
+          },
+          "generic_requirements": {}
+        }
+      },
+      "response": {
+        "status": 200,
+        "contractVersion": "1.0",
+        "count": 0,
+        "results": []
+      }
+    },
+    {
+      "id": "crown",
+      "body": {
+        "contract_version": "1.0",
+        "request_id": "task16d-crown",
+        "consumer_id": "task16d-verification",
+        "service_category": "precision_gears",
+        "part_family": "gear",
+        "part_type": "crown_gear",
+        "requirements": {
+          "part_family_specifications": {},
+          "generic_requirements": {}
+        }
+      },
+      "response": {
+        "status": 200,
+        "contractVersion": "1.0",
+        "count": 0,
+        "results": []
+      }
+    },
+    {
+      "id": "legacy_score_only",
+      "body": {
+        "contract_version": "1.0",
+        "request_id": "task16d-legacy_score_only",
+        "consumer_id": "task16d-verification",
+        "service_category": "precision_gears",
+        "part_family": "gear",
+        "part_type": "spur_gear",
+        "requirements": {
+          "part_family_specifications": {},
+          "generic_requirements": {
+            "materials": [
+              "steel"
+            ]
+          }
+        },
+        "match_policy": {
+          "optional_match_mode": "score_only",
+          "unknown_policy": "keep_as_unknown"
+        }
+      },
+      "response": {
+        "status": 200,
+        "contractVersion": "1.0",
+        "count": 0,
+        "results": []
+      }
+    },
+    {
+      "id": "legacy_any",
+      "body": {
+        "contract_version": "1.0",
+        "request_id": "task16d-legacy_any",
+        "consumer_id": "task16d-verification",
+        "service_category": "precision_gears",
+        "part_family": "gear",
+        "part_type": "spur_gear",
+        "requirements": {
+          "part_family_specifications": {},
+          "generic_requirements": {
+            "materials": [
+              "alloyed_carburizing_steel",
+              "titanium"
+            ]
+          }
+        },
+        "match_policy": {
+          "optional_match_mode": "any",
+          "unknown_policy": "keep_as_unknown",
+          "minimum_score": 1
+        }
+      },
+      "response": {
+        "status": 200,
+        "contractVersion": "1.0",
+        "count": 0,
+        "results": []
+      }
+    },
+    {
+      "id": "legacy_all",
+      "body": {
+        "contract_version": "1.0",
+        "request_id": "task16d-legacy_all",
+        "consumer_id": "task16d-verification",
+        "service_category": "precision_gears",
+        "part_family": "gear",
+        "part_type": "spur_gear",
+        "requirements": {
+          "part_family_specifications": {},
+          "generic_requirements": {
+            "materials": [
+              "alloyed_carburizing_steel"
+            ]
+          }
+        },
+        "match_policy": {
+          "optional_match_mode": "all",
+          "unknown_policy": "reject_unknown"
+        }
+      },
+      "response": {
+        "status": 200,
+        "contractVersion": "1.0",
+        "count": 1,
+        "results": [
+          {
+            "provider_id": "tasowheel",
+            "offering_id": "tasowheel_precision_gears",
+            "match": {
+              "status": "full_match",
+              "score": 1
+            },
+            "matched": [
+              {
+                "field": "materials",
+                "requested": [
+                  "alloyed_carburizing_steel"
+                ],
+                "provided": [
+                  {
+                    "material": "alloyed_carburizing_steel",
+                    "available_grades": [
+                      "18CrNiMo7-6",
+                      "16MnCr5",
+                      "20MnCr5"
+                    ]
+                  }
+                ]
+              }
+            ],
+            "unmatched": 0,
+            "unknown": 0
+          }
+        ]
+      }
+    },
+    {
+      "id": "material_grades",
+      "body": {
+        "contract_version": "1.0",
+        "request_id": "task16d-material_grades",
+        "consumer_id": "task16d-verification",
+        "service_category": "precision_gears",
+        "part_family": "gear",
+        "part_type": "spur_gear",
+        "requirements": {
+          "part_family_specifications": {},
+          "generic_requirements": {
+            "material_grades": [
+              "18CrNiMo7-6"
+            ]
+          }
+        }
+      },
+      "response": {
+        "status": 400,
+        "contractVersion": "1.0",
+        "code": "invalid_service_discovery_request"
+      }
+    },
+    {
+      "id": "unsupported_new_policy",
+      "body": {
+        "contract_version": "1.0",
+        "request_id": "task16d-unsupported_new_policy",
+        "consumer_id": "task16d-verification",
+        "service_category": "precision_gears",
+        "part_family": "gear",
+        "part_type": "spur_gear",
+        "requirements": {
+          "part_family_specifications": {},
+          "generic_requirements": {}
+        },
+        "match_policy": {
+          "discovery_mode": "lenient"
+        }
+      },
+      "response": {
+        "status": 400,
+        "contractVersion": "1.0",
+        "code": "invalid_service_discovery_request"
+      }
+    }
+  ]
+}
