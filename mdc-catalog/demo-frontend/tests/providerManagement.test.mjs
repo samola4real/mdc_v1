@@ -129,6 +129,46 @@ test('provider and offering patches exclude immutable fields and preserve untouc
     assert.deepEqual(patch.generic_capabilities.surface_finish_ra_um, saved.generic_capabilities.surface_finish_ra_um);
 });
 
+test('editing a saved spline point emits exact while preserving untouched scoped data', () => {
+    const saved = {
+        ...offering(), part_family: 'shaft', service_category: 'precision_shafts',
+        supported_part_types: [part('plain_shaft'), part('splined_shaft')],
+        part_type_capabilities: {
+            plain_shaft: { principal_diameter_mm: { exact: 12, ...source } },
+            splined_shaft: { spline_module: { value: 2, ...source }, spline_length_mm: { max: 80, ...source } }
+        }
+    };
+    const old = offeringEditor(resource(saved));
+    assert.equal(old.draft.partMeasurements.splined_shaft.splineModule, 2);
+    assert.deepEqual(buildOfferingEdit(old, filters).patch, {});
+    assert.deepEqual(buildOfferingEdit(edit(old, { offeringName: 'Renamed' }), filters).patch, {
+        offering_name: 'Renamed'
+    });
+    const withModule = (editor, splineModule) => edit(editor, {
+        partMeasurements: { ...editor.draft.partMeasurements, splined_shaft: { splineModule } }
+    });
+    const { patch, errors } = buildOfferingEdit(withModule(old, 2.25), filters);
+    assert.deepEqual(errors, {});
+    assert.deepEqual(patch, { part_type_capabilities: {
+        ...saved.part_type_capabilities, splined_shaft: {
+            ...saved.part_type_capabilities.splined_shaft, spline_module: { exact: 2.25, ...source }
+        }
+    } });
+    const canonical = offeringEditor(resource({ ...saved, ...patch }));
+    assert.equal(canonical.draft.partMeasurements.splined_shaft.splineModule, 2.25);
+    assert.equal(buildOfferingEdit(withModule(canonical, 3), filters).patch
+        .part_type_capabilities.splined_shaft.spline_module.exact, 3);
+
+    const ranged = offeringEditor(resource({
+        ...saved,
+        part_type_capabilities: { splined_shaft: { spline_module: { min: 0.3, max: 10, ...source } } }
+    }));
+    assert(Object.hasOwn(ranged.locked, 'partMeasurements.splined_shaft.splineModule'));
+    const refused = buildOfferingEdit(withModule(ranged, 2), filters);
+    assert.deepEqual(refused.patch, {});
+    assert(Object.hasOwn(refused.errors, 'partMeasurements.splined_shaft.splineModule'));
+});
+
 test('type and material removal changes only selected records and reselection restores their own draft', () => {
     const saved = offering();
     const editor = offeringEditor(resource(saved));

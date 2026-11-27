@@ -8,7 +8,7 @@ const preservedMessage = 'The saved format is preserved. This field cannot be ed
 const record = (value) => value !== null && typeof value === 'object' && !Array.isArray(value);
 const text = (value) => typeof value === 'string';
 const lines = (value) => Array.isArray(value) && value.every((item) => text(item) && !/[\r\n]/.test(item));
-const bounds = ['min', 'max', 'value'];
+const bounds = ['min', 'max', 'exact'];
 
 export function sameValue(left, right) {
     if (left === right) return true;
@@ -64,8 +64,18 @@ function hydrateRanges(map, ranges, locked, prefix) {
         for (const bound of bounds) {
             const field = range[bound];
             if (!field || item == null) continue;
-            if (record(item) && Number.isFinite(item[bound])) result[field] = item[bound];
-            else if (!record(item) || Object.hasOwn(item, bound)) locked[prefix + '.' + field] = preservedMessage;
+            if (!record(item)) {
+                locked[prefix + '.' + field] = preservedMessage;
+                continue;
+            }
+            const splinePoint = range.key === 'spline_module' && bound === 'exact';
+            const stored = splinePoint && !Object.hasOwn(item, 'exact') ? 'value' : bound;
+            if (Number.isFinite(item[stored])) result[field] = item[stored];
+            const conflictingSpline = splinePoint && (Object.hasOwn(item, 'min') || Object.hasOwn(item, 'max')
+                || (stored === 'exact' && Object.hasOwn(item, 'value') && item.value !== item.exact));
+            if (conflictingSpline || (Object.hasOwn(item, stored) && !Number.isFinite(item[stored]))) {
+                locked[prefix + '.' + field] = preservedMessage;
+            }
         }
     }
     return result;
@@ -153,7 +163,7 @@ export function offeringEditor(resource) {
         ['Saved numeric tolerance', generic.tolerance_mm, ' mm'],
         ['Saved numeric surface finish', generic.surface_finish_ra_um, ' µm Ra']
     ].flatMap(([label, entry, unit]) => {
-        const values = bounds.filter((bound) => Number.isFinite(entry?.[bound]))
+        const values = [...bounds, 'value'].filter((bound) => Number.isFinite(entry?.[bound]))
             .map((bound) => (bound === 'value' ? '' : bound + ' ') + entry[bound] + unit);
         return values.length ? [{ label, value: values.join(', ') }] : [];
     });
@@ -246,6 +256,7 @@ function editRanges(map, ranges, next, initial, prefix, locked, errors) {
         for (const bound of changed) {
             const field = range[bound];
             if (!protect(prefix + '.' + field, locked, errors)) continue;
+            if (range.key === 'spline_module' && bound === 'exact') delete item.value;
             if (next[field] == null || next[field] === '') delete item[bound];
             else item[bound] = next[field];
         }

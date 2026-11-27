@@ -43,6 +43,9 @@ MDC_CATALOG_AUTO_SYNC_ENABLED = env_bool(
     "MDC_CATALOG_AUTO_SYNC_ENABLED",
     False,
 )
+MDC_AUTHORITATIVE_PREVIEW_PROOF = (
+    os.getenv("VERCEL_ENV") == "preview" and env_bool("MDC_AUTHORITATIVE_PREVIEW_PROOF", False)
+)
 
 # M7.6 production lifecycle boundary. These requirements remain on even while
 # publication/validation feature flags are disabled, so later enablement cannot

@@ -29,8 +29,8 @@ const boxRanges = [
     { key: 'height_mm', label: 'Height/thickness', max: 'maxHeightMm', suffix: ' mm' }
 ];
 const roundRanges = [{ key: 'outer_diameter_mm', label: 'Outer diameter', max: 'maxDiameterMm', suffix: ' mm' }];
-const splineRanges = [{ key: 'spline_module', label: 'Spline module', value: 'splineModule', decimal: true }];
-const bounds = ['min', 'max', 'value'];
+const splineRanges = [{ key: 'spline_module', label: 'Spline module', exact: 'splineModule', decimal: true }];
+const bounds = ['min', 'max', 'exact'];
 export const evidence = { source_type: 'provider_confirmed', confidence: 'declared' };
 
 export const registrationPartRanges = (family, type) => {
@@ -42,7 +42,7 @@ export const registrationPartRanges = (family, type) => {
 
 export const measurementFields = (ranges) => ranges.flatMap((range) => (
     bounds.filter((bound) => range[bound]).map((bound) => ({
-        name: range[bound], label: bound === 'value' ? range.label : range.label + ' ' + bound,
+        name: range[bound], label: bound === 'exact' ? range.label : range.label + ' ' + bound,
         suffix: range.suffix, decimal: range.decimal
     }))
 ));

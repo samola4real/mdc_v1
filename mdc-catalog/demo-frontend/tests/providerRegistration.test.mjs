@@ -98,10 +98,12 @@ test('selected spline measurements retain their draft and new support is always 
         partMeasurements: { splined_shaft: { splineModule: 2 } }
     };
     assert.equal(offering(initial).family_capabilities.length_mm.max, 300);
-    assert.equal(offering(initial).part_type_capabilities.splined_shaft.spline_module.value, 2);
+    assert.deepEqual(offering(initial).part_type_capabilities.splined_shaft.spline_module, {
+        exact: 2, source_type: 'provider_confirmed', confidence: 'declared'
+    });
     const withoutSpline = { ...initial, partTypes: ['plain_shaft'] };
     assert.deepEqual(offering(withoutSpline).part_type_capabilities, {});
-    assert.equal(offering({ ...withoutSpline, partTypes: initial.partTypes }).part_type_capabilities.splined_shaft.spline_module.value, 2);
+    assert.equal(offering({ ...withoutSpline, partTypes: initial.partTypes }).part_type_capabilities.splined_shaft.spline_module.exact, 2);
     for (const supportStatus of [undefined, 'candidate_requiring_confirmation', 'unknown']) {
         const { payload, errors } = build({ ...initial, supportStatus });
         const [result] = payload.offerings;
@@ -110,7 +112,7 @@ test('selected spline measurements retain their draft and new support is always 
         assert.deepEqual(result.supported_part_types, initial.partTypes.map((part_type) => ({
             part_type, support_status: 'confirmed', source_type: 'provider_confirmed', confidence: 'declared'
         })));
-        assert.equal(result.part_type_capabilities.splined_shaft.spline_module.value, 2);
+        assert.equal(result.part_type_capabilities.splined_shaft.spline_module.exact, 2);
     }
 });
 

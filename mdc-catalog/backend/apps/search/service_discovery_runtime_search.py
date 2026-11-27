@@ -82,6 +82,16 @@ def search_service_discovery_with_runtime_backends(
                 raise ServiceDiscoveryRuntimeSearchError(
                     "The authoritative catalogue changed during search."
                 )
+            if getattr(settings, "MDC_AUTHORITATIVE_PREVIEW_PROOF", False):
+                # This private Preview log records a completed read guard without
+                # including requests, credentials, connection strings or URLs.
+                print(
+                    f"MDC_AUTHORITATIVE_PREVIEW_PROOF revision={revision_after} "
+                    f"sync={settings.MDC_CATALOG_SYNC_ENABLED} auto={settings.MDC_CATALOG_AUTO_SYNC_ENABLED} "
+                    f"publication={settings.MDC_PROVIDER_PUBLICATION_ENABLED} "
+                    f"validation={settings.MDC_PROVIDER_VALIDATION_ENABLED} demo={settings.MDC_DEMO_API_ENABLED}",
+                    flush=True,
+                )
             return response
         except (CatalogueSyncError, *RECOVERABLE_SEARCH_ERRORS) as exc:
             raise ServiceDiscoveryRuntimeSearchError(
