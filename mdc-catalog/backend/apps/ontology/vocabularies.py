@@ -59,6 +59,8 @@ CERTIFICATIONS = [
     {"value": "APQP", "label": "Advanced Product Quality Planning"},
     {"value": "aerospace_traceability", "label": "Aerospace traceability"},
     {"value": "full_traceability", "label": "Full traceability"},
+    {"value": "ISO13485_2016", "label": "ISO 13485:2016"},
+    {"value": "AS9100_D", "label": "AS9100 Rev D / EN 9100:2018"},
 ]
 
 

@@ -108,6 +108,8 @@ CERTIFICATION_CONCEPTS = {
     "ISO14001_2015": MDC.ISO140012015,
     "aerospace_traceability": MDC.AerospaceTraceability,
     "full_traceability": MDC.FullTraceability,
+    "ISO13485_2016": MDC.ISO134852016,
+    "AS9100_D": MDC.AS9100D,
 }
 
 
