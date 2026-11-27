@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Button } from 'primereact/button';
+import Button from './MaaSAIButton';
 import { Card } from 'primereact/card';
 import { Column } from 'primereact/column';
 import { DataTable } from 'primereact/datatable';

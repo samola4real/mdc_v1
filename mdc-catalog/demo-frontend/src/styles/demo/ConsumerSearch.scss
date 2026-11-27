@@ -67,7 +67,12 @@
         display: flex;
         flex-wrap: wrap;
         gap: 0.25rem;
+        white-space: normal;
     }
+
+    .mdc-consumer-chips .p-multiselect-token { max-width: 100%; }
+    .mdc-consumer-chips .p-multiselect-token-label { min-width: 0; overflow-wrap: anywhere; }
+    .mdc-consumer-chips .p-multiselect-token-icon { flex-shrink: 0; }
 
     .mdc-consumer-chips button.p-multiselect-clear-icon {
         display: grid;
@@ -111,8 +116,6 @@
         align-items: center;
         gap: 0.75rem;
 
-        .p-button { min-height: 2.75rem; }
-        .p-button-outlined { color: var(--brand-navy); border-color: var(--brand-navy); }
         [role='status'] { color: var(--text-medium); }
     }
 

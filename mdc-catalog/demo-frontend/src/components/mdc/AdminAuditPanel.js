@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Button } from 'primereact/button';
+import Button from './MaaSAIButton';
 import { Card } from 'primereact/card';
 import { Panel } from 'primereact/panel';
 import { getCatalogFilters, normalizeCatalogFilters } from '@/services/mdc/catalog.service';
@@ -82,7 +82,7 @@ const AdminAuditPanel = () => {
                 ) : <p className="mdc-admin-catalogue-message">{loading ? 'Checking catalogue…' : 'Catalogue counts are unavailable.'}</p>}
                 <div className="mdc-admin-refresh">
                     <Button type="button" label="Refresh checks" icon="pi pi-refresh" outlined
-                        className="mdc-admin-action mdc-admin-action--outline" loading={loading} disabled={loading} onClick={refresh} />
+                        className="mdc-admin-action" loading={loading} disabled={loading} onClick={refresh} />
                 </div>
             </Panel>
         </>

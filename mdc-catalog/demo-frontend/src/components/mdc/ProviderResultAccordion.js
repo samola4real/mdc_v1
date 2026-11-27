@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Accordion, AccordionTab } from 'primereact/accordion';
-import { Button } from 'primereact/button';
+import Button from './MaaSAIButton';
 import { Message } from 'primereact/message';
 import { Tag } from 'primereact/tag';
 import { Toast } from 'primereact/toast';

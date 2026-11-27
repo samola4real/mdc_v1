@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Button } from 'primereact/button';
+import Button from './MaaSAIButton';
 import { Message } from 'primereact/message';
 import {
     getOffering, getProvider, listProviderOfferings, registerProvider, validateProviderPublication

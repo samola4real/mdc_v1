@@ -1,6 +1,6 @@
 import React from 'react';
 import Link from 'next/link';
-import { Button } from 'primereact/button';
+import Button from '@/components/mdc/MaaSAIButton';
 import { Card } from 'primereact/card';
 import { Divider } from 'primereact/divider';
 import { Message } from 'primereact/message';

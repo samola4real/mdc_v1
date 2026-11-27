@@ -1,5 +1,5 @@
 import React from 'react';
-import { Button } from 'primereact/button';
+import Button from './MaaSAIButton';
 import { Card } from 'primereact/card';
 import { Message } from 'primereact/message';
 import { useAuth } from '@/layout/context/AuthContext';

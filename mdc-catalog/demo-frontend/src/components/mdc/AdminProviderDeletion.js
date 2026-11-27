@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Button } from 'primereact/button';
+import Button from './MaaSAIButton';
 import { InputText } from 'primereact/inputtext';
 import { Message } from 'primereact/message';
 import { Panel } from 'primereact/panel';
@@ -127,7 +127,7 @@ export default function AdminProviderDeletion({ filters }) {
                     <label htmlFor="adminProviderLookup">Provider ID to look up</label>
                     <InputText id="adminProviderLookup" value={lookupId} disabled={Boolean(busy)} onChange={changeLookupId} />
                 </div>
-                <Button type="submit" label="Load provider" icon="pi pi-search" className="mdc-admin-action mdc-admin-action--load"
+                <Button type="submit" label="Load provider" icon="pi pi-search" className="mdc-admin-action"
                     disabled={Boolean(busy) || loading || !id} />
             </form>
             {(busy || loading) && <p role="status">{busy || 'Loading provider'}…</p>}
@@ -144,10 +144,10 @@ export default function AdminProviderDeletion({ filters }) {
                         </div>
                     </div>
                     <div className="mdc-admin-loaded-provider__actions">
-                        <Button type="button" label="View provider" icon="pi pi-eye" className="mdc-admin-action mdc-admin-action--view"
+                        <Button type="button" label="View provider" icon="pi pi-eye" outlined className="mdc-admin-action"
                             aria-haspopup="dialog" disabled={Boolean(busy)} onClick={() => setViewVisible(true)} />
                         {canDelete && <Button type="button" label="Delete provider" icon="pi pi-trash" severity="danger"
-                            className="mdc-admin-action mdc-admin-action--delete" disabled={Boolean(busy)} onClick={remove} />}
+                            className="mdc-admin-action" disabled={Boolean(busy)} onClick={remove} />}
                     </div>
                 </div>
             )}

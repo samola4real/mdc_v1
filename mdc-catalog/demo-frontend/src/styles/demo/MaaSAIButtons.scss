@@ -1,0 +1,81 @@
+:root {
+    --maasai-danger: #a82736;
+    --maasai-danger-hover: #87202c;
+    --maasai-danger-text: var(--maasai-danger);
+}
+
+:is([data-theme='dark'], [data-theme='hmi']) {
+    --maasai-danger-text: var(--status-error);
+}
+
+button.maasai-button:is(.p-button.p-component, .p-dialog-header-close) {
+    --action-accent: var(--blue);
+    --action-background: var(--brand-orange);
+    --action-border: var(--brand-orange);
+    --action-text: var(--brand-ink);
+    --action-hover: var(--brand-sand);
+    --action-active: color-mix(in srgb, var(--brand-orange) 88%, var(--brand-ink));
+    --action-hover-border: var(--action-hover);
+    --action-active-border: var(--action-active);
+
+    &.p-button-danger {
+        --action-accent: var(--maasai-danger-text);
+        --action-background: var(--maasai-danger);
+        --action-border: var(--maasai-danger);
+        --action-text: var(--primary-color-text);
+        --action-hover: var(--maasai-danger-hover);
+        --action-active: color-mix(in srgb, var(--maasai-danger-hover) 85%, var(--brand-ink));
+    }
+
+    &:is(.p-button-outlined, .p-button-secondary, .p-button-text, .p-button-link) {
+        --action-background: transparent;
+        --action-border: var(--action-accent);
+        --action-text: var(--action-accent);
+        --action-hover: color-mix(in srgb, var(--action-accent) 10%, var(--bg-card));
+        --action-active: color-mix(in srgb, var(--action-accent) 18%, var(--bg-card));
+        --action-hover-border: var(--action-border);
+        --action-active-border: var(--action-border);
+    }
+
+    &:is(.p-button-text, .p-button-link) {
+        --action-border: transparent;
+    }
+
+    min-height: 2.75rem;
+    font-family: var(--font-family);
+    background-color: var(--action-background);
+    border-color: var(--action-border);
+    color: var(--action-text);
+
+    &:enabled:hover {
+        background-color: var(--action-hover);
+        border-color: var(--action-hover-border);
+        color: var(--action-text);
+    }
+
+    &:enabled:active {
+        background-color: var(--action-active);
+        border-color: var(--action-active-border);
+        color: var(--action-text);
+    }
+
+    &:focus-visible {
+        box-shadow: var(--focus-ring);
+        outline: 0;
+    }
+
+    &:disabled { opacity: 0.55; }
+    &.p-button-loading:disabled { opacity: 0.75; }
+
+    .p-button-label { font-weight: 600; }
+    .p-button-icon { font-size: 1rem; flex-shrink: 0; }
+
+    &.p-button-link:enabled:hover .p-button-label { text-decoration: underline; }
+
+    &.p-button-icon-only {
+        inline-size: 2.75rem;
+        block-size: 2.75rem;
+        padding: 0;
+        justify-content: center;
+    }
+}

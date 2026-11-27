@@ -69,7 +69,11 @@ function ProviderDetails({ providerId, filters }) {
 export default function AdminProviderView({ providerId, filters, visible, onHide }) {
     return (
         <Dialog id="adminProviderDetails" className="mdc-admin-provider-view" header="Provider details" visible={visible} modal
-            draggable={false} resizable={false} onHide={onHide}>
+            draggable={false} resizable={false} onHide={onHide}
+            pt={{
+                closeButton: { className: 'maasai-button p-button-text p-button-icon-only' },
+                closeButtonIcon: { className: 'p-button-icon' }
+            }}>
             {visible && <ProviderDetails key={providerId} providerId={providerId} filters={filters} />}
         </Dialog>
     );

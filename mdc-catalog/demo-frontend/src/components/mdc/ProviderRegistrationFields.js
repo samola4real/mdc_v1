@@ -1,5 +1,5 @@
 import React from 'react';
-import { Button } from 'primereact/button';
+import Button from './MaaSAIButton';
 import { Dropdown } from 'primereact/dropdown';
 import { InputNumber } from 'primereact/inputnumber';
 import { InputText } from 'primereact/inputtext';
