@@ -4,7 +4,7 @@ import { normalizeDemoRoles } from '../../../components/mdc/demoAuth.js';
 import { isDisposableMdcId, isDisposableOfferingId } from '../../../services/mdc/stage1bScope.js';
 
 const preview = 'https://maasai-mdc-v1-y1vib2sq7-mdc19.vercel.app';
-const discoveryPreview = 'https://maasai-mdc-v1-pi9dh538z-mdc19.vercel.app';
+const discoveryPreview = 'https://maasai-mdc-v1-7l62onih5-mdc19.vercel.app';
 const { realmUrl: issuer, clientId } = getDefaultRuntimeConfig().keycloak;
 const issuerKeys = createRemoteJWKSet(new URL(issuer + '/protocol/openid-connect/certs'), { timeoutDuration: 5000 });
 const userInfoEndpoint = new URL(issuer + '/protocol/openid-connect/userinfo');

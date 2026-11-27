@@ -250,7 +250,7 @@ test('signed Consumer can read only the two exact lifecycle details and cannot u
         assert.equal((await invoke({ method, path, authorization, body: {} })).statusCode, 403);
     }
     assert.deepEqual(requests.map(({ url }) => url), detailPaths.map((path) => (
-        'https://maasai-mdc-v1-pi9dh538z-mdc19.vercel.app/api/' + path.join('/')
+        'https://maasai-mdc-v1-7l62onih5-mdc19.vercel.app/api/' + path.join('/')
     )));
     for (const { options } of requests) {
         assert.equal(options.method, 'GET');
@@ -283,8 +283,8 @@ test('signed strict and lenient discovery use the same fixed read-only Preview o
     assert.equal((await invoke({ method: 'POST', path, body, authorization: consumer })).statusCode, 200);
     assert.equal((await invoke({ method: 'POST', path, body: {}, authorization: consumer })).statusCode, 200);
     assert.deepEqual(requests.map(({ url }) => url), [
-        'https://maasai-mdc-v1-pi9dh538z-mdc19.vercel.app/api/service-discovery/search',
-        'https://maasai-mdc-v1-pi9dh538z-mdc19.vercel.app/api/service-discovery/search'
+        'https://maasai-mdc-v1-7l62onih5-mdc19.vercel.app/api/service-discovery/search',
+        'https://maasai-mdc-v1-7l62onih5-mdc19.vercel.app/api/service-discovery/search'
     ]);
     for (const { options } of requests) {
         assert.equal(options.headers.Authorization, undefined);
@@ -427,7 +427,7 @@ test('offline default relay verifies session before forwarding and fails closed 
     const health = { method: 'GET', path: ['health'], authorization: provider, extraHeaders: { 'x-mdc-actor-id': 'offline-actor' } };
     assert.equal((await invoke(health)).statusCode, 200);
     assert.equal(forwarded.length, 1);
-    assert.equal(forwarded[0].url, 'https://maasai-mdc-v1-pi9dh538z-mdc19.vercel.app/api/health');
+    assert.equal(forwarded[0].url, 'https://maasai-mdc-v1-7l62onih5-mdc19.vercel.app/api/health');
     assert.equal(forwarded[0].options.headers.Authorization, undefined);
     assert.equal(forwarded[0].options.headers['x-mdc-actor-id'], undefined);
 
