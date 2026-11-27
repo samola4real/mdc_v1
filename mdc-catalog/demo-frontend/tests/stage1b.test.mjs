@@ -208,6 +208,58 @@ test('offline transport preserves exact ETag and receipt, strips identity header
     assert.equal(options.redirect, 'error');
 });
 
+test('signed Consumer can read only the two exact lifecycle details and cannot use client roles for writes', async (t) => {
+    const jwk = { ...await exportJWK(publicKey), kid, alg: 'RS256' };
+    const config = { MDC_KEYCLOAK_AUDIENCE: audience, MDC_KEYCLOAK_ROLE_SOURCE: 'client', MDC_VERCEL_PROTECTION_BYPASS: 'offline-fixture-only' };
+    const previous = Object.keys(config).map((key) => [key, process.env[key]]);
+    t.after(() => previous.forEach(([key, value]) => {
+        if (value === undefined) delete process.env[key];
+        else process.env[key] = value;
+    }));
+    Object.assign(process.env, config);
+    const requests = [];
+    const etag = '"fixture-revision"';
+    t.mock.method(globalThis, 'fetch', async (url, options) => {
+        if (String(url) === issuer + '/protocol/openid-connect/certs') return Response.json({ keys: [jwk] });
+        requests.push({ url: String(url), options });
+        return Response.json({ contract_version: '1.0' }, { headers: { ETag: etag } });
+    });
+    const authorization = 'Bearer ' + await fixture({
+        resource_access: { myClient: { roles: ['consumer'] }, unrelated: { roles: ['admin'] } },
+        realm_access: { roles: ['admin'] }
+    });
+    const detailPaths = [['providers', providerId], ['offerings', offeringId]];
+    for (const path of detailPaths) {
+        assert.equal((await invoke({ method: 'GET', path, extraHeaders: { 'x-mdc-actor-role': 'admin' } })).statusCode, 401);
+        const reply = await invoke({ method: 'GET', path, authorization });
+        assert.equal(reply.statusCode, 200);
+        assert.equal(reply.headers.ETag, etag);
+        assert.equal(reply.headers['Cache-Control'], 'no-store');
+        for (const method of ['PATCH', 'DELETE']) {
+            const denied = await invoke({ method, path, authorization, body: {}, extraHeaders: { 'if-match': etag, 'x-mdc-actor-role': 'admin' } });
+            assert.equal(denied.statusCode, 403);
+            assert.equal(denied.data.error.code, 'mdc_role_forbidden');
+        }
+    }
+    for (const [method, path] of [
+        ['GET', ['providers', providerId, 'offerings']],
+        ['POST', ['providers', providerId, 'offerings']],
+        ['POST', ['provider-publication', 'validation']],
+        ['POST', ['provider-publication']]
+    ]) {
+        assert.equal((await invoke({ method, path, authorization, body: {} })).statusCode, 403);
+    }
+    assert.deepEqual(requests.map(({ url }) => url), detailPaths.map((path) => (
+        'https://maasai-mdc-v1-y1vib2sq7-mdc19.vercel.app/api/' + path.join('/')
+    )));
+    for (const { options } of requests) {
+        assert.equal(options.method, 'GET');
+        assert.equal(options.headers['Accept-Encoding'], 'identity');
+        assert.equal(options.headers.Authorization, undefined);
+        assert.equal(options.headers['x-vercel-protection-bypass'], 'offline-fixture-only');
+    }
+});
+
 test('offline relay requires signed Admin for provider deletion and retains disposable scope for every role', async (t) => {
     const jwk = { ...await exportJWK(publicKey), kid, alg: 'RS256' };
     const config = { MDC_KEYCLOAK_AUDIENCE: audience, MDC_KEYCLOAK_ROLE_SOURCE: 'client', MDC_VERCEL_PROTECTION_BYPASS: 'offline-fixture-only' };

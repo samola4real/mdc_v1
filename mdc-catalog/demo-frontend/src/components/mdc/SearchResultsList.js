@@ -1,11 +1,12 @@
 import React from 'react';
 import { Message } from 'primereact/message';
 import ProviderResultAccordion from './ProviderResultAccordion';
+import { catalogueLabel } from './providerManagementDraft';
 
-const SearchResultsList = ({ response, catalogue, hasRequirements }) => {
+const SearchResultsList = ({ response, catalogue, requirements }) => {
     if (!response) return null;
 
-    const partTypeLabel = catalogue.partTypes[response.part_family]?.find(({ value }) => value === response.part_type)?.label;
+    const partTypeLabel = catalogueLabel(catalogue.partTypes[response.part_family], response.part_type);
     return (
         <section className="mdc-consumer-results" aria-labelledby="eligible-offerings">
             <div role="status">
@@ -20,10 +21,9 @@ const SearchResultsList = ({ response, catalogue, hasRequirements }) => {
                 />
             ) : (
                 <ProviderResultAccordion
+                    key={response.request_id}
                     results={response.results}
-                    catalogue={catalogue}
-                    partTypeLabel={partTypeLabel}
-                    hasRequirements={hasRequirements}
+                    context={{ partType: response.part_type, partTypeLabel, catalogue, requirements }}
                 />
             )}
         </section>

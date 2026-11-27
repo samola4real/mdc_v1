@@ -123,7 +123,11 @@
         }
     }
 
-    .mdc-consumer-evidence .mdc-consumer-part-confirmed { margin: 0 0 0.875rem; }
+    .mdc-consumer-evidence {
+        display: grid;
+        gap: 1.25rem;
+        min-width: 0;
+    }
 
     .mdc-consumer-comparison {
         width: 100%;
@@ -135,15 +139,60 @@
 
         th, td { padding: 0.625rem; text-align: start; vertical-align: top; border-bottom: 1px solid var(--border); }
         thead th { background: var(--surface-ground); font-weight: 600; }
+        thead th:last-child { width: 7rem; }
         tbody th { font-weight: 500; }
     }
 
-    .mdc-consumer-evidence-groups {
-        margin: 0.875rem 0 0;
+    .mdc-comparison-mobile-label { display: none; }
 
-        > div { overflow-wrap: anywhere; }
-        dt { color: var(--brand-navy); font-weight: 600; }
-        dd { margin: 0.375rem 0 0; }
+    .mdc-comparison-matched {
+        display: inline-flex;
+        gap: 0.375rem;
+        align-items: center;
+        padding: 0.125rem 0.5rem;
+        border-radius: 1rem;
+        background: #e7f5eb;
+        color: #215c36;
+        white-space: nowrap;
+    }
+
+    .mdc-offering-overview, .mdc-offering-actions {
+        border-top: 1px solid var(--border);
+        padding-top: 1rem;
+    }
+
+    .mdc-offering-facts-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 1rem 1.5rem;
+        margin-top: 0.75rem;
+    }
+
+    .mdc-offering-facts {
+        min-width: 0;
+
+        h4 {
+            margin: 0;
+            padding: 0.375rem 0.625rem;
+            border-inline-start: 3px solid var(--brand-orange);
+            background: var(--surface-ground);
+            color: var(--brand-navy);
+            font-size: 1rem;
+            font-weight: 600;
+        }
+
+        ul { list-style: none; margin: 0; padding: 0; }
+        .mdc-offering-process-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        li {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            gap: 0.25rem 0.75rem;
+            padding: 0.375rem 0.625rem;
+            border-bottom: 1px solid var(--border);
+            overflow-wrap: anywhere;
+        }
+        strong { font-weight: 600; }
     }
 
     @media (max-width: 767px) {
@@ -152,6 +201,35 @@
         .mdc-consumer-requirements > .p-card-body { padding: 1rem; }
         .mdc-consumer-grid { grid-template-columns: minmax(0, 1fr); }
         .mdc-consumer-offering { align-items: flex-start; flex-direction: column; }
-        .mdc-consumer-comparison th, .mdc-consumer-comparison td { padding: 0.5rem 0.375rem; }
+        .mdc-offering-facts-grid { grid-template-columns: minmax(0, 1fr); }
+        .mdc-offering-facts .mdc-offering-process-list { grid-template-columns: minmax(0, 1fr); }
+        .mdc-consumer-comparison {
+            display: block;
+
+            thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+            tbody { display: block; }
+            tbody tr {
+                display: grid;
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+                padding: 0.5rem 0;
+                border-bottom: 1px solid var(--border);
+            }
+
+            th, td { padding: 0.25rem; border: 0; }
+            tbody th { grid-column: 1 / -1; font-weight: 600; }
+        }
+
+        .mdc-comparison-mobile-label { display: block; margin-bottom: 0.25rem; color: var(--text-medium); font-size: 0.875rem; }
+    }
+}
+
+.p-toast.mdc-offering-toast {
+    top: calc(var(--topbar-height) + 16px) !important;
+    width: min(25rem, calc(100vw - 40px));
+
+    .p-toast-message-info {
+        background: #EDF4FA;
+        color: #223F61;
+        border-color: #223F61;
     }
 }

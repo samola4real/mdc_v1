@@ -1,8 +1,13 @@
 import React from 'react';
 import ConsumerSearchMockup from '@/components/mdc/ConsumerSearchMockup';
 import DemoRoleGuard from '@/components/mdc/DemoRoleGuard';
+import { useSelectedDemoRole } from '@/components/mdc/demoAuth';
+import { useAuth } from '@/layout/context/AuthContext';
 
 const ConsumerSearch = () => {
+    const { authenticated, keycloak } = useAuth();
+    const role = useSelectedDemoRole();
+    const searchScope = JSON.stringify([authenticated, role, keycloak?.subject, keycloak?.sessionId]);
     return (
         <div className="mdc-consumer">
             <header className="mdc-consumer-header">
@@ -12,7 +17,7 @@ const ConsumerSearch = () => {
                 </p>
             </header>
             <DemoRoleGuard allowedRoles={['consumer', 'admin']} pageLabel="Consumer or Admin">
-                <ConsumerSearchMockup />
+                <ConsumerSearchMockup key={searchScope} />
             </DemoRoleGuard>
         </div>
     );

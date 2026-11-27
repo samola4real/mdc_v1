@@ -101,7 +101,7 @@ const ConsumerSearchMockup = () => {
         try {
             const response = validateSearchResponse(await searchServiceDiscovery(payload), payload);
             if (activeSearch.current === job && !job.obsolete) {
-                setOutcome({ response, hasRequirements: Object.values(payload.requirements).some((group) => Object.keys(group).length) });
+                setOutcome({ response, requirements: payload.requirements });
             }
         } catch (error) {
             if (activeSearch.current === job && !job.obsolete) setOutcome({ error });
@@ -257,7 +257,7 @@ const ConsumerSearchMockup = () => {
             </Card>
 
             <SearchErrorMessage error={outcome?.error} />
-            <SearchResultsList response={outcome?.response} catalogue={catalogue} hasRequirements={outcome?.hasRequirements} />
+            <SearchResultsList response={outcome?.response} catalogue={catalogue} requirements={outcome?.requirements} />
         </>
     );
 };

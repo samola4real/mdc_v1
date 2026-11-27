@@ -1,91 +1,186 @@
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Accordion, AccordionTab } from 'primereact/accordion';
+import { Button } from 'primereact/button';
+import { Message } from 'primereact/message';
 import { Tag } from 'primereact/tag';
-import {
-    EVIDENCE_GROUPS,
-    formatCapabilityRange,
-    formatEvidenceList,
-    formatFieldLabel,
-    formatSuitability,
-    NOT_PROVIDED,
-    offeringKey
-} from './searchResultFormatters';
+import { Toast } from 'primereact/toast';
+import { getOffering, getProvider } from '@/services/mdc/provider.service';
+import { buildRequirementComparison, createOfferingDetailsLoader } from './consumerOfferingDetails';
+import { formatSuitability, offeringKey } from './searchResultFormatters';
 
-const groupedFields = new Set(EVIDENCE_GROUPS.map(({ field }) => field));
+const columns = ['Specification', 'Your requirement', 'Provider capability', 'Status'];
+const contactMessage = 'Future implementation: contacting providers will be available in a future release.';
 
-const CapabilityComparison = ({ capabilities }) => (
-    capabilities.length ? (
-        <table className="mdc-consumer-comparison">
-            <thead>
-                <tr>
-                    <th scope="col">Manufacturing specification</th>
-                    <th scope="col">Your requirement</th>
-                    <th scope="col">Provider capability</th>
-                </tr>
-            </thead>
-            <tbody>
-                {capabilities.map(({ field, requested, provided }) => (
-                    <tr key={field}>
-                        <th scope="row">{formatFieldLabel(field)}</th>
-                        <td>{formatCapabilityRange(requested)}</td>
-                        <td>{formatCapabilityRange(provided)}</td>
-                    </tr>
-                ))}
-            </tbody>
-        </table>
-    ) : <p>Manufacturing specifications: {NOT_PROVIDED}</p>
-);
+function RequirementComparison({ rows }) {
+    return (
+        <section aria-label="Requirement Comparison">
+            <h3>Requirement Comparison</h3>
+            <table className="mdc-consumer-comparison" aria-label="Matched search requirements">
+                <thead>
+                    <tr>{columns.map((label) => <th scope="col" key={label}>{label}</th>)}</tr>
+                </thead>
+                <tbody>
+                    {rows.map(({ field, label, requested, provided }) => (
+                        <tr key={field}>
+                            <th scope="row">{label}</th>
+                            <td><span className="mdc-comparison-mobile-label" aria-hidden="true">Your requirement</span>{requested}</td>
+                            <td><span className="mdc-comparison-mobile-label" aria-hidden="true">Provider capability</span>{provided}</td>
+                            <td><span className="mdc-comparison-matched"><i className="pi pi-check" aria-hidden="true" /> Matched</span></td>
+                        </tr>
+                    ))}
+                </tbody>
+            </table>
+            {rows.length === 1 && <p>No additional requirements were specified.</p>}
+        </section>
+    );
+}
 
-const OfferingEvidence = ({ result, catalogue, partTypeLabel, hasRequirements }) => (
-    <div className="mdc-consumer-evidence">
-        {partTypeLabel && <p className="mdc-consumer-part-confirmed">Confirmed part type: <strong>{partTypeLabel}</strong></p>}
-        <h3>Capability comparison</h3>
-        {hasRequirements ? (
-            <>
-                <CapabilityComparison capabilities={result.matched_capabilities.filter(({ field }) => !groupedFields.has(field))} />
-                <dl className="mdc-consumer-grid mdc-consumer-evidence-groups">
-                    {EVIDENCE_GROUPS.map((group) => {
-                        const capability = result.matched_capabilities.find(({ field }) => field === group.field);
-                        const options = catalogue?.[group.field];
-                        return (
-                            <div key={group.field}>
-                                <dt>{group.label}</dt>
-                                <dd>{formatEvidenceList(capability?.provided, group, options)}</dd>
-                                {capability?.requested && <dd className="mdc-consumer-hint">Requested: {formatEvidenceList(capability.requested, group, options)}</dd>}
-                            </div>
-                        );
-                    })}
-                </dl>
-            </>
-        ) : <p>No additional requirements were specified.</p>}
-    </div>
-);
-
-const ProviderResultAccordion = ({ results, catalogue, partTypeLabel, hasRequirements }) => (
-    <Accordion>
-        {results.map((result) => (
-            <AccordionTab
-                key={offeringKey(result)}
-                header={
-                    <div className="mdc-consumer-offering">
-                        <div>
-                            <strong>{result.provider_name}</strong>
-                            <span>{result.offering_name}</span>
-                            {partTypeLabel && <span className="mdc-consumer-hint">Requested part type: {partTypeLabel}</span>}
-                        </div>
-                        <Tag value={formatSuitability(result.match.status)} severity="success" rounded />
+function PublishedOverview({ entry, onRetry }) {
+    const kind = entry?.kind;
+    return (
+        <section className="mdc-offering-overview" aria-label="Manufacturing Capability Overview">
+            <h3>Manufacturing Capability Overview</h3>
+            {kind === 'ready' ? (
+                <>
+                    <p>Published capabilities for this offering.</p>
+                    <div className="mdc-offering-facts-grid">
+                        {entry.details.sections.map(({ title, rows }) => (
+                            <section className="mdc-offering-facts" key={title}>
+                                <h4>{title}</h4>
+                                <ul className={title === 'Manufacturing processes' ? 'mdc-offering-process-list' : undefined}>
+                                    {rows.map(({ label, value }) => (
+                                        <li key={label}>
+                                            <span>{label}</span>
+                                            {value && <strong>{value}</strong>}
+                                        </li>
+                                    ))}
+                                </ul>
+                            </section>
+                        ))}
                     </div>
-                }
-            >
-                <OfferingEvidence
-                    result={result}
-                    catalogue={catalogue}
-                    partTypeLabel={partTypeLabel}
-                    hasRequirements={hasRequirements}
-                />
-            </AccordionTab>
-        ))}
-    </Accordion>
-);
+                </>
+            ) : <DetailsNotice entry={entry} onRetry={onRetry} />}
+        </section>
+    );
+}
+
+function DetailsNotice({ entry, onRetry }) {
+    if (!entry || entry.kind === 'loading') return <p role="status">Loading offering details...</p>;
+    if (entry.kind === 'changed' || entry.kind === 'unavailable') {
+        const message = entry.kind === 'changed' ? 'This offering has changed since your search.' : 'This offering is no longer available.';
+        return <Message severity="warn" className="mt-2" text={message + ' Search again to check current eligibility.'} />;
+    }
+    const message = {
+        401: 'Your session has expired. Please sign in again.',
+        403: 'You do not have permission to view offering details.'
+    }[entry.status] || 'Offering details are temporarily unavailable.';
+    return (
+        <div className="mdc-consumer-actions mt-2">
+            <Message severity="warn" text={message} />
+            <Button type="button" label="Retry details" icon="pi pi-refresh" outlined onClick={onRetry} />
+        </div>
+    );
+}
+
+const ProviderResultAccordion = ({ results, context }) => {
+    const toast = useRef(null);
+    const [loader] = useState(() => createOfferingDetailsLoader({ getProvider, getOffering }));
+    const [activeIndex, setActiveIndex] = useState(null);
+    const [entries, setEntries] = useState({});
+    const [downloading, setDownloading] = useState({});
+    const downloads = useRef(new Map());
+
+    useEffect(() => {
+        const activeDownloads = downloads.current;
+        return () => {
+            loader.clear();
+            activeDownloads.clear();
+        };
+    }, [loader]);
+
+    const load = (result, retry) => loader.load(result, context,
+        (key, entry) => setEntries((current) => ({ ...current, [key]: entry })), retry);
+
+    const changeTab = ({ index }) => {
+        setActiveIndex(index);
+        if (results[index]) void load(results[index]);
+    };
+
+    const notify = (message) => {
+        toast.current?.clear();
+        toast.current?.show({ life: 4000, ...message });
+    };
+
+    const download = async (key, comparison) => {
+        const entry = entries[key];
+        if (downloads.current.has(key) || entry?.kind !== 'ready') return;
+        const job = {};
+        downloads.current.set(key, job);
+        setDownloading((current) => ({ ...current, [key]: true }));
+        try {
+            const { createOfferingPdf, offeringPdfFilename } = await import('./offeringPdf');
+            const pdf = await createOfferingPdf(entry.details, comparison);
+            if (downloads.current.get(key) !== job) return;
+            pdf.save(offeringPdfFilename(entry.details.offeringId));
+            notify({ severity: 'success', summary: 'Download Offering', detail: 'Your offering PDF is ready.' });
+        } catch (error) {
+            if (downloads.current.get(key) === job) {
+                const detail = error?.code === 'unsupported_pdf_characters'
+                    ? 'The offering contains characters that the PDF export cannot display.'
+                    : 'The offering PDF could not be created. Please try again.';
+                notify({ severity: 'error', summary: 'Download Offering', detail });
+            }
+        } finally {
+            if (downloads.current.get(key) === job) {
+                downloads.current.delete(key);
+                setDownloading((current) => ({ ...current, [key]: false }));
+            }
+        }
+    };
+
+    return (
+        <>
+            <Toast ref={toast} position="top-right" className="mdc-offering-toast" />
+            <Accordion activeIndex={activeIndex} onTabChange={changeTab}>
+                {results.map((result, index) => {
+                    const key = offeringKey(result);
+                    const entry = entries[key];
+                    const comparison = activeIndex === index
+                        ? buildRequirementComparison(result, context.partTypeLabel, context.catalogue)
+                        : null;
+                    return (
+                        <AccordionTab
+                            key={key}
+                            header={
+                                <div className="mdc-consumer-offering">
+                                    <div>
+                                        <strong>{result.provider_name}</strong>
+                                        <span>{result.offering_name}</span>
+                                        <span className="mdc-consumer-hint">Requested part type: {context.partTypeLabel}</span>
+                                    </div>
+                                    <Tag value={formatSuitability(result.match.status)} severity="success" rounded />
+                                </div>
+                            }
+                        >
+                            {comparison && (
+                                <div className="mdc-consumer-evidence">
+                                    <RequirementComparison rows={comparison} />
+                                    <PublishedOverview entry={entry} onRetry={() => load(result, true)} />
+                                    <div className="mdc-consumer-actions mdc-offering-actions">
+                                        <Button type="button" label="Download Offering" icon="pi pi-download" loading={Boolean(downloading[key])}
+                                            disabled={entry?.kind !== 'ready' || Boolean(downloading[key])}
+                                            onClick={() => download(key, comparison)} />
+                                        <Button type="button" label="Contact Provider" icon="pi pi-envelope" outlined
+                                            onClick={() => notify({ severity: 'info', summary: 'Contact Provider', detail: contactMessage })} />
+                                    </div>
+                                </div>
+                            )}
+                        </AccordionTab>
+                    );
+                })}
+            </Accordion>
+        </>
+    );
+};
 
 export default ProviderResultAccordion;

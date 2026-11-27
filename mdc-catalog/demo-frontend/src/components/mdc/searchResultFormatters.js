@@ -6,29 +6,41 @@ const FIELD_LABELS = {
     bounding_box_mm: 'Bounding box',
     surface_finish_ra_um: 'Surface finish Ra (µm)',
     delivery: 'Delivery time (weeks)',
-    weight_kg: 'Weight (kg)'
+    lead_time_weeks: 'Lead time (weeks)',
+    batch_size: 'Batch size (pieces)',
+    weight_kg: 'Weight (kg)',
+    materials: 'Materials',
+    processes: 'Manufacturing processes',
+    certifications: 'Certifications'
 };
 
 export const formatFieldLabel = (field) => {
     if (Object.hasOwn(FIELD_LABELS, field)) return FIELD_LABELS[field];
-    const label = field.replace(/_mm$/, ' (mm)').replace(/_/g, ' ');
+    const label = field.replace(/_mm$/, ' (mm)').replace(/_deg$/, ' (°)').replace(/_/g, ' ');
     return label.charAt(0).toUpperCase() + label.slice(1);
 };
 
 export const formatCapabilityRange = (value) => {
-    if (typeof value === 'number' || (typeof value === 'string' && value.trim())) return String(value);
+    if (Number.isFinite(value) || nonemptyString(value)) return String(value);
     if (!value || typeof value !== 'object') return NOT_PROVIDED;
 
-    if (value.standard && value.best_class != null) return `${value.standard}, best class ${value.best_class}`;
-    if (value.standard && value.max_class != null) return `${value.standard}, class ≤ ${value.max_class}`;
-    if (value.exact != null || (value.min != null && value.min === value.max)) return String(value.exact ?? value.min);
-    if (value.min != null && value.max != null) return `${value.min}–${value.max}`;
-    if (value.max != null) return `≤ ${value.max}`;
-    if (value.min != null) return `≥ ${value.min}`;
+    if (nonemptyString(value.standard)) {
+        if (Number.isFinite(value.best_class)) return `${value.standard}, best class ${value.best_class}`;
+        if (Number.isFinite(value.max_class)) return `${value.standard}, class ≤ ${value.max_class}`;
+        return value.standard;
+    }
+    if (Number.isFinite(value.exact)) return String(value.exact);
+    if (Number.isFinite(value.value)) return String(value.value);
+    const hasMin = Number.isFinite(value.min);
+    const hasMax = Number.isFinite(value.max);
+    if (hasMin && hasMax) return value.min === value.max ? String(value.min) : `${value.min}–${value.max}`;
+    if (hasMax) return `≤ ${value.max}`;
+    if (hasMin) return `≥ ${value.min}`;
 
-    const dimensions = ['length_mm', 'width_mm', 'height_mm']
-        .filter((field) => value[field] != null)
-        .map((field) => `${formatFieldLabel(field)}: ${formatCapabilityRange(value[field])}`);
+    const dimensions = ['length_mm', 'width_mm', 'height_mm'].flatMap((field) => {
+        const dimension = formatCapabilityRange(value[field]);
+        return dimension === NOT_PROVIDED ? [] : [`${formatFieldLabel(field)}: ${dimension}`];
+    });
     return dimensions.length ? dimensions.join(', ') : NOT_PROVIDED;
 };
 

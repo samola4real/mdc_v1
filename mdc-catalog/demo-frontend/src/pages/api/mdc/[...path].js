@@ -37,7 +37,9 @@ export const resolveEndpoint = (segments, method) => {
     else if (collection === 'offerings' && !nested) resource = 'offering';
     else return null;
 
-    const roles = resource === 'provider' && method === 'DELETE' ? ['admin'] : providerRoles;
+    let roles = providerRoles;
+    if (method === 'GET' && (resource === 'provider' || resource === 'offering')) roles = demoRoles;
+    if (method === 'DELETE' && resource === 'provider') roles = ['admin'];
     return { path, id, resource, methods: lifecycleMethods[resource], roles, write: method !== 'GET' };
 };
 
