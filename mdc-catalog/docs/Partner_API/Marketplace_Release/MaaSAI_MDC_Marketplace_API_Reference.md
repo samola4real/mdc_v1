@@ -161,31 +161,52 @@ Use the current fields instead:
 
 Do not send a single capabilities object in place of the three structured capability maps.
 
-### 4.6 Conditional updates and deletion
+### 4.6 Updating and deleting existing records
 
-Provider and offering detail responses include a strong ETag in the HTTP response header. Use the latest ETag when updating or deleting that resource.
+You only need to use an **ETag** when updating or deleting an existing provider or offering. You do not need an ETag when registering a provider, adding an offering or performing a service-discovery search.
 
-For detail reads used to obtain an ETag, send:
+Think of an ETag as a version label that MDC gives to a provider or offering. It helps prevent an update based on old information from accidentally overwriting a more recent change.
+
+**How to use it:**
+
+1. First, send a GET request for the provider or offering you want to change.
+2. In the GET response headers, find the value named **ETag**. MDC generates this value; you do not create it.
+3. When sending the PATCH or DELETE request, send that same value in the **If-Match** header.
+
+For example, a GET response will contain a header similar to this:
 
 ~~~http
-Accept-Encoding: identity
+ETag: "<value-generated-by-MDC>"
 ~~~
 
-For PATCH and DELETE, send:
+The quotation marks are part of the value returned by MDC. Copy the complete value exactly as it appears. You do not need to type a value or add quotation marks yourself.
+
+In Postman, save the returned value in an environment variable and use it like this:
 
 ~~~http
-If-Match: "the-strong-etag-returned-by-the-detail-request"
+If-Match: {{provider_etag}}
 ~~~
 
-The ETag is an opaque value. Copy it exactly, including quotation marks. Do not use a weak ETag beginning with W/.
+For an offering, use:
+
+~~~http
+If-Match: {{offering_etag}}
+~~~
+
+**Which operations need it?**
+
+- **PATCH:** Always send the latest ETag. Some deployments may enforce this check; sending it consistently also protects against overwriting a change made by another user.
+- **DELETE:** The latest ETag is required.
+
+If another user changes the provider or offering after you retrieve it, MDC returns HTTP **412**. Retrieve the record again, review the latest information and retry with the new ETag. If a required ETag is missing, MDC returns HTTP **428**.
 
 | HTTP status | Meaning |
 |---:|---|
-| 400 | Invalid request, unsupported field or malformed ETag |
+| 400 | Invalid request or incorrectly formatted ETag |
 | 404 | Provider or offering not found |
 | 409 | Provider or offering ID already exists |
-| 412 | The resource has changed since the ETag was retrieved; GET it again |
-| 428 | Required If-Match header was not supplied |
+| 412 | The record changed after you retrieved it; GET it again |
+| 428 | A required If-Match header was not supplied |
 | 503 | The operation or catalogue publication could not be confirmed |
 
 PATCH changes only the scalar fields supplied. A supplied object/map field is a whole-map replacement: include every entry that must remain. Do not send only one nested map member if other existing members must be preserved.
@@ -331,7 +352,97 @@ curl --request GET "https://maasai-mdc-v1.vercel.app/api/catalog/filters"
 
 Validates and normalizes a provider publication payload without registering the provider.
 
-Send the same JSON body that will be used for provider registration.
+Set the request body to **Body → raw → JSON** in Postman. Paste the complete payload below. This is the same payload you will use for the registration request in Section 7.2. Use a new provider_id and matching offering_id if you have already registered this test provider.
+
+**Request headers:**
+
+~~~http
+Content-Type: application/json
+Accept: application/json
+~~~
+
+**Request body (copy into Postman):**
+
+~~~json
+{
+  "contract_version": "1.0",
+  "provider_id": "marketplace_api_test_20261127_01",
+  "provider_name": "Marketplace API Test Works",
+  "country": "Finland",
+  "certifications": [],
+  "offerings": [
+    {
+      "offering_id": "marketplace_api_test_20261127_01_block_cell",
+      "service_category": "precision_metal_parts",
+      "offering_name": "Precision block manufacturing",
+      "part_family": "metal_part",
+      "support_status": "confirmed",
+      "supported_part_types": [
+        {
+          "part_type": "block",
+          "support_status": "confirmed",
+          "source_type": "provider_confirmed",
+          "confidence": "declared"
+        }
+      ],
+      "family_capabilities": {},
+      "part_type_capabilities": {
+        "block": {
+          "bounding_box_mm": {
+            "length_mm": {
+              "max": 150,
+              "source_type": "provider_confirmed",
+              "confidence": "declared"
+            },
+            "width_mm": {
+              "max": 80,
+              "source_type": "provider_confirmed",
+              "confidence": "declared"
+            },
+            "height_mm": {
+              "max": 20,
+              "source_type": "provider_confirmed",
+              "confidence": "declared"
+            }
+          },
+          "number_of_holes": {
+            "max": 4,
+            "source_type": "provider_confirmed",
+            "confidence": "declared"
+          }
+        }
+      },
+      "generic_capabilities": {
+        "materials": [
+          {
+            "material": "steel",
+            "available_grades": ["18CrNiMo7-6"],
+            "source_type": "provider_confirmed",
+            "confidence": "declared"
+          }
+        ],
+        "processes": [
+          {
+            "process": "machining",
+            "delivery_mode": "in_house",
+            "source_type": "provider_confirmed",
+            "confidence": "declared"
+          }
+        ],
+        "certifications": [
+          {
+            "code": "ISO9001_2015",
+            "source_type": "provider_confirmed",
+            "confidence": "declared"
+          }
+        ]
+      },
+      "custom_offering_fields": {},
+      "custom_capability_fields": {}
+    }
+  ]
+}
+~~~
 
 **Successful response — HTTP 200**
 
@@ -505,6 +616,8 @@ The accepted delivery_mode values are in_house, subcontracted and unspecified.
 
 For quality capability records, standard may be AGMA, DIN or ISO.
 
+**Request body (Postman: Body → raw → JSON):**
+
 #### Complete example: provider offering block manufacturing
 
 The following example uses a provider with a confirmed block-manufacturing offering. Use a unique provider ID when testing. If the ID already exists, registration returns a conflict.
@@ -656,7 +769,7 @@ Representative response body:
 }
 ~~~
 
-The response includes a strong ETag HTTP header. Retain it when a subsequent provider PATCH or DELETE is required.
+The response includes an **ETag** header. If you plan to update or delete this provider, save the complete header value in Postman as `provider_etag`.
 
 ### 8.2 Update provider information
 
@@ -686,7 +799,7 @@ Example:
 }
 ~~~
 
-Include the current strong ETag in If-Match. A successful update returns HTTP 200, a publication receipt and a new ETag.
+Send the latest provider ETag in the `If-Match` header, for example `If-Match: {{provider_etag}}`. Postman should store the complete ETag value returned by GET, including its quotation marks. A successful update returns HTTP 200, a publication receipt and a new ETag.
 
 ### 8.3 Delete a provider
 
@@ -695,7 +808,7 @@ Include the current strong ETag in If-Match. A successful update returns HTTP 20
 Deletes the provider and all offerings belonging to it.
 
 - No request body is required.
-- A current strong ETag in If-Match is required.
+- The latest ETag in the `If-Match` header is required.
 - A successful request returns HTTP 200 and a deletion receipt.
 - Retrieve the provider again before deletion if any provider or offering changes have occurred since the last provider detail read.
 
@@ -703,7 +816,7 @@ Example:
 
 ~~~http
 DELETE /api/providers/marketplace_api_test_20261127_01
-If-Match: "current-strong-provider-etag"
+If-Match: {{provider_etag}}
 ~~~
 
 A completed deletion receipt includes the target provider, publication_id, publication_status, sync_status and the removed offering IDs.
@@ -751,7 +864,7 @@ Optional fields:
 
 The offering fields and capability rules are the same as those described in Section 7.2.
 
-Example:
+**Request body (Postman: Body → raw → JSON):**
 
 ~~~json
 {
@@ -800,7 +913,7 @@ Example:
 curl --request GET "https://maasai-mdc-v1.vercel.app/api/offerings/marketplace_api_test_20261127_01_block_cell" --header "Accept-Encoding: identity"
 ~~~
 
-The response includes a strong ETag HTTP header. Retain it for offering PATCH or DELETE.
+The response includes an **ETag** header. If you plan to update or delete this offering, save the complete header value in Postman as `offering_etag`.
 
 ### 9.4 Update an offering
 
@@ -840,7 +953,7 @@ Example:
 }
 ~~~
 
-Include the current strong ETag in If-Match. Because part_type_capabilities is a whole-map replacement, the example includes every block capability that should remain after the update.
+Send the latest offering ETag in the `If-Match` header, for example `If-Match: {{offering_etag}}`. Postman should store the complete ETag value returned by GET, including its quotation marks. Because part_type_capabilities is a whole-map replacement, the example includes every block capability that should remain after the update.
 
 A successful update returns HTTP 200, a publication receipt and a new ETag.
 
@@ -851,14 +964,14 @@ A successful update returns HTTP 200, a publication receipt and a new ETag.
 Deletes only the selected offering. Other offerings belonging to the same provider remain.
 
 - No request body is required.
-- A current strong ETag in If-Match is required.
+- The latest ETag in the `If-Match` header is required.
 - A successful request returns HTTP 200 and a deletion receipt.
 
 Example:
 
 ~~~http
 DELETE /api/offerings/marketplace_api_test_20261127_01_block_cell
-If-Match: "current-strong-offering-etag"
+If-Match: {{offering_etag}}
 ~~~
 
 ---
@@ -1025,6 +1138,8 @@ The current service applies strict eligibility regardless of legacy permissive p
 
 This example searches for block-manufacturing offerings that can satisfy the requested bounding box and hole count and support the selected material, process and certification.
 
+**Request body (Postman: Body → raw → JSON):**
+
 ~~~json
 {
   "contract_version": "1.0",
@@ -1145,8 +1260,8 @@ Representative format:
 | 400 | Invalid request or unsupported field | Correct the field/value identified in error.details |
 | 404 | Provider or offering not found | Verify the ID and request URL |
 | 409 | Provider or offering already exists | Use a unique ID or retrieve the existing record |
-| 412 | ETag is stale | GET the current resource, review it and retry with the new ETag |
-| 428 | If-Match is missing | GET the resource and supply its strong ETag |
+| 412 | ETag is stale | GET the current resource, review it and retry with the latest ETag |
+| 428 | If-Match is missing | GET the resource and supply its latest ETag |
 | 503 | Service or publication could not be confirmed | Read the resource before deciding whether a write needs retrying |
 
 A lifecycle write may have been accepted even when the response is HTTP 503. Retain publication_id if present, GET the relevant provider or offering, and confirm its current state before retrying. Do not blindly repeat a registration request.
@@ -1174,7 +1289,7 @@ For consumer discovery:
 4. Pass the eligible offering results to the MaaS Recommendation System.
 5. If full offering details are needed, GET /api/offerings/{offering_id}.
 
-For updates or deletion, retrieve the current resource and ETag first, then send the ETag in If-Match.
+For updates or deletion, retrieve the current resource first, save its ETag and send it in the `If-Match` header. Postman can save and reuse the value automatically.
 
 ---
 
