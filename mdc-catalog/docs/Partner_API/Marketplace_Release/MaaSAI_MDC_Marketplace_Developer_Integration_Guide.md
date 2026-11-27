@@ -247,7 +247,7 @@ GET {{base_url}}/api/providers/{{provider_id}}
 Accept-Encoding: identity
 ~~~
 
-The response contains the provider details and a summary of its offerings. The HTTP response also includes a strong ETag header.
+The response contains the provider details and a summary of its offerings. The HTTP response also includes an **ETag** header. Save it in Postman as `provider_etag` if you may update or delete the provider later.
 
 Retain the ETag if the provider may be updated or deleted later.
 
